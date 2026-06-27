@@ -7,29 +7,38 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
-        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         h1 { text-align: center; margin: 30px 0; color: #1a73e8; }
         .input-section { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px; }
         label { display: block; margin-bottom: 8px; font-weight: 500; }
         textarea { width: 100%; height: 150px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical; font-family: inherit; }
         textarea:focus { outline: none; border-color: #1a73e8; }
         .hint { color: #666; font-size: 13px; margin-top: 6px; }
-        button { display: inline-block; margin-top: 16px; padding: 12px 32px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
-        button:hover { background: #1557b0; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-group { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+        button { padding: 12px 24px; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; transition: background 0.2s; }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; }
+        .btn-secondary { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+        .btn-secondary:hover { background: #e8f0fe; }
+        button:disabled { background: #ccc; color: #666; cursor: not-allowed; border-color: #ccc; }
         .results-section { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
-        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
         .results-count { color: #666; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; font-weight: 500; color: #555; }
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
+        th { background: #f8f9fa; font-weight: 500; color: #555; position: relative; cursor: default; user-select: none; }
+        th .resize { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; background: transparent; }
+        th .resize:hover { background: #1a73e8; }
         tr:hover { background: #f8f9fa; }
-        .status { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 500; }
+        .status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 500; }
         .status-active { background: #e6f4ea; color: #1e7e34; }
         .status-deprecated { background: #fce8e6; color: #d93025; }
         .status-upcoming { background: #e8f0fe; color: #1967d2; }
         .loading { text-align: center; padding: 40px; color: #666; }
         .error { background: #fce8e6; color: #d93025; padding: 12px; border-radius: 6px; margin-top: 12px; display: none; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: #fff; padding: 12px 24px; border-radius: 6px; font-size: 14px; opacity: 0; transition: opacity 0.3s; z-index: 1000; }
+        .toast.show { opacity: 1; }
         @media (max-width: 768px) {
             .container { padding: 12px; }
             table { font-size: 13px; }
@@ -45,7 +54,10 @@
             <label for="keywords">请输入标准编号（每行一个）</label>
             <textarea id="keywords" placeholder="例如：&#10;50222&#10;50010&#10;50311"></textarea>
             <p class="hint">支持 GB、行业标准等编号，每行一个</p>
-            <button id="queryBtn" onclick="query()">开始查询</button>
+            <div class="btn-group">
+                <button id="queryBtn" class="btn-primary" onclick="query()">开始查询</button>
+                <button id="copyBtn" class="btn-secondary" onclick="copyMarkdown()" disabled>复制 Markdown</button>
+            </div>
             <div class="error" id="error"></div>
         </div>
 
@@ -54,24 +66,59 @@
                 <h2>查询结果</h2>
                 <span class="results-count" id="count"></span>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>查询编号</th>
-                        <th>标准编号</th>
-                        <th>规范名称</th>
-                        <th>实施状态</th>
-                        <th>发布日期</th>
-                        <th>发布部门</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody"></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table id="resultTable">
+                    <thead>
+                        <tr id="thead"></tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
             <div class="loading" id="loading" style="display:none;">查询中，请稍候...</div>
         </div>
     </div>
 
+    <div class="toast" id="toast"></div>
+
     <script>
+        const COLUMNS = ['查询编号', '标准编号', '规范名称', '实施状态', '发布日期', '发布部门'];
+        const KEYS = ['query', 'standard_number', 'title', 'status', 'publish_date', 'publisher'];
+        let lastResults = [];
+
+        function initTable() {
+            const thead = document.getElementById('thead');
+            thead.innerHTML = '';
+            COLUMNS.forEach((col, i) => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                th.style.width = i === 2 ? '35%' : '';
+                const handle = document.createElement('div');
+                handle.className = 'resize';
+                handle.addEventListener('mousedown', e => startResize(e, th));
+                th.appendChild(handle);
+                thead.appendChild(th);
+            });
+        }
+
+        let startX, startW, resizing;
+        function startResize(e, th) {
+            e.preventDefault();
+            startX = e.clientX;
+            startW = th.offsetWidth;
+            resizing = th;
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', stopResize);
+        }
+        function doResize(e) {
+            if (!resizing) return;
+            resizing.style.width = Math.max(60, startW + e.clientX - startX) + 'px';
+        }
+        function stopResize() {
+            resizing = null;
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+
         async function query() {
             const keywords = document.getElementById('keywords').value.trim();
             const btn = document.getElementById('queryBtn');
@@ -80,6 +127,7 @@
             const tbody = document.getElementById('tbody');
             const loading = document.getElementById('loading');
             const count = document.getElementById('count');
+            const copyBtn = document.getElementById('copyBtn');
 
             error.style.display = 'none';
             if (!keywords) {
@@ -93,6 +141,7 @@
             results.style.display = 'block';
             loading.style.display = 'block';
             tbody.innerHTML = '';
+            copyBtn.disabled = true;
 
             try {
                 const resp = await fetch('/api/query', {
@@ -109,22 +158,27 @@
                     return;
                 }
 
+                lastResults = data.results;
                 count.textContent = `共 ${data.total} 条结果`;
                 data.results.forEach(r => {
                     let statusClass = 'status-active';
                     if (r.status === '作废' || r.status === '废止') statusClass = 'status-deprecated';
                     else if (r.status === '即将实施') statusClass = 'status-upcoming';
 
-                    tbody.innerHTML += `<tr>
-                        <td>${r.query}</td>
-                        <td>${r.standard_number}</td>
-                        <td>${r.title}</td>
-                        <td><span class="status ${statusClass}">${r.status}</span></td>
-                        <td>${r.publish_date}</td>
-                        <td>${r.publisher}</td>
-                    </tr>`;
+                    const tr = document.createElement('tr');
+                    KEYS.forEach((key, i) => {
+                        const td = document.createElement('td');
+                        if (key === 'status') {
+                            td.innerHTML = `<span class="status ${statusClass}">${r[key]}</span>`;
+                        } else {
+                            td.textContent = r[key];
+                        }
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
                 });
                 loading.style.display = 'none';
+                copyBtn.disabled = false;
             } catch (e) {
                 error.textContent = '请求失败: ' + e.message;
                 error.style.display = 'block';
@@ -134,6 +188,37 @@
                 btn.textContent = '开始查询';
             }
         }
+
+        function copyMarkdown() {
+            if (!lastResults.length) return;
+
+            let md = '| ' + COLUMNS.join(' | ') + ' |\n';
+            md += '| ' + COLUMNS.map(() => '---').join(' | ') + ' |\n';
+            lastResults.forEach(r => {
+                md += '| ' + KEYS.map(k => r[k] || '').join(' | ') + ' |\n';
+            });
+
+            navigator.clipboard.writeText(md).then(() => {
+                showToast('已复制到剪贴板');
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = md;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已复制到剪贴板');
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        initTable();
     </script>
 </body>
 </html>
