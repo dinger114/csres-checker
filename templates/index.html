@@ -24,13 +24,19 @@
         .results-section { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
         .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
         .results-count { color: #666; font-size: 14px; }
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+        .filter-bar label { margin-bottom: 0; font-size: 13px; color: #666; }
+        .filter-bar select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background: #fff; }
+        .filter-bar input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; width: 200px; }
+        .filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: #1a73e8; }
         .table-wrapper { overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; white-space: nowrap; }
         th:last-child, td:last-child { border-right: none; }
         th { background: #e8e8e8; font-weight: 600; color: #333; position: relative; cursor: default; user-select: none; border-bottom: 2px solid #ccc; }
         th .resize { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; background: transparent; }
         th .resize:hover { background: #1a73e8; }
+        td.col-num { text-align: center; color: #999; font-size: 13px; width: 50px; }
         tbody tr:nth-child(odd) { background: #fff; }
         tbody tr:nth-child(even) { background: #f7f9fc; }
         tbody tr:hover { background: #eef3fb; }
@@ -69,6 +75,13 @@
                 <h2>查询结果</h2>
                 <span class="results-count" id="count"></span>
             </div>
+            <div class="filter-bar">
+                <label>筛选列：</label>
+                <select id="filterCol" onchange="updateFilterInput()">
+                    <option value="">全部</option>
+                </select>
+                <input type="text" id="filterInput" placeholder="输入筛选内容..." oninput="applyFilter()">
+            </div>
             <div class="table-wrapper">
                 <table id="resultTable">
                     <thead>
@@ -87,19 +100,35 @@
         const COLUMNS = ['查询编号', '标准编号', '规范名称', '实施状态', '发布日期', '发布部门'];
         const KEYS = ['query', 'standard_number', 'title', 'status', 'publish_date', 'publisher'];
         let lastResults = [];
+        let filteredResults = [];
 
         function initTable() {
             const thead = document.getElementById('thead');
             thead.innerHTML = '';
+
+            const thNum = document.createElement('th');
+            thNum.textContent = '#';
+            thNum.style.width = '50px';
+            thNum.style.textAlign = 'center';
+            thead.appendChild(thNum);
+
+            const filterCol = document.getElementById('filterCol');
+            filterCol.innerHTML = '<option value="">全部</option>';
+
             COLUMNS.forEach((col, i) => {
                 const th = document.createElement('th');
                 th.textContent = col;
-                th.style.width = i === 2 ? '35%' : '';
+                th.style.width = i === 2 ? '30%' : '';
                 const handle = document.createElement('div');
                 handle.className = 'resize';
                 handle.addEventListener('mousedown', e => startResize(e, th));
                 th.appendChild(handle);
                 thead.appendChild(th);
+
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = col;
+                filterCol.appendChild(opt);
             });
         }
 
@@ -122,12 +151,71 @@
             document.removeEventListener('mouseup', stopResize);
         }
 
+        function renderTable(results) {
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+            results.forEach((r, idx) => {
+                let statusClass = 'status-active';
+                if (r.status === '作废' || r.status === '废止') statusClass = 'status-deprecated';
+                else if (r.status === '即将实施') statusClass = 'status-upcoming';
+
+                const tr = document.createElement('tr');
+
+                const tdNum = document.createElement('td');
+                tdNum.className = 'col-num';
+                tdNum.textContent = idx + 1;
+                tr.appendChild(tdNum);
+
+                KEYS.forEach(key => {
+                    const td = document.createElement('td');
+                    if (key === 'status') {
+                        td.innerHTML = `<span class="status ${statusClass}">${r[key]}</span>`;
+                    } else {
+                        td.textContent = r[key];
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function applyFilter() {
+            const colIdx = document.getElementById('filterCol').value;
+            const keyword = document.getElementById('filterInput').value.trim().toLowerCase();
+
+            if (!keyword) {
+                filteredResults = [...lastResults];
+            } else if (colIdx === '') {
+                filteredResults = lastResults.filter(r =>
+                    KEYS.some(k => (r[k] || '').toLowerCase().includes(keyword))
+                );
+            } else {
+                const key = KEYS[parseInt(colIdx)];
+                filteredResults = lastResults.filter(r =>
+                    (r[key] || '').toLowerCase().includes(keyword)
+                );
+            }
+            document.getElementById('count').textContent = `共 ${filteredResults.length} 条结果`;
+            renderTable(filteredResults);
+        }
+
+        function updateFilterInput() {
+            const colIdx = document.getElementById('filterCol').value;
+            const input = document.getElementById('filterInput');
+            if (colIdx === '') {
+                input.placeholder = '在所有列中搜索...';
+            } else {
+                input.placeholder = `在「${COLUMNS[parseInt(colIdx)]}」中筛选...`;
+            }
+            input.value = '';
+            applyFilter();
+        }
+
         async function query() {
             const keywords = document.getElementById('keywords').value.trim();
             const btn = document.getElementById('queryBtn');
             const error = document.getElementById('error');
             const results = document.getElementById('results');
-            const tbody = document.getElementById('tbody');
             const loading = document.getElementById('loading');
             const count = document.getElementById('count');
             const copyBtn = document.getElementById('copyBtn');
@@ -143,7 +231,7 @@
             btn.textContent = '查询中...';
             results.style.display = 'block';
             loading.style.display = 'block';
-            tbody.innerHTML = '';
+            document.getElementById('tbody').innerHTML = '';
             copyBtn.disabled = true;
 
             try {
@@ -162,24 +250,11 @@
                 }
 
                 lastResults = data.results;
+                filteredResults = [...data.results];
                 count.textContent = `共 ${data.total} 条结果`;
-                data.results.forEach(r => {
-                    let statusClass = 'status-active';
-                    if (r.status === '作废' || r.status === '废止') statusClass = 'status-deprecated';
-                    else if (r.status === '即将实施') statusClass = 'status-upcoming';
-
-                    const tr = document.createElement('tr');
-                    KEYS.forEach((key, i) => {
-                        const td = document.createElement('td');
-                        if (key === 'status') {
-                            td.innerHTML = `<span class="status ${statusClass}">${r[key]}</span>`;
-                        } else {
-                            td.textContent = r[key];
-                        }
-                        tr.appendChild(td);
-                    });
-                    tbody.appendChild(tr);
-                });
+                document.getElementById('filterInput').value = '';
+                document.getElementById('filterCol').value = '';
+                renderTable(data.results);
                 loading.style.display = 'none';
                 copyBtn.disabled = false;
             } catch (e) {
@@ -193,12 +268,13 @@
         }
 
         function copyMarkdown() {
-            if (!lastResults.length) return;
+            const results = filteredResults.length ? filteredResults : lastResults;
+            if (!results.length) return;
 
-            let md = '| ' + COLUMNS.join(' | ') + ' |\n';
-            md += '| ' + COLUMNS.map(() => '---').join(' | ') + ' |\n';
-            lastResults.forEach(r => {
-                md += '| ' + KEYS.map(k => r[k] || '').join(' | ') + ' |\n';
+            let md = '| 序号 | ' + COLUMNS.join(' | ') + ' |\n';
+            md += '| --- | ' + COLUMNS.map(() => '---').join(' | ') + ' |\n';
+            results.forEach((r, i) => {
+                md += '| ' + (i + 1) + ' | ' + KEYS.map(k => r[k] || '').join(' | ') + ' |\n';
             });
 
             navigator.clipboard.writeText(md).then(() => {
