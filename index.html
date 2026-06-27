@@ -152,57 +152,64 @@
             throw new Error('所有代理请求失败');
         }
 
+        function parseResults(html, keyword) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const results = [];
+
+            doc.querySelectorAll('tr[bgcolor="#FFFFFF"]').forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                if (tds.length < 5) return;
+
+                const titleAttr = tr.getAttribute('title') || '';
+                const info = {};
+                titleAttr.split('\n').forEach(line => {
+                    if (line.includes('：')) {
+                        const [k, ...v] = line.split('：');
+                        info[k.trim()] = v.join('：').trim();
+                    }
+                });
+
+                results.push({
+                    query: keyword,
+                    standard_number: tds[0].textContent.trim().replace(/^\s/, ''),
+                    title: tds[1].textContent.trim().replace(/^\s/, ''),
+                    status: tds[4].textContent.trim().replace(/^\s/, ''),
+                    publisher: info['发布部门'] || '',
+                    publish_date: info['发布日期'] || '',
+                });
+            });
+            return results;
+        }
+
+        function getTotalFromHtml(html) {
+            const match = html.match(/共\s*(\d+)\s*条/);
+            return match ? parseInt(match[1]) : 0;
+        }
+
         async function queryStandard(keyword) {
             let allResults = [];
             let lastError;
-            let page = 1;
 
             for (const proxyFn of PROXIES) {
                 try {
                     allResults = [];
-                    page = 1;
-                    let nextUrl = `${BASE_URL}?keyword=${keyword}`;
+                    const firstUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}`;
+                    const resp = await fetchWithRetry(proxyFn(firstUrl), 1);
+                    const buf = await resp.arrayBuffer();
+                    const html = new TextDecoder('gbk').decode(buf);
 
-                    while (nextUrl) {
-                        const url = proxyFn(nextUrl);
-                        const resp = await fetchWithRetry(url, 1);
-                        const buf = await resp.arrayBuffer();
-                        const html = new TextDecoder('gbk').decode(buf);
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
+                    allResults = parseResults(html, keyword);
+                    const total = getTotalFromHtml(html);
+                    const pageSize = allResults.length;
+                    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
-                        doc.querySelectorAll('tr[bgcolor="#FFFFFF"]').forEach(tr => {
-                            const tds = tr.querySelectorAll('td');
-                            if (tds.length < 5) return;
-
-                            const titleAttr = tr.getAttribute('title') || '';
-                            const info = {};
-                            titleAttr.split('\n').forEach(line => {
-                                if (line.includes('：')) {
-                                    const [k, ...v] = line.split('：');
-                                    info[k.trim()] = v.join('：').trim();
-                                }
-                            });
-
-                            allResults.push({
-                                query: keyword,
-                                standard_number: tds[0].textContent.trim().replace(/^\s/, ''),
-                                title: tds[1].textContent.trim().replace(/^\s/, ''),
-                                status: tds[4].textContent.trim().replace(/^\s/, ''),
-                                publisher: info['发布部门'] || '',
-                                publish_date: info['发布日期'] || '',
-                            });
-                        });
-
-                        nextUrl = null;
-                        const links = doc.querySelectorAll('a');
-                        for (const a of links) {
-                            if (a.textContent.trim() === '下一页' && a.href) {
-                                nextUrl = a.href;
-                                page++;
-                                break;
-                            }
-                        }
+                    for (let p = 2; p <= totalPages; p++) {
+                        const pageUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}&pageNum=${p}`;
+                        const pageResp = await fetchWithRetry(proxyFn(pageUrl), 1);
+                        const pageBuf = await pageResp.arrayBuffer();
+                        const pageHtml = new TextDecoder('gbk').decode(pageBuf);
+                        allResults.push(...parseResults(pageHtml, keyword));
                     }
                     return allResults;
                 } catch (e) {
