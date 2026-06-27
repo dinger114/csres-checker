@@ -95,6 +95,7 @@
             url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
             url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
         ];
+        const STD_SEARCH_URL = 'https://std.samr.gov.cn/search/std?q=';
         const BASE_URL = 'http://www.csres.com/s.jsp';
         let lastResults = [];
 
@@ -231,14 +232,27 @@
                 KEYS.forEach(key => {
                     const td = document.createElement('td');
                     td.className = 'clickable';
-                    td.title = '点击复制';
                     const val = r[key] || '';
                     if (key === 'status') {
                         td.innerHTML = `<span class="status ${statusClass}">${val}</span>`;
+                        td.title = '点击复制';
+                        td.addEventListener('click', () => copyCell(td, val));
+                    } else if (key === 'standard_number') {
+                        const a = document.createElement('a');
+                        a.href = STD_SEARCH_URL + encodeURIComponent(val);
+                        a.target = '_blank';
+                        a.textContent = val;
+                        a.style.color = '#1a73e8';
+                        a.style.textDecoration = 'none';
+                        a.addEventListener('click', e => e.stopPropagation());
+                        td.appendChild(a);
+                        td.title = '点击查看国标详情，右键复制';
+                        td.addEventListener('click', () => copyCell(td, val));
                     } else {
                         td.textContent = val;
+                        td.title = '点击复制';
+                        td.addEventListener('click', () => copyCell(td, val));
                     }
-                    td.addEventListener('click', () => copyCell(td, val));
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
