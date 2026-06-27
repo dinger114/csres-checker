@@ -156,7 +156,8 @@
             const url = PROXY + encodeURIComponent(`${BASE_URL}?keyword=${keyword}`);
             const resp = await fetch(url);
             if (!resp.ok) throw new Error(`请求失败: ${keyword}`);
-            const html = await resp.text();
+            const buf = await resp.arrayBuffer();
+            const html = new TextDecoder('gbk').decode(buf);
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const results = [];
