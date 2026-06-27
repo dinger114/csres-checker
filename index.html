@@ -24,11 +24,6 @@
         .results-section { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
         .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
         .results-count { color: #666; font-size: 14px; }
-        .filter-bar { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-        .filter-bar label { margin-bottom: 0; font-size: 13px; color: #666; }
-        .filter-bar select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background: #fff; }
-        .filter-bar input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; width: 200px; }
-        .filter-bar input:focus, .filter-bar select:focus { outline: none; border-color: #1a73e8; }
         .table-wrapper { overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; min-width: 900px; }
         th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; border-right: 1px solid #e0e0e0; white-space: nowrap; }
@@ -37,6 +32,9 @@
         th .resize { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; background: transparent; }
         th .resize:hover { background: #1a73e8; }
         td.col-num { text-align: center; color: #999; font-size: 13px; width: 50px; }
+        td.clickable { cursor: pointer; transition: background 0.15s; }
+        td.clickable:hover { background: #e8f0fe !important; }
+        td.copied { background: #d4edda !important; }
         tbody tr:nth-child(odd) { background: #fff; }
         tbody tr:nth-child(even) { background: #f7f9fc; }
         tbody tr:hover { background: #eef3fb; }
@@ -62,7 +60,7 @@
         <div class="input-section">
             <label for="keywords">请输入标准编号（每行一个）</label>
             <textarea id="keywords" placeholder="例如：&#10;50222&#10;50010&#10;50311"></textarea>
-            <p class="hint">支持 GB、行业标准等编号，每行一个</p>
+            <p class="hint">支持 GB、行业标准等编号，每行一个。点击表格单元格可复制内容。</p>
             <div class="btn-group">
                 <button id="queryBtn" class="btn-primary" onclick="query()">开始查询</button>
                 <button id="copyBtn" class="btn-secondary" onclick="copyMarkdown()" disabled>复制 Markdown</button>
@@ -74,13 +72,6 @@
             <div class="results-header">
                 <h2>查询结果</h2>
                 <span class="results-count" id="count"></span>
-            </div>
-            <div class="filter-bar">
-                <label>筛选列：</label>
-                <select id="filterCol" onchange="updateFilterInput()">
-                    <option value="">全部</option>
-                </select>
-                <input type="text" id="filterInput" placeholder="在所有列中搜索..." oninput="applyFilter()">
             </div>
             <div class="table-wrapper">
                 <table id="resultTable">
@@ -106,7 +97,6 @@
         ];
         const BASE_URL = 'http://www.csres.com/s.jsp';
         let lastResults = [];
-        let filteredResults = [];
 
         function initTable() {
             const thead = document.getElementById('thead');
@@ -117,9 +107,6 @@
             thNum.style.textAlign = 'center';
             thead.appendChild(thNum);
 
-            const filterCol = document.getElementById('filterCol');
-            filterCol.innerHTML = '<option value="">全部</option>';
-
             COLUMNS.forEach((col, i) => {
                 const th = document.createElement('th');
                 th.textContent = col;
@@ -129,11 +116,6 @@
                 handle.addEventListener('mousedown', e => startResize(e, th));
                 th.appendChild(handle);
                 thead.appendChild(th);
-
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.textContent = col;
-                filterCol.appendChild(opt);
             });
         }
 
@@ -213,6 +195,25 @@
             throw lastError || new Error('查询失败');
         }
 
+        function copyCell(td, text) {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                td.classList.add('copied');
+                showToast('已复制: ' + (text.length > 30 ? text.substring(0, 30) + '...' : text));
+                setTimeout(() => td.classList.remove('copied'), 800);
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                td.classList.add('copied');
+                showToast('已复制');
+                setTimeout(() => td.classList.remove('copied'), 800);
+            });
+        }
+
         function renderTable(results) {
             const tbody = document.getElementById('tbody');
             tbody.innerHTML = '';
@@ -229,47 +230,19 @@
 
                 KEYS.forEach(key => {
                     const td = document.createElement('td');
+                    td.className = 'clickable';
+                    td.title = '点击复制';
+                    const val = r[key] || '';
                     if (key === 'status') {
-                        td.innerHTML = `<span class="status ${statusClass}">${r[key]}</span>`;
+                        td.innerHTML = `<span class="status ${statusClass}">${val}</span>`;
                     } else {
-                        td.textContent = r[key];
+                        td.textContent = val;
                     }
+                    td.addEventListener('click', () => copyCell(td, val));
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             });
-        }
-
-        function applyFilter() {
-            const colIdx = document.getElementById('filterCol').value;
-            const keyword = document.getElementById('filterInput').value.trim().toLowerCase();
-
-            if (!keyword) {
-                filteredResults = [...lastResults];
-            } else if (colIdx === '') {
-                filteredResults = lastResults.filter(r =>
-                    KEYS.some(k => (r[k] || '').toLowerCase().includes(keyword))
-                );
-            } else {
-                const key = KEYS[parseInt(colIdx)];
-                filteredResults = lastResults.filter(r =>
-                    (r[key] || '').toLowerCase().includes(keyword)
-                );
-            }
-            document.getElementById('count').textContent = `共 ${filteredResults.length} 条结果`;
-            renderTable(filteredResults);
-        }
-
-        function updateFilterInput() {
-            const colIdx = document.getElementById('filterCol').value;
-            const input = document.getElementById('filterInput');
-            if (colIdx === '') {
-                input.placeholder = '在所有列中搜索...';
-            } else {
-                input.placeholder = `在「${COLUMNS[parseInt(colIdx)]}」中筛选...`;
-            }
-            input.value = '';
-            applyFilter();
         }
 
         async function query() {
@@ -307,10 +280,7 @@
                 }
             }
 
-            filteredResults = [...lastResults];
             count.textContent = `共 ${lastResults.length} 条结果`;
-            document.getElementById('filterInput').value = '';
-            document.getElementById('filterCol').value = '';
             renderTable(lastResults);
             loading.style.display = 'none';
             copyBtn.disabled = false;
@@ -319,12 +289,11 @@
         }
 
         function copyMarkdown() {
-            const results = filteredResults.length ? filteredResults : lastResults;
-            if (!results.length) return;
+            if (!lastResults.length) return;
 
             let md = '| 序号 | ' + COLUMNS.join(' | ') + ' |\n';
             md += '| --- | ' + COLUMNS.map(() => '---').join(' | ') + ' |\n';
-            results.forEach((r, i) => {
+            lastResults.forEach((r, i) => {
                 md += '| ' + (i + 1) + ' | ' + KEYS.map(k => r[k] || '').join(' | ') + ' |\n';
             });
 
