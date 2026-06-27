@@ -153,47 +153,63 @@
         }
 
         async function queryStandard(keyword) {
-            const targetUrl = `${BASE_URL}?keyword=${keyword}`;
+            let allResults = [];
             let lastError;
+            let page = 1;
 
             for (const proxyFn of PROXIES) {
                 try {
-                    const url = proxyFn(targetUrl);
-                    const resp = await fetchWithRetry(url, 1);
-                    const buf = await resp.arrayBuffer();
-                    const html = new TextDecoder('gbk').decode(buf);
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const results = [];
+                    allResults = [];
+                    page = 1;
+                    let nextUrl = `${BASE_URL}?keyword=${keyword}`;
 
-                    doc.querySelectorAll('tr[bgcolor="#FFFFFF"]').forEach(tr => {
-                        const tds = tr.querySelectorAll('td');
-                        if (tds.length < 5) return;
+                    while (nextUrl) {
+                        const url = proxyFn(nextUrl);
+                        const resp = await fetchWithRetry(url, 1);
+                        const buf = await resp.arrayBuffer();
+                        const html = new TextDecoder('gbk').decode(buf);
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
 
-                        const titleAttr = tr.getAttribute('title') || '';
-                        const info = {};
-                        titleAttr.split('\n').forEach(line => {
-                            if (line.includes('：')) {
-                                const [k, ...v] = line.split('：');
-                                info[k.trim()] = v.join('：').trim();
+                        doc.querySelectorAll('tr[bgcolor="#FFFFFF"]').forEach(tr => {
+                            const tds = tr.querySelectorAll('td');
+                            if (tds.length < 5) return;
+
+                            const titleAttr = tr.getAttribute('title') || '';
+                            const info = {};
+                            titleAttr.split('\n').forEach(line => {
+                                if (line.includes('：')) {
+                                    const [k, ...v] = line.split('：');
+                                    info[k.trim()] = v.join('：').trim();
+                                }
+                            });
+
+                            allResults.push({
+                                query: keyword,
+                                standard_number: tds[0].textContent.trim().replace(/^\s/, ''),
+                                title: tds[1].textContent.trim().replace(/^\s/, ''),
+                                status: tds[4].textContent.trim().replace(/^\s/, ''),
+                                publisher: info['发布部门'] || '',
+                                publish_date: info['发布日期'] || '',
+                            });
+                        });
+
+                        nextUrl = null;
+                        const links = doc.querySelectorAll('a');
+                        for (const a of links) {
+                            if (a.textContent.trim() === '下一页' && a.href) {
+                                nextUrl = a.href;
+                                page++;
+                                break;
                             }
-                        });
-
-                        results.push({
-                            query: keyword,
-                            standard_number: tds[0].textContent.trim().replace(/^\s/, ''),
-                            title: tds[1].textContent.trim().replace(/^\s/, ''),
-                            status: tds[4].textContent.trim().replace(/^\s/, ''),
-                            publisher: info['发布部门'] || '',
-                            publish_date: info['发布日期'] || '',
-                        });
-                    });
-                    if (results.length > 0) return results;
+                        }
+                    }
+                    return allResults;
                 } catch (e) {
                     lastError = e;
                 }
             }
-            throw lastError || new Error('查询失败');
+            return allResults;
         }
 
         function copyCell(td, text) {
@@ -284,20 +300,25 @@
             copyBtn.disabled = true;
 
             lastResults = [];
+            let emptyKeywords = [];
             for (let i = 0; i < keywords.length; i++) {
                 loading.textContent = `查询中 (${i + 1}/${keywords.length})...`;
-                try {
-                    const r = await queryStandard(keywords[i]);
-                    lastResults.push(...r);
-                } catch (e) {
-                    console.error(e);
+                const r = await queryStandard(keywords[i]);
+                if (r.length === 0) {
+                    emptyKeywords.push(keywords[i]);
                 }
+                lastResults.push(...r);
             }
 
             count.textContent = `共 ${lastResults.length} 条结果`;
+            if (lastResults.length === 0) {
+                document.getElementById('tbody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#999;padding:30px;">未找到任何标准信息</td></tr>`;
+            } else if (emptyKeywords.length > 0) {
+                showToast(`以下编号无结果: ${emptyKeywords.join(', ')}`);
+            }
             renderTable(lastResults);
             loading.style.display = 'none';
-            copyBtn.disabled = false;
+            copyBtn.disabled = lastResults.length === 0;
             btn.disabled = false;
             btn.textContent = '开始查询';
         }
