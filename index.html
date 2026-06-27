@@ -99,7 +99,11 @@
     <script>
         const COLUMNS = ['查询编号', '标准编号', '规范名称', '实施状态', '发布日期', '发布部门'];
         const KEYS = ['query', 'standard_number', 'title', 'status', 'publish_date', 'publisher'];
-        const PROXY = 'https://api.allorigins.win/raw?url=';
+        const PROXIES = [
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+            url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+        ];
         const BASE_URL = 'http://www.csres.com/s.jsp';
         let lastResults = [];
         let filteredResults = [];
@@ -152,39 +156,61 @@
             document.removeEventListener('mouseup', stopResize);
         }
 
+        async function fetchWithRetry(url, retries = 2) {
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const resp = await fetch(url);
+                    if (resp.ok) return resp;
+                } catch (e) {
+                    if (i === retries) throw e;
+                }
+                await new Promise(r => setTimeout(r, 500));
+            }
+            throw new Error('所有代理请求失败');
+        }
+
         async function queryStandard(keyword) {
-            const url = PROXY + encodeURIComponent(`${BASE_URL}?keyword=${keyword}`);
-            const resp = await fetch(url);
-            if (!resp.ok) throw new Error(`请求失败: ${keyword}`);
-            const buf = await resp.arrayBuffer();
-            const html = new TextDecoder('gbk').decode(buf);
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const results = [];
+            const targetUrl = `${BASE_URL}?keyword=${keyword}`;
+            let lastError;
 
-            doc.querySelectorAll('tr[bgcolor="#FFFFFF"]').forEach(tr => {
-                const tds = tr.querySelectorAll('td');
-                if (tds.length < 5) return;
+            for (const proxyFn of PROXIES) {
+                try {
+                    const url = proxyFn(targetUrl);
+                    const resp = await fetchWithRetry(url, 1);
+                    const buf = await resp.arrayBuffer();
+                    const html = new TextDecoder('gbk').decode(buf);
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const results = [];
 
-                const titleAttr = tr.getAttribute('title') || '';
-                const info = {};
-                titleAttr.split('\n').forEach(line => {
-                    if (line.includes('：')) {
-                        const [k, ...v] = line.split('：');
-                        info[k.trim()] = v.join('：').trim();
-                    }
-                });
+                    doc.querySelectorAll('tr[bgcolor="#FFFFFF"]').forEach(tr => {
+                        const tds = tr.querySelectorAll('td');
+                        if (tds.length < 5) return;
 
-                results.push({
-                    query: keyword,
-                    standard_number: tds[0].textContent.trim().replace(/^\s/, ''),
-                    title: tds[1].textContent.trim().replace(/^\s/, ''),
-                    status: tds[4].textContent.trim().replace(/^\s/, ''),
-                    publisher: info['发布部门'] || '',
-                    publish_date: info['发布日期'] || '',
-                });
-            });
-            return results;
+                        const titleAttr = tr.getAttribute('title') || '';
+                        const info = {};
+                        titleAttr.split('\n').forEach(line => {
+                            if (line.includes('：')) {
+                                const [k, ...v] = line.split('：');
+                                info[k.trim()] = v.join('：').trim();
+                            }
+                        });
+
+                        results.push({
+                            query: keyword,
+                            standard_number: tds[0].textContent.trim().replace(/^\s/, ''),
+                            title: tds[1].textContent.trim().replace(/^\s/, ''),
+                            status: tds[4].textContent.trim().replace(/^\s/, ''),
+                            publisher: info['发布部门'] || '',
+                            publish_date: info['发布日期'] || '',
+                        });
+                    });
+                    if (results.length > 0) return results;
+                } catch (e) {
+                    lastError = e;
+                }
+            }
+            throw lastError || new Error('查询失败');
         }
 
         function renderTable(results) {
