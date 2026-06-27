@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>标准查新工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin: 30px 0; color: #1a73e8; }
+        .input-section { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        label { display: block; margin-bottom: 8px; font-weight: 500; }
+        textarea { width: 100%; height: 150px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; resize: vertical; font-family: inherit; }
+        textarea:focus { outline: none; border-color: #1a73e8; }
+        .hint { color: #666; font-size: 13px; margin-top: 6px; }
+        button { display: inline-block; margin-top: 16px; padding: 12px 32px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #1557b0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .results-section { background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none; }
+        .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .results-count { color: #666; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 500; color: #555; }
+        tr:hover { background: #f8f9fa; }
+        .status { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 13px; font-weight: 500; }
+        .status-active { background: #e6f4ea; color: #1e7e34; }
+        .status-deprecated { background: #fce8e6; color: #d93025; }
+        .status-upcoming { background: #e8f0fe; color: #1967d2; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .error { background: #fce8e6; color: #d93025; padding: 12px; border-radius: 6px; margin-top: 12px; display: none; }
+        @media (max-width: 768px) {
+            .container { padding: 12px; }
+            table { font-size: 13px; }
+            th, td { padding: 8px 6px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>标准查新工具</h1>
+
+        <div class="input-section">
+            <label for="keywords">请输入标准编号（每行一个）</label>
+            <textarea id="keywords" placeholder="例如：&#10;50222&#10;50010&#10;50311"></textarea>
+            <p class="hint">支持 GB、行业标准等编号，每行一个</p>
+            <button id="queryBtn" onclick="query()">开始查询</button>
+            <div class="error" id="error"></div>
+        </div>
+
+        <div class="results-section" id="results">
+            <div class="results-header">
+                <h2>查询结果</h2>
+                <span class="results-count" id="count"></span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>查询编号</th>
+                        <th>标准编号</th>
+                        <th>规范名称</th>
+                        <th>实施状态</th>
+                        <th>发布日期</th>
+                        <th>发布部门</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+            </table>
+            <div class="loading" id="loading" style="display:none;">查询中，请稍候...</div>
+        </div>
+    </div>
+
+    <script>
+        async function query() {
+            const keywords = document.getElementById('keywords').value.trim();
+            const btn = document.getElementById('queryBtn');
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+            const tbody = document.getElementById('tbody');
+            const loading = document.getElementById('loading');
+            const count = document.getElementById('count');
+
+            error.style.display = 'none';
+            if (!keywords) {
+                error.textContent = '请输入标准编号';
+                error.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '查询中...';
+            results.style.display = 'block';
+            loading.style.display = 'block';
+            tbody.innerHTML = '';
+
+            try {
+                const resp = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keywords })
+                });
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    error.textContent = data.error || '查询失败';
+                    error.style.display = 'block';
+                    loading.style.display = 'none';
+                    return;
+                }
+
+                count.textContent = `共 ${data.total} 条结果`;
+                data.results.forEach(r => {
+                    let statusClass = 'status-active';
+                    if (r.status === '作废' || r.status === '废止') statusClass = 'status-deprecated';
+                    else if (r.status === '即将实施') statusClass = 'status-upcoming';
+
+                    tbody.innerHTML += `<tr>
+                        <td>${r.query}</td>
+                        <td>${r.standard_number}</td>
+                        <td>${r.title}</td>
+                        <td><span class="status ${statusClass}">${r.status}</span></td>
+                        <td>${r.publish_date}</td>
+                        <td>${r.publisher}</td>
+                    </tr>`;
+                });
+                loading.style.display = 'none';
+            } catch (e) {
+                error.textContent = '请求失败: ' + e.message;
+                error.style.display = 'block';
+                loading.style.display = 'none';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '开始查询';
+            }
+        }
+    </script>
+</body>
+</html>
