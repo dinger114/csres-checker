@@ -184,7 +184,9 @@
 
         function getTotalFromHtml(html) {
             const match = html.match(/共[找到有]*?(\d+)条/);
-            return match ? parseInt(match[1]) : 0;
+            const total = match ? parseInt(match[1]) : 0;
+            console.log('[getTotalFromHtml] match:', match, 'total:', total);
+            return total;
         }
 
         async function queryStandard(keyword) {
@@ -195,7 +197,9 @@
                 try {
                     allResults = [];
                     const firstUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}`;
-                    const resp = await fetchWithRetry(proxyFn(firstUrl), 1);
+                    const proxyUrl = proxyFn(firstUrl);
+                    console.log('[queryStandard] page 1 url:', proxyUrl);
+                    const resp = await fetchWithRetry(proxyUrl, 1);
                     const buf = await resp.arrayBuffer();
                     const html = new TextDecoder('gbk').decode(buf);
 
@@ -203,16 +207,23 @@
                     const total = getTotalFromHtml(html);
                     const pageSize = allResults.length;
                     const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
+                    console.log('[queryStandard] page1 results:', pageSize, 'total:', total, 'totalPages:', totalPages);
 
                     for (let p = 2; p <= totalPages; p++) {
                         const pageUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}&pageNum=${p}`;
-                        const pageResp = await fetchWithRetry(proxyFn(pageUrl), 1);
+                        const ppUrl = proxyFn(pageUrl);
+                        console.log('[queryStandard] fetching page', p, ppUrl);
+                        const pageResp = await fetchWithRetry(ppUrl, 1);
                         const pageBuf = await pageResp.arrayBuffer();
                         const pageHtml = new TextDecoder('gbk').decode(pageBuf);
-                        allResults.push(...parseResults(pageHtml, keyword));
+                        const pageResults = parseResults(pageHtml, keyword);
+                        console.log('[queryStandard] page', p, 'results:', pageResults.length);
+                        allResults.push(...pageResults);
                     }
+                    console.log('[queryStandard] total results:', allResults.length);
                     return allResults;
                 } catch (e) {
+                    console.error('[queryStandard] error:', e);
                     lastError = e;
                 }
             }
