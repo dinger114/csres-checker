@@ -183,7 +183,7 @@
         }
 
         function getTotalFromHtml(html) {
-            const match = html.match(/共\s*(\d+)\s*条/);
+            const match = html.match(/共[找到有]*?(\d+)条/);
             return match ? parseInt(match[1]) : 0;
         }
 
