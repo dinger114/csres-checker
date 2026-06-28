@@ -90,14 +90,16 @@
     <script>
         const COLUMNS = ['查询编号', '标准编号', '规范名称', '实施状态', '发布日期', '发布部门'];
         const KEYS = ['query', 'standard_number', 'title', 'status', 'publish_date', 'publisher'];
-        const PROXIES = [
-            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-            url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-            url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-        ];
         const STD_SEARCH_URL = 'https://std.samr.gov.cn/search/std?q=';
         const BASE_URL = 'http://www.csres.com/s.jsp';
         let lastResults = [];
+
+        async function fetchPage(url) {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const resp = await fetchWithRetry(proxyUrl, 2);
+            const buf = await resp.arrayBuffer();
+            return new TextDecoder('gbk').decode(buf);
+        }
 
         function initTable() {
             const thead = document.getElementById('thead');
@@ -184,48 +186,31 @@
 
         function getTotalFromHtml(html) {
             const match = html.match(/共[找到有]*?(\d+)条/);
-            const total = match ? parseInt(match[1]) : 0;
-            console.log('[getTotalFromHtml] match:', match, 'total:', total);
-            return total;
+            return match ? parseInt(match[1]) : 0;
         }
 
         async function queryStandard(keyword) {
             let allResults = [];
-            let lastError;
+            try {
+                const firstUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}`;
+                const html = await fetchPage(firstUrl);
 
-            for (const proxyFn of PROXIES) {
-                try {
-                    allResults = [];
-                    const firstUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}`;
-                    const proxyUrl = proxyFn(firstUrl);
-                    console.log('[queryStandard] page 1 url:', proxyUrl);
-                    const resp = await fetchWithRetry(proxyUrl, 1);
-                    const buf = await resp.arrayBuffer();
-                    const html = new TextDecoder('gbk').decode(buf);
+                allResults = parseResults(html, keyword);
+                const total = getTotalFromHtml(html);
+                const pageSize = allResults.length;
+                const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
-                    allResults = parseResults(html, keyword);
-                    const total = getTotalFromHtml(html);
-                    const pageSize = allResults.length;
-                    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
-                    console.log('[queryStandard] page1 results:', pageSize, 'total:', total, 'totalPages:', totalPages);
-
-                    for (let p = 2; p <= totalPages; p++) {
-                        const pageUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}&pageNum=${p}`;
-                        const ppUrl = proxyFn(pageUrl);
-                        console.log('[queryStandard] fetching page', p, ppUrl);
-                        const pageResp = await fetchWithRetry(ppUrl, 1);
-                        const pageBuf = await pageResp.arrayBuffer();
-                        const pageHtml = new TextDecoder('gbk').decode(pageBuf);
-                        const pageResults = parseResults(pageHtml, keyword);
-                        console.log('[queryStandard] page', p, 'results:', pageResults.length);
-                        allResults.push(...pageResults);
+                for (let p = 2; p <= totalPages; p++) {
+                    const pageUrl = `${BASE_URL}?keyword=${encodeURIComponent(keyword)}&pageNum=${p}`;
+                    try {
+                        const pageHtml = await fetchPage(pageUrl);
+                        allResults.push(...parseResults(pageHtml, keyword));
+                    } catch (e) {
+                        console.error('Page', p, 'failed:', e);
                     }
-                    console.log('[queryStandard] total results:', allResults.length);
-                    return allResults;
-                } catch (e) {
-                    console.error('[queryStandard] error:', e);
-                    lastError = e;
                 }
+            } catch (e) {
+                console.error('Query failed:', e);
             }
             return allResults;
         }
