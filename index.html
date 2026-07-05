@@ -906,7 +906,7 @@
             }
             turnstile.render('#turnstileWidget', {
                 sitekey: TURNSTILE_SITE_KEY,
-                callback: function(token) { turnstileToken = token; turnstilePending = false; query(); },
+                callback: function(token) { turnstileToken = token; turnstilePending = false; document.getElementById('turnstileWidget').style.display = 'none'; query(); },
                 'error-callback': function() { turnstileToken = ''; turnstilePending = false; },
                 'expired-callback': function() { turnstileToken = ''; },
                 appearance: 'interaction-only',
