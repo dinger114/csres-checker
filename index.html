@@ -632,9 +632,11 @@
                     .filter(r => {
                         const stdNorm = normalizeStdNo(r.a100 || '');
                         if (queryNorm.includes(stdNorm) || stdNorm.includes(queryNorm)) return true;
+                        const qPrefix = (queryNorm.match(/^[a-z\/]+/i) || [''])[0];
+                        const sPrefix = (stdNorm.match(/^[a-z\/]+/i) || [''])[0];
                         const qNum = queryNorm.replace(/^[a-z\/]+/i, '');
                         const sNum = stdNorm.replace(/^[a-z\/]+/i, '');
-                        if (qNum && sNum && qNum === sNum) return true;
+                        if (qNum && sNum && qNum === sNum && qPrefix.slice(0, 2) === sPrefix.slice(0, 2)) return true;
                         return false;
                     });
                 const currentMap = {};
