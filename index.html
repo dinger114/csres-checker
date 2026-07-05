@@ -873,6 +873,7 @@
             btn.textContent = '[ RUN ]';
             document.getElementById('copyBtn').disabled = lastResults.length === 0;
             turnstileToken = '';
+            document.getElementById('turnstileWidget').style.display = '';
         }
 
         function copyMarkdown() {
@@ -907,8 +908,8 @@
             turnstile.render('#turnstileWidget', {
                 sitekey: TURNSTILE_SITE_KEY,
                 callback: function(token) { turnstileToken = token; turnstilePending = false; document.getElementById('turnstileWidget').style.display = 'none'; query(); },
-                'error-callback': function() { turnstileToken = ''; turnstilePending = false; },
-                'expired-callback': function() { turnstileToken = ''; },
+                'error-callback': function() { turnstileToken = ''; turnstilePending = false; document.getElementById('turnstileWidget').style.display = ''; },
+                'expired-callback': function() { turnstileToken = ''; document.getElementById('turnstileWidget').style.display = ''; },
                 appearance: 'interaction-only',
                 execution: 'execute',
             });
