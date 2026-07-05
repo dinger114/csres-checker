@@ -127,8 +127,19 @@ def query_cssn(keyword: str) -> list[dict]:
     return results
 
 
+def _normalize_keyword(kw: str) -> str:
+    import re
+    s = " ".join(kw.split()).strip()
+    s = s.replace("—", "-").replace("－", "-")
+    s = re.sub(r"GBT(\d)", r"GB/T \1", s, flags=re.IGNORECASE)
+    s = re.sub(r"GB/TB(\d)", r"GB/T \1", s, flags=re.IGNORECASE)
+    s = re.sub(r"^GB/(\d)", r"GB \1", s, flags=re.IGNORECASE)
+    return s
+
+
 def query_standard(keyword: str) -> list[dict]:
     """查询单个标准编号：先 cssn.net.cn，再工标库"""
+    keyword = _normalize_keyword(keyword)
     results = query_cssn(keyword)
     if not results:
         results = query_gongbiaoku(keyword)
