@@ -676,11 +676,12 @@
                 const resp = await raceQuery(url);
                 const data = JSON.parse(resp);
                 addLog(`cssn response: ${data.results?.length || 0} results, ${Date.now() - t0}ms`, '');
+                const allResults = data.results || [];
                 const queryNorm = normalizeStdNo(keyword);
-                const filtered = (data.results || [])
+                const filtered = allResults
                     .filter(r => normalizeStdNo(r.a100 || '').includes(queryNorm) || queryNorm.includes(normalizeStdNo(r.a100 || '')));
                 const currentMap = {};
-                filtered.forEach(r => {
+                allResults.forEach(r => {
                     if (r.a000 === '现行') {
                         const base = stdBase(r.a100);
                         if (base) currentMap[base] = r.a100;
