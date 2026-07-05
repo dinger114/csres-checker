@@ -633,7 +633,7 @@
                     status: r.a000 || '',
                     publish_date: r.a101 || '',
                     implement_date: r.a205 || '',
-                    replaced_by: (r.a000 === '被代替' ? currentMap[stdBase(r.a100)] : '') || '',
+                    replaced_by: (['被代替', '作废', '废止'].includes(r.a000) ? currentMap[stdBase(r.a100)] : '') || '',
                 }));
             } catch (e) {
                 addLog(`cssn error: ${e.message}`, 'error');
