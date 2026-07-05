@@ -66,6 +66,10 @@ def query_gongbiaoku(keyword: str) -> list[dict]:
     return results
 
 
+def _normalize_std_no(s: str) -> str:
+    return s.replace(" ", "").replace("－", "-").lower()
+
+
 def query_cssn(keyword: str) -> list[dict]:
     """从 cssn.net.cn 查询标准"""
     try:
@@ -81,11 +85,16 @@ def query_cssn(keyword: str) -> list[dict]:
         print(f"[错误] cssn 解析失败: {keyword} - {e}", file=sys.stderr)
         return []
 
+    query_norm = _normalize_std_no(keyword)
     results = []
     for r in data.get("results", []):
+        std_no = r.get("a100", "")
+        std_norm = _normalize_std_no(std_no)
+        if query_norm not in std_norm and std_norm not in query_norm:
+            continue
         results.append({
             "query": keyword,
-            "standard_number": r.get("a100", ""),
+            "standard_number": std_no,
             "title": r.get("a298", ""),
             "status": r.get("a000", ""),
             "publisher": "",

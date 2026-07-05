@@ -659,6 +659,10 @@
             return results;
         }
 
+        function normalizeStdNo(s) {
+            return (s || '').replace(/\s+/g, '').replace(/－/g, '-').toLowerCase();
+        }
+
         async function queryCssn(keyword) {
             const t0 = Date.now();
             const url = `https://www.cssn.net.cn/api/standards/?keyword=${encodeURIComponent(keyword)}`;
@@ -667,14 +671,17 @@
                 const resp = await raceQuery(url);
                 const data = JSON.parse(resp);
                 addLog(`cssn response: ${data.results?.length || 0} results, ${Date.now() - t0}ms`, '');
-                return (data.results || []).map(r => ({
-                    query: keyword,
-                    standard_number: r.a100 || '',
-                    title: r.a298 || '',
-                    status: r.a000 || '',
-                    publish_date: r.a101 || '',
-                    implement_date: r.a205 || '',
-                }));
+                const queryNorm = normalizeStdNo(keyword);
+                return (data.results || [])
+                    .filter(r => normalizeStdNo(r.a100 || '').includes(queryNorm) || queryNorm.includes(normalizeStdNo(r.a100 || '')))
+                    .map(r => ({
+                        query: keyword,
+                        standard_number: r.a100 || '',
+                        title: r.a298 || '',
+                        status: r.a000 || '',
+                        publish_date: r.a101 || '',
+                        implement_date: r.a205 || '',
+                    }));
             } catch (e) {
                 addLog(`cssn error: ${e.message}`, 'error');
                 return [];
