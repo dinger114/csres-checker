@@ -12,4 +12,5 @@ venv/
 results.json
 query_count.json
 *.local
+.codebuddy/
 .DS_Store
