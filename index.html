@@ -357,7 +357,7 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        const COLUMNS = ['QUERY', 'STD NO', 'TITLE', 'STATUS', 'PUBLISHED', 'IMPLEMENTED', 'DOC88', 'SOUJZ', 'WANFANG'];
+        const COLUMNS = ['QUERY', 'STD NO', 'TITLE', 'STATUS', 'PUBLISHED', 'IMPLEMENTED', 'DOC88', 'SOUJZ'];
         const KEYS = ['query', 'standard_number', 'title', 'status', 'publish_date', 'implement_date'];
         const BASE_URL = 'https://www.gongbiaoku.com/search/advance/result';
         const PROXY_LIST = [
@@ -598,6 +598,28 @@
             return results;
         }
 
+        async function queryCssn(keyword) {
+            const t0 = Date.now();
+            const url = `https://www.cssn.net.cn/api/standards/?keyword=${encodeURIComponent(keyword)}`;
+            addLog(`cssn: "${keyword}"`, 'info');
+            try {
+                const resp = await raceQuery(url);
+                const data = JSON.parse(resp);
+                addLog(`cssn response: ${data.results?.length || 0} results, ${Date.now() - t0}ms`, '');
+                return (data.results || []).map(r => ({
+                    query: keyword,
+                    standard_number: r.a100 || '',
+                    title: r.a298 || '',
+                    status: r.a000 || '',
+                    publish_date: r.a101 || '',
+                    implement_date: r.a205 || '',
+                }));
+            } catch (e) {
+                addLog(`cssn error: ${e.message}`, 'error');
+                return [];
+            }
+        }
+
         function renderTable(results) {
             const tbody = document.getElementById('tbody');
             tbody.innerHTML = '';
@@ -608,7 +630,6 @@
                 const stdNo = r.standard_number || '';
                 const doc88Url = `https://www.doc88.com/tag/${encodeURIComponent(stdNo)}`;
                 const sjzUrl = `https://www.soujianzhu.cn/Search/SouGuifan.aspx?skey=${encodeURIComponent(stdNo.toLowerCase())}`;
-                const wfUrl = `https://s.wanfangdata.com.cn/standard?q=${encodeURIComponent(stdNo)}`;
                 const tr = document.createElement('tr');
 
                 const numTd = document.createElement('td');
@@ -638,7 +659,7 @@
                     tr.appendChild(td);
                 });
 
-                [{ url: doc88Url, text: '道客巴巴' }, { url: sjzUrl, text: '搜建筑' }, { url: wfUrl, text: '万方' }].forEach(link => {
+                [{ url: doc88Url, text: '道客巴巴' }, { url: sjzUrl, text: '搜建筑' }].forEach(link => {
                     const td = document.createElement('td');
                     const a = document.createElement('a');
                     a.href = link.url;
@@ -757,14 +778,15 @@
             const totalQueries = await incQueryCount();
             document.getElementById('statQueries').textContent = totalQueries;
             addLog(`═══ START: ${keywords.length} items ═══`, 'highlight');
-            addLog(`phase1: gongbiaoku.com (parallel)`, '');
-            addLog(`phase2: csres.com fallback (parallel)`, '');
+            addLog(`phase1: cssn.net.cn (parallel)`, '');
+            addLog(`phase2: gongbiaoku.com fallback (parallel)`, '');
+            addLog(`phase3: csres.com fallback (parallel)`, '');
             addLog(`────────────────────────────────`, '');
             const t0 = Date.now();
             lastResults = [];
             let emptyKeywords = [];
 
-            // Phase 1: parallel gongbiaoku
+            // Phase 1: parallel cssn
             const batchSize = 4;
             for (let i = 0; i < keywords.length; i += batchSize) {
                 const batch = keywords.slice(i, i + batchSize);
@@ -772,7 +794,7 @@
                 document.getElementById('progressFill').style.width = pct + '%';
                 document.getElementById('progressPct').textContent = pct + '%';
                 document.getElementById('progressText').textContent = `[${Math.min(i + batchSize, keywords.length)}/${keywords.length}]`;
-                const results = await Promise.allSettled(batch.map(kw => queryGongbiaoku(kw)));
+                const results = await Promise.allSettled(batch.map(kw => queryCssn(kw)));
                 results.forEach((r, idx) => {
                     if (r.status === 'fulfilled' && r.value.length > 0) {
                         lastResults.push(...r.value);
@@ -787,12 +809,35 @@
                 renderTable(lastResults);
             }
 
-            // Phase 2: parallel csres fallback
+            // Phase 2: parallel gongbiaoku fallback
+            let stillEmpty = [];
             if (emptyKeywords.length > 0) {
                 addLog(`────────────────────────────────`, '');
-                addLog(`phase2: csres.com fallback (${emptyKeywords.length} items)`, 'warn');
+                addLog(`phase2: gongbiaoku.com fallback (${emptyKeywords.length} items)`, 'warn');
                 for (let i = 0; i < emptyKeywords.length; i += batchSize) {
                     const batch = emptyKeywords.slice(i, i + batchSize);
+                    const results = await Promise.allSettled(batch.map(kw => queryGongbiaoku(kw)));
+                    results.forEach((r, idx) => {
+                        if (r.status === 'fulfilled' && r.value.length > 0) {
+                            lastResults.push(...r.value);
+                            logCount.ok++;
+                            logCount.empty--;
+                        } else {
+                            stillEmpty.push(batch[idx]);
+                        }
+                        updateStats();
+                    });
+                    document.getElementById('count').innerHTML = `TOTAL: <span>${lastResults.length}</span>`;
+                    renderTable(lastResults);
+                }
+            }
+
+            // Phase 3: parallel csres fallback
+            if (stillEmpty.length > 0) {
+                addLog(`────────────────────────────────`, '');
+                addLog(`phase3: csres.com fallback (${stillEmpty.length} items)`, 'warn');
+                for (let i = 0; i < stillEmpty.length; i += batchSize) {
+                    const batch = stillEmpty.slice(i, i + batchSize);
                     const results = await Promise.allSettled(batch.map(kw => queryCsres(kw)));
                     results.forEach((r, idx) => {
                         if (r.status === 'fulfilled' && r.value.length > 0) {
@@ -830,8 +875,7 @@
                 const stdNo = r.standard_number || '';
                 const doc88 = `[道客巴巴](https://www.doc88.com/tag/${encodeURIComponent(stdNo)})`;
                 const sjz = `[搜建筑](https://www.soujianzhu.cn/Search/SouGuifan.aspx?skey=${encodeURIComponent(stdNo.toLowerCase())})`;
-                const wf = `[万方](https://s.wanfangdata.com.cn/standard?q=${encodeURIComponent(stdNo)})`;
-                md += '| ' + (i + 1) + ' | ' + KEYS.map(k => r[k] || '').join(' | ') + ' | ' + doc88 + ' | ' + sjz + ' | ' + wf + ' |\n';
+                md += '| ' + (i + 1) + ' | ' + KEYS.map(k => r[k] || '').join(' | ') + ' | ' + doc88 + ' | ' + sjz + ' |\n';
             });
             navigator.clipboard.writeText(md).then(() => showToast('markdown copied'));
         }

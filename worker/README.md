@@ -1,6 +1,6 @@
 # Proxy Worker
 
-代理服务，用于跨域请求 gongbiaoku.com 和 csres.com。
+代理服务，用于跨域请求 gongbiaoku.com、cssn.net.cn 和 csres.com。
 
 ## 部署到 Cloudflare Workers
 

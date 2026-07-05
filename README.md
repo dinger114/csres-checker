@@ -1,17 +1,17 @@
 # 标准查新工具 (csres-checker)
 
-批量查询国家标准/行业标准现行状态，数据来源 [工标库](https://www.gongbiaoku.com)（主）+ [csres.com](http://www.csres.com)（备用）。
+批量查询国家标准/行业标准现行状态，数据来源 [cssn.net.cn](https://www.cssn.net.cn)（主）+ [工标库](https://www.gongbiaoku.com)（备用）+ [csres.com](http://www.csres.com)（备用）。
 
 **在线使用：https://csres.yeye.moe**
 
 ## 功能特性
 
 - 支持 GB、行业标准等编号查询（`GB50222` → `GB 50222` 自动格式化）
-- 双数据源：工标库查不到时自动 fallback 到 csres.com
+- 三数据源：cssn.net.cn 查不到时自动 fallback 到工标库，再 fallback 到 csres.com
 - 并行批量查询（4 个一批），实时进度条 + 日志面板
 - Dark / Light 主题切换，跟随系统偏好
 - 废止标准点击查看替代标准编号
-- 外链快捷入口：道客巴巴、搜建筑、万方数据
+- 外链快捷入口：道客巴巴、搜建筑
 - Firebase 全网查询计数
 - 复制 Markdown 表格
 - XSS 防护（DOMPurify）、Worker SSRF 白名单

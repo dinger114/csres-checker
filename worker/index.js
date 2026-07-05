@@ -1,6 +1,8 @@
 const ALLOWED_HOSTS = [
   'gongbiaoku.com',
   'www.gongbiaoku.com',
+  'cssn.net.cn',
+  'www.cssn.net.cn',
   'csres.com',
   'www.csres.com',
 ];

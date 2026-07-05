@@ -12,6 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.gongbiaoku.com/search"
+CSSN_API_URL = "https://www.cssn.net.cn/api/standards/"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -19,8 +20,8 @@ HEADERS = {
 }
 
 
-def query_standard(keyword: str) -> list[dict]:
-    """查询单个标准编号"""
+def query_gongbiaoku(keyword: str) -> list[dict]:
+    """从工标库查询标准"""
     try:
         resp = requests.get(BASE_URL, params={"query": keyword}, headers=HEADERS, timeout=15)
         resp.encoding = "utf-8"
@@ -62,6 +63,46 @@ def query_standard(keyword: str) -> list[dict]:
             "ics": "",
         })
 
+    return results
+
+
+def query_cssn(keyword: str) -> list[dict]:
+    """从 cssn.net.cn 查询标准"""
+    try:
+        resp = requests.get(CSSN_API_URL, params={"keyword": keyword}, headers={
+            **HEADERS,
+            "Accept": "application/json",
+        }, timeout=15)
+        data = resp.json()
+    except requests.RequestException as e:
+        print(f"[错误] cssn 请求失败: {keyword} - {e}", file=sys.stderr)
+        return []
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"[错误] cssn 解析失败: {keyword} - {e}", file=sys.stderr)
+        return []
+
+    results = []
+    for r in data.get("results", []):
+        results.append({
+            "query": keyword,
+            "standard_number": r.get("a100", ""),
+            "title": r.get("a298", ""),
+            "status": r.get("a000", ""),
+            "publisher": "",
+            "publish_date": r.get("a101", ""),
+            "replaced_by": "",
+            "category": "",
+            "ics": "",
+        })
+
+    return results
+
+
+def query_standard(keyword: str) -> list[dict]:
+    """查询单个标准编号：先 cssn.net.cn，再工标库"""
+    results = query_cssn(keyword)
+    if not results:
+        results = query_gongbiaoku(keyword)
     return results
 
 
