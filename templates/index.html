@@ -692,7 +692,11 @@
                 const filtered = allResults
                     .filter(r => {
                         const stdNorm = normalizeStdNo(r.a100 || '');
-                        return queryNorm.includes(stdNorm) || stdNorm.includes(queryNorm);
+                        if (queryNorm.includes(stdNorm) || stdNorm.includes(queryNorm)) return true;
+                        const qNum = queryNorm.replace(/^[a-z\/]+/i, '');
+                        const sNum = stdNorm.replace(/^[a-z\/]+/i, '');
+                        if (qNum && sNum && qNum === sNum) return true;
+                        return false;
                     });
                 const currentMap = {};
                 allResults.forEach(r => {
