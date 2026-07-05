@@ -436,10 +436,11 @@
             let s = kw.replace(/\s+/g, ' ').trim();
             s = s.replace(/—/g, '-').replace(/－/g, '-');
             s = s.replace(/\u2013/g, '-');
-            s = s.replace(/GBT(\d)/i, 'GB/T $1');
-            s = s.replace(/GB\/TB(\d)/i, 'GB/T $1');
+            s = s.replace(/（[^）]*）/g, '');
+            s = s.replace(/\([^)]*\)/g, '');
+            s = s.replace(/([A-Z]+)T(\s*\d)/i, '$1/T$2');
             s = s.replace(/^GB\/(\d)/i, 'GB $1');
-            return s;
+            return s.trim();
         }
 
         function formatKeyword(kw) {

@@ -131,10 +131,11 @@ def _normalize_keyword(kw: str) -> str:
     import re
     s = " ".join(kw.split()).strip()
     s = s.replace("—", "-").replace("－", "-")
-    s = re.sub(r"GBT(\d)", r"GB/T \1", s, flags=re.IGNORECASE)
-    s = re.sub(r"GB/TB(\d)", r"GB/T \1", s, flags=re.IGNORECASE)
+    s = re.sub(r"（[^）]*）", "", s)
+    s = re.sub(r"\([^)]*\)", "", s)
+    s = re.sub(r"([A-Z]+)T(\s*\d)", r"\1/T\2", s, flags=re.IGNORECASE)
     s = re.sub(r"^GB/(\d)", r"GB \1", s, flags=re.IGNORECASE)
-    return s
+    return s.strip()
 
 
 def query_standard(keyword: str) -> list[dict]:
