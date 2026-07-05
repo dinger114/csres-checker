@@ -663,6 +663,11 @@
             return (s || '').replace(/\s+/g, '').replace(/－/g, '-').toLowerCase();
         }
 
+        function stdBase(s) {
+            const m = (s || '').replace(/\s+/g, '').match(/^(.*?)[-–]\d{4}$/);
+            return m ? m[1] : '';
+        }
+
         async function queryCssn(keyword) {
             const t0 = Date.now();
             const url = `https://www.cssn.net.cn/api/standards/?keyword=${encodeURIComponent(keyword)}`;
@@ -672,16 +677,24 @@
                 const data = JSON.parse(resp);
                 addLog(`cssn response: ${data.results?.length || 0} results, ${Date.now() - t0}ms`, '');
                 const queryNorm = normalizeStdNo(keyword);
-                return (data.results || [])
-                    .filter(r => normalizeStdNo(r.a100 || '').includes(queryNorm) || queryNorm.includes(normalizeStdNo(r.a100 || '')))
-                    .map(r => ({
-                        query: keyword,
-                        standard_number: r.a100 || '',
-                        title: r.a298 || '',
-                        status: r.a000 || '',
-                        publish_date: r.a101 || '',
-                        implement_date: r.a205 || '',
-                    }));
+                const filtered = (data.results || [])
+                    .filter(r => normalizeStdNo(r.a100 || '').includes(queryNorm) || queryNorm.includes(normalizeStdNo(r.a100 || '')));
+                const currentMap = {};
+                filtered.forEach(r => {
+                    if (r.a000 === '现行') {
+                        const base = stdBase(r.a100);
+                        if (base) currentMap[base] = r.a100;
+                    }
+                });
+                return filtered.map(r => ({
+                    query: keyword,
+                    standard_number: r.a100 || '',
+                    title: r.a298 || '',
+                    status: r.a000 || '',
+                    publish_date: r.a101 || '',
+                    implement_date: r.a205 || '',
+                    replaced_by: (r.a000 === '被代替' ? currentMap[stdBase(r.a100)] : '') || '',
+                }));
             } catch (e) {
                 addLog(`cssn error: ${e.message}`, 'error');
                 return [];
@@ -694,6 +707,7 @@
             results.forEach((r, idx) => {
                 let b = 'badge-active';
                 if (r.status === '废止' || r.status === '作废') b = 'badge-deprecated';
+                else if (r.status === '被代替') b = 'badge-deprecated';
                 else if (r.status === '即将实施') b = 'badge-upcoming';
                 const stdNo = r.standard_number || '';
                 const doc88Url = `https://www.doc88.com/tag/${encodeURIComponent(stdNo)}`;
@@ -712,7 +726,7 @@
                         const span = document.createElement('span');
                         span.className = 'badge ' + b;
                         span.textContent = v;
-                        if ((r.status === '废止' || r.status === '作废') && r.replaced_by) {
+                        if ((r.status === '废止' || r.status === '作废' || r.status === '被代替') && r.replaced_by) {
                             span.title = '点击查看替代标准';
                             span.style.cursor = 'pointer';
                             span.addEventListener('click', function(e) { showReplaceInfo(e, r.replaced_by); });

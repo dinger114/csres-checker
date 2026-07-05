@@ -70,6 +70,12 @@ def _normalize_std_no(s: str) -> str:
     return s.replace(" ", "").replace("－", "-").lower()
 
 
+def _std_base(s: str) -> str:
+    import re
+    m = re.match(r"^(.*?)[-–]\d{4}$", s.replace(" ", ""))
+    return m.group(1) if m else ""
+
+
 def query_cssn(keyword: str) -> list[dict]:
     """从 cssn.net.cn 查询标准"""
     try:
@@ -86,20 +92,34 @@ def query_cssn(keyword: str) -> list[dict]:
         return []
 
     query_norm = _normalize_std_no(keyword)
-    results = []
+    filtered = []
     for r in data.get("results", []):
         std_no = r.get("a100", "")
         std_norm = _normalize_std_no(std_no)
         if query_norm not in std_norm and std_norm not in query_norm:
             continue
+        filtered.append(r)
+
+    current_map = {}
+    for r in filtered:
+        if r.get("a000") == "现行":
+            base = _std_base(r.get("a100", ""))
+            if base:
+                current_map[base] = r["a100"]
+
+    results = []
+    for r in filtered:
+        std_no = r.get("a100", "")
+        status = r.get("a000", "")
+        replaced_by = current_map[_std_base(std_no)] if status == "被代替" else ""
         results.append({
             "query": keyword,
             "standard_number": std_no,
             "title": r.get("a298", ""),
-            "status": r.get("a000", ""),
+            "status": status,
             "publisher": "",
             "publish_date": r.get("a101", ""),
-            "replaced_by": "",
+            "replaced_by": replaced_by or "",
             "category": "",
             "ics": "",
         })
