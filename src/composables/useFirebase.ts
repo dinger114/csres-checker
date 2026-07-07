@@ -1,31 +1,33 @@
 import { ref } from 'vue'
+import { initializeApp, type FirebaseApp } from 'firebase/app'
+import { getDatabase, ref as dbRef, runTransaction, get } from 'firebase/database'
 import { FIREBASE_CONFIG } from '../utils/constants'
 
-declare global {
-  interface Window {
-    firebase?: any
-  }
-}
-
 const globalCount = ref(0)
+let app: FirebaseApp | null = null
+let db: ReturnType<typeof getDatabase> | null = null
+
+function getApp() {
+  if (!app) {
+    app = initializeApp(FIREBASE_CONFIG)
+    db = getDatabase(app)
+  }
+  return db!
+}
 
 export function useFirebase() {
   function init() {
-    if (window.firebase) {
-      try {
-        if (!window.firebase.apps.length) {
-          window.firebase.initializeApp(FIREBASE_CONFIG)
-        }
-      } catch {
-        // ignore init errors
-      }
+    try {
+      getApp()
+    } catch {
+      // ignore init errors
     }
   }
 
   async function refreshCount() {
-    if (!window.firebase) return
     try {
-      const snapshot = await window.firebase.database().ref('queryCount').once('value')
+      const database = getApp()
+      const snapshot = await get(dbRef(database, 'queryCount'))
       globalCount.value = snapshot.val() || 0
     } catch {
       // ignore
@@ -33,10 +35,10 @@ export function useFirebase() {
   }
 
   async function incQueryCount() {
-    if (!window.firebase) return
     try {
-      const r = window.firebase.database().ref('queryCount')
-      await r.transaction((current: number) => (current || 0) + 1)
+      const database = getApp()
+      const countRef = dbRef(database, 'queryCount')
+      await runTransaction(countRef, (current: number) => (current || 0) + 1)
       globalCount.value = (globalCount.value || 0) + 1
     } catch {
       // ignore

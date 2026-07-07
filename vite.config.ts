@@ -7,5 +7,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'firebase': ['firebase/app', 'firebase/database'],
+          'vue-vendor': ['vue'],
+        },
+      },
+    },
   },
 })
