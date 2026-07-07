@@ -38,6 +38,7 @@ import { useClipboard } from './composables/useClipboard'
 import { useToast } from './composables/useToast'
 import { useFirebase } from './composables/useFirebase'
 import { useTurnstile } from './composables/useTurnstile'
+import { useLog } from './composables/useLog'
 
 const { theme, toggleTheme, initTheme } = useTheme()
 const { results, progress, running, query } = useQuery()
@@ -45,6 +46,7 @@ const { exportMarkdown, copy } = useClipboard()
 const toast = useToast()
 const firebase = useFirebase()
 const turnstile = useTurnstile()
+const { add: logAdd } = useLog()
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
@@ -57,8 +59,11 @@ const themeOverrides = computed(() => ({
 }))
 
 async function handleRun(keywords: string[]) {
+  logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   if (turnstile.enabled) {
+    logAdd('TURNSTILE: 等待验证...', 'info')
     await turnstile.execute()
+    logAdd('TURNSTILE: 验证完毕，开始查询', 'info')
   }
   query(keywords)
 }
