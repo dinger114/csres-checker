@@ -14,12 +14,18 @@ export function useTurnstile() {
 
   function init(containerEl: HTMLElement | null) {
     if (!enabled || !window.turnstile || !containerEl) return
-
     window.turnstile.render(containerEl, {
       sitekey: TURNSTILE_SITE_KEY,
+      theme: 'auto',
       callback: (t: string) => {
         token.value = t
         pending.value = false
+      },
+      'expired-callback': () => {
+        token.value = ''
+      },
+      'error-callback': () => {
+        token.value = ''
       },
     })
   }
@@ -30,24 +36,30 @@ export function useTurnstile() {
         resolve('')
         return
       }
-
       if (token.value) {
         resolve(token.value)
         return
       }
-
-      if (window.turnstile) {
-        pending.value = true
-        window.turnstile.execute()
-        const check = setInterval(() => {
-          if (token.value) {
-            clearInterval(check)
-            resolve(token.value)
-          }
-        }, 200)
-      } else {
+      if (!window.turnstile) {
         resolve('')
+        return
       }
+      pending.value = true
+      window.turnstile.execute()
+      const check = setInterval(() => {
+        if (token.value) {
+          clearInterval(check)
+          pending.value = false
+          resolve(token.value)
+        }
+      }, 200)
+      setTimeout(() => {
+        clearInterval(check)
+        if (!token.value) {
+          pending.value = false
+          resolve('')
+        }
+      }, 30000)
     })
   }
 
