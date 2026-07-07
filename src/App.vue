@@ -102,14 +102,14 @@ onMounted(() => {
 }
 
 .turnstile-container {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
-  width: 1px;
-  height: 1px;
+  width: 300px;
+  height: 60px;
   overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0.01;
+  z-index: 9999;
 }
 
 @media (max-width: 768px) {

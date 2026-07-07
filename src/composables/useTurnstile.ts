@@ -17,6 +17,7 @@ export function useTurnstile() {
     window.turnstile.render(containerEl, {
       sitekey: TURNSTILE_SITE_KEY,
       theme: 'auto',
+      size: 'invisible',
       callback: (t: string) => {
         token.value = t
         pending.value = false
