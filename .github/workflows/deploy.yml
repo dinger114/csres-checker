@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build and Deploy
 
 on:
   push:
@@ -7,12 +7,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -27,22 +21,20 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Build
+      - name: Install and Build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
           npm ci
           npm run build
-
-      - name: Prepare dist
-        run: |
-          cp CNAME dist/ 2>/dev/null || true
-          cp .nojekyll dist/ 2>/dev/null || true
-          cp robots.txt dist/ 2>/dev/null || true
+          cp CNAME dist/
+          cp .nojekyll dist/
+          cp robots.txt dist/
 
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          force_orphan: true
