@@ -49,6 +49,10 @@ watch(
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  min-height: 200px;
 }
 
 .log-panel::after {

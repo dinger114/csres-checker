@@ -86,10 +86,13 @@ onMounted(() => {
 <style scoped>
 .app {
   display: flex;
+  flex-direction: row;
   height: 100vh;
   overflow: hidden;
   font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
 }
+
+
 
 .main-panel {
   flex: 1;
@@ -99,17 +102,55 @@ onMounted(() => {
   padding: 16px;
   overflow-y: auto;
   min-width: 0;
+  height: 100%;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot-red { background: #ff5f56; }
+.dot-yellow { background: #ffbd2e; }
+.dot-green { background: #27c93f; }
+
+.terminal-title {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 1px;
 }
 
 .turnstile-container {
-  position: fixed;
+  position: absolute;
   bottom: 0;
-  left: 0;
+  right: 320px;
   width: 300px;
-  height: 60px;
+  height: 68px;
   overflow: hidden;
-  opacity: 0.01;
-  z-index: 9999;
+  z-index: 100;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  padding: 4px;
 }
 
 @media (max-width: 768px) {
