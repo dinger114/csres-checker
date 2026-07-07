@@ -26,12 +26,16 @@ export function useQuery() {
     progress.value = { current: 0, total: keywords.length, pct: 0 }
 
     const startTime = Date.now()
-    const normalizedKws = keywords.map(normalizeKeyword).filter(Boolean)
+    const normalizedKws = [...new Set(keywords.map(normalizeKeyword).filter(Boolean))]
 
     if (normalizedKws.length === 0) {
       add('请输入标准编号', 'warn')
       running.value = false
       return
+    }
+
+    if (normalizedKws.length < keywords.length) {
+      add(`去重: ${keywords.length} → ${normalizedKws.length} 个唯一关键词`, 'info')
     }
 
     add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')

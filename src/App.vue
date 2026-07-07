@@ -61,7 +61,11 @@ async function handleRun(keywords: string[]) {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   if (turnstile.enabled) {
     logAdd('TURNSTILE: 等待验证...', 'info')
-    await turnstile.execute()
+    const token = await turnstile.execute()
+    if (!token) {
+      logAdd('TURNSTILE: 验证未通过，查询被阻止', 'error')
+      return
+    }
     logAdd('TURNSTILE: 验证完毕，开始查询', 'info')
   }
   query(keywords)

@@ -87,38 +87,51 @@ export function useTurnstile() {
         resolve(token.value)
         return
       }
-      if (!window.turnstile || widgetId.value === null) {
-        add('Turnstile: 未就绪，跳过验证', 'warn')
-        resolve('')
-        return
-      }
 
       pending.value = true
-      try {
-        window.turnstile.execute(widgetId.value)
-      } catch (e: any) {
-        add(`Turnstile: execute 失败 - ${e.message}`, 'error')
-        pending.value = false
-        resolve('')
-        return
-      }
 
-      const check = setInterval(() => {
-        if (token.value) {
-          clearInterval(check)
-          pending.value = false
-          resolve(token.value)
+      // Wait for widget to become ready
+      const waitForReady = setInterval(() => {
+        if (window.turnstile && widgetId.value !== null) {
+          clearInterval(waitForReady)
+          try {
+            window.turnstile.execute(widgetId.value)
+          } catch (e: any) {
+            add(`Turnstile: execute 失败 - ${e.message}`, 'error')
+            pending.value = false
+            resolve('')
+            return
+          }
+
+          // Poll for token
+          const check = setInterval(() => {
+            if (token.value) {
+              clearInterval(check)
+              pending.value = false
+              resolve(token.value)
+            }
+          }, 200)
+
+          setTimeout(() => {
+            clearInterval(check)
+            if (!token.value) {
+              pending.value = false
+              add('Turnstile: 验证超时，查询被阻止', 'error')
+              resolve('')
+            }
+          }, 10000)
         }
       }, 200)
 
+      // If widget never becomes ready in 15s, block
       setTimeout(() => {
-        clearInterval(check)
+        clearInterval(waitForReady)
         if (!token.value) {
           pending.value = false
-          add('Turnstile: 验证超时，跳过', 'warn')
+          add('Turnstile: 加载失败，查询被阻止', 'error')
           resolve('')
         }
-      }, 10000)
+      }, 15000)
     })
   }
 
