@@ -10,103 +10,67 @@
       <div v-if="results.length === 0" class="empty-state">
         <span class="cursor">_</span> 等待输入
       </div>
-      <n-data-table
-        v-else
-        :columns="columns"
-        :data="results"
-        :bordered="false"
-        :single-line="false"
-        size="small"
-        style="font-family: inherit"
-      />
+      <table v-else class="result-table">
+        <thead id="thead">
+          <tr>
+            <th class="col-num">#</th>
+            <th>QUERY</th>
+            <th>STD NO</th>
+            <th>TITLE</th>
+            <th>STATUS</th>
+            <th>PUBLISHED</th>
+            <th>IMPLEMENTED</th>
+            <th>道客巴巴</th>
+            <th>搜建筑</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr v-for="(r, idx) in results" :key="idx">
+            <td class="col-num">{{ idx + 1 }}</td>
+            <td class="clickable" @click="copyCell($event, r.query)">{{ r.query }}</td>
+            <td class="clickable" @click="copyCell($event, r.standard_number)">{{ r.standard_number }}</td>
+            <td class="clickable" @click="copyCell($event, r.title)">{{ r.title }}</td>
+            <td>
+              <StatusBadge :status="r.status" :replacedBy="r.replaced_by" />
+            </td>
+            <td class="clickable" @click="copyCell($event, r.publish_date)">{{ r.publish_date }}</td>
+            <td class="clickable" @click="copyCell($event, r.implement_date)">{{ r.implement_date }}</td>
+            <td>
+              <a :href="doc88Url(r)" target="_blank" rel="noopener" class="ext-link">道客巴巴</a>
+            </td>
+            <td>
+              <a :href="sjzUrl(r)" target="_blank" rel="noopener" class="ext-link">搜建筑</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { h, computed } from 'vue'
-import { NDataTable, NButton, NTooltip } from 'naive-ui'
-import type { DataTableColumns } from 'naive-ui'
-import type { StandardResult } from '../types'
 import StatusBadge from './StatusBadge.vue'
+import type { StandardResult } from '../types'
 
-const props = defineProps<{
+defineProps<{
   results: StandardResult[]
 }>()
 
-const emit = defineEmits<{
-  'copy-md': []
-}>()
-
-function makeColumns(): DataTableColumns<StandardResult> {
-  return [
-    {
-      title: '标准号',
-      key: 'standard_number',
-      width: 160,
-      ellipsis: { tooltip: true },
-    },
-    {
-      title: '名称',
-      key: 'title',
-      ellipsis: { tooltip: true },
-    },
-    {
-      title: '状态',
-      key: 'status',
-      width: 100,
-      render(row: StandardResult) {
-        return h(StatusBadge, {
-          status: row.status,
-          replacedBy: row.replaced_by,
-        })
-      },
-    },
-    {
-      title: '发布日期',
-      key: 'publish_date',
-      width: 100,
-    },
-    {
-      title: '实施日期',
-      key: 'implement_date',
-      width: 100,
-    },
-    {
-      title: '链接',
-      key: 'links',
-      width: 120,
-      render(row: StandardResult) {
-        const no = row.standard_number.replace(/\s/g, '')
-        return h('span', { class: 'links-cell' }, [
-          h(
-            'a',
-            {
-              href: `https://www.doc88.com/tag/${encodeURIComponent(row.title)}`,
-              target: '_blank',
-              rel: 'noopener',
-              class: 'ext-link',
-            },
-            '道客'
-          ),
-          ' ',
-          h(
-            'a',
-            {
-              href: `https://www.sojianzhu.com/standard/detail?standardNo=${encodeURIComponent(no)}`,
-              target: '_blank',
-              rel: 'noopener',
-              class: 'ext-link',
-            },
-            '搜建筑'
-          ),
-        ])
-      },
-    },
-  ]
+function doc88Url(r: StandardResult): string {
+  return `https://www.doc88.com/tag/${encodeURIComponent(r.standard_number || '')}`
 }
 
-const columns = computed(makeColumns)
+function sjzUrl(r: StandardResult): string {
+  return `https://www.soujianzhu.cn/Search/SouGuifan.aspx?skey=${encodeURIComponent((r.standard_number || '').toLowerCase())}`
+}
+
+function copyCell(e: MouseEvent, text: string) {
+  navigator.clipboard.writeText(text).then(() => {
+    const el = e.target as HTMLElement
+    el.style.color = 'var(--primary)'
+    setTimeout(() => (el.style.color = ''), 500)
+  })
+}
 </script>
 
 <style scoped>
@@ -142,14 +106,59 @@ const columns = computed(makeColumns)
   50% { opacity: 0; }
 }
 
-.links-cell {
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.result-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--border);
+  background: var(--header-bg);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-dim);
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.result-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--td-border);
+  color: var(--text);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-table tr:hover td {
+  background: var(--row-hover);
+}
+
+.col-num {
+  width: 30px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  color: var(--primary);
 }
 
 .ext-link {
   color: var(--link);
   text-decoration: none;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .ext-link:hover {
