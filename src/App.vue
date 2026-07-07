@@ -36,12 +36,14 @@ import { useQuery } from './composables/useQuery'
 import { useClipboard } from './composables/useClipboard'
 import { useToast } from './composables/useToast'
 import { useFirebase } from './composables/useFirebase'
+import { useTurnstile } from './composables/useTurnstile'
 
 const { theme, toggleTheme, initTheme } = useTheme()
 const { results, progress, running, query } = useQuery()
 const { exportMarkdown, copy } = useClipboard()
 const toast = useToast()
 const firebase = useFirebase()
+const turnstile = useTurnstile()
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
@@ -53,7 +55,10 @@ const themeOverrides = computed(() => ({
   },
 }))
 
-function handleRun(keywords: string[]) {
+async function handleRun(keywords: string[]) {
+  if (turnstile.enabled) {
+    await turnstile.execute()
+  }
   query(keywords)
 }
 
@@ -70,6 +75,7 @@ async function handleCopyMd() {
 onMounted(() => {
   initTheme()
   firebase.init()
+  firebase.refreshCount()
 })
 </script>
 

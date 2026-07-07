@@ -4,14 +4,17 @@
     <span><i class="stat-dot stat-empty"></i>EMPTY: {{ stats.empty }}</span>
     <span>TIME: {{ stats.time }}s</span>
     <span>Q: {{ stats.queries }}</span>
+    <span class="global-count">TOTAL: {{ globalCount }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useLog } from '../composables/useLog'
+import { useFirebase } from '../composables/useFirebase'
 
 const { stats } = useLog()
+const { globalCount } = useFirebase()
 </script>
 
 <style scoped>
@@ -35,4 +38,10 @@ const { stats } = useLog()
 
 .stat-ok { background: #27c93f; }
 .stat-empty { background: #ff5f56; }
+
+.global-count {
+  margin-left: auto;
+  color: var(--primary);
+  font-weight: 600;
+}
 </style>
