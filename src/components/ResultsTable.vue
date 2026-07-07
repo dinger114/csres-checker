@@ -4,7 +4,8 @@
       <span class="dot dot-red"></span>
       <span class="dot dot-yellow"></span>
       <span class="dot dot-green"></span>
-      <span class="terminal-title">OUTPUT &nbsp; RESULTS &nbsp; {{ results.length }}</span>
+      <span class="terminal-title">OUTPUT</span>
+      <span class="count-badge" v-if="results.length > 0">TOTAL: {{ results.length }}</span>
     </div>
     <div class="table-wrap">
       <div v-if="results.length === 0" class="empty-state">
@@ -163,5 +164,12 @@ function copyCell(e: MouseEvent, text: string) {
 
 .ext-link:hover {
   text-decoration: underline;
+}
+
+.count-badge {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
 }
 </style>

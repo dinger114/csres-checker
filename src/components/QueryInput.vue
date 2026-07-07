@@ -23,7 +23,7 @@
           COPY MD
         </n-button>
       </div>
-      <div ref="turnstileRef" class="turnstile-widget" style="display: none"></div>
+      <div :ref="(el) => { if (el) $emit('turnstile-mount', el as HTMLElement) }" class="turnstile-widget"></div>
       <ProgressBar :progress="progress" :running="running" />
     </div>
   </div>
@@ -35,23 +35,22 @@ import { NInput, NButton } from 'naive-ui'
 import ProgressBar from './ProgressBar.vue'
 import type { ProgressState } from '../types'
 
-const props = defineProps<{
+defineProps<{
   running: boolean
   progress: ProgressState
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   run: [keywords: string[]]
   'copy-md': []
+  'turnstile-mount': [el: HTMLElement]
 }>()
 
 const keywords = ref('')
-const turnstileRef = ref<HTMLElement | null>(null)
 
 function handleRun() {
   const lines = keywords.value.split('\n').map((l) => l.trim()).filter(Boolean)
   if (lines.length === 0) return
-  emit('run', lines)
 }
 </script>
 
