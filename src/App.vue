@@ -8,7 +8,6 @@
             :running="running"
             :progress="progress"
             @run="handleRun"
-            @turnstile-mount="onTurnstileMount"
           />
           <ResultsTable
             :results="results"
@@ -58,15 +57,6 @@ const themeOverrides = computed(() => ({
   },
 }))
 
-let turnstileInitialized = false
-
-function onTurnstileMount(el: HTMLElement) {
-  if (!turnstileInitialized && el) {
-    turnstileInitialized = true
-    turnstile.init(el)
-  }
-}
-
 async function handleRun(keywords: string[]) {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   if (turnstile.enabled) {
@@ -87,10 +77,22 @@ async function handleCopyMd() {
   toast.show(ok ? '已复制 Markdown 到剪贴板' : '复制失败')
 }
 
+let turnstileInited = false
+
+function initTurnstile(el: HTMLElement) {
+  if (!turnstileInited && el) {
+    turnstileInited = true
+    turnstile.init(el)
+  }
+}
+
 onMounted(() => {
   initTheme()
   firebase.init()
   firebase.refreshCount()
+  window.addEventListener('turnstile-mount', (e: any) => {
+    if (e.detail) initTurnstile(e.detail)
+  })
 })
 </script>
 
