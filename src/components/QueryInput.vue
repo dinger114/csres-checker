@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import type { ProgressState } from '../types'
 
 defineProps<{
@@ -57,9 +57,17 @@ function handleRun() {
   emit('run', lines)
 }
 
-onMounted(() => {
+function emitTurnstileMount() {
   if (turnstileEl.value) {
     window.dispatchEvent(new CustomEvent('turnstile-mount', { detail: turnstileEl.value }))
   }
+}
+
+onMounted(() => {
+  nextTick(emitTurnstileMount)
+})
+
+watch(turnstileEl, (el) => {
+  if (el) emitTurnstileMount()
 })
 </script>
