@@ -17,10 +17,14 @@ export function useTurnstile() {
   const { add } = useLog()
 
   function renderWidget(containerEl: HTMLElement) {
+    add(`Turnstile: sitekey=${TURNSTILE_SITE_KEY.substring(0, 8)}...`, 'info')
+    add(`Turnstile: container=${containerEl.tagName}#${containerEl.id}, children=${containerEl.children.length}`, 'info')
     try {
       widgetId.value = window.turnstile.render(containerEl, {
         sitekey: TURNSTILE_SITE_KEY,
         theme: 'auto',
+        appearance: 'interaction-only',
+        execution: 'execute',
         callback: (t: string) => {
           token.value = t
           pending.value = false
@@ -36,7 +40,7 @@ export function useTurnstile() {
         },
       })
       inited.value = true
-      add('Turnstile: widget 已初始化', 'success')
+      add(`Turnstile: widget 已初始化 (id=${widgetId.value})`, 'success')
     } catch (e: any) {
       add(`Turnstile: render 失败 - ${e.message}`, 'error')
     }
@@ -53,6 +57,8 @@ export function useTurnstile() {
     }
     if (inited.value) return
 
+    add(`Turnstile: window.turnstile=${typeof window.turnstile}`, 'info')
+
     // Script already loaded
     if (window.turnstile) {
       renderWidget(containerEl)
@@ -61,9 +67,12 @@ export function useTurnstile() {
 
     // Script not loaded yet — poll for it
     add('Turnstile: 等待 script 加载...', 'info')
+    let attempts = 0
     const check = setInterval(() => {
+      attempts++
       if (window.turnstile) {
         clearInterval(check)
+        add(`Turnstile: script 已加载 (${attempts * 200}ms)`, 'success')
         renderWidget(containerEl)
       }
     }, 200)
@@ -72,7 +81,10 @@ export function useTurnstile() {
     setTimeout(() => {
       clearInterval(check)
       if (!inited.value) {
-        add('Turnstile: script 加载超时', 'error')
+        add(`Turnstile: script 加载超时 (${attempts}次尝试)`, 'error')
+        // Log script tag status
+        const scripts = document.querySelectorAll('script[src*="turnstile"]')
+        add(`Turnstile: found ${scripts.length} script tag(s)`, 'info')
       }
     }, 15000)
   }
@@ -94,6 +106,7 @@ export function useTurnstile() {
       const waitForReady = setInterval(() => {
         if (window.turnstile && widgetId.value !== null) {
           clearInterval(waitForReady)
+          add(`Turnstile: execute widget (id=${widgetId.value})`, 'info')
           try {
             window.turnstile.execute(widgetId.value)
           } catch (e: any) {
