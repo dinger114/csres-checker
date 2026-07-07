@@ -1,0 +1,47 @@
+import { ref } from 'vue'
+import { FIREBASE_CONFIG } from '../utils/constants'
+
+declare global {
+  interface Window {
+    firebase?: any
+  }
+}
+
+const globalCount = ref(0)
+
+export function useFirebase() {
+  function init() {
+    if (window.firebase) {
+      try {
+        if (!window.firebase.apps.length) {
+          window.firebase.initializeApp(FIREBASE_CONFIG)
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  async function refreshCount() {
+    if (!window.firebase) return
+    try {
+      const snapshot = await window.firebase.database().ref('queryCount').once('value')
+      globalCount.value = snapshot.val() || 0
+    } catch {
+      // ignore
+    }
+  }
+
+  async function incQueryCount() {
+    if (!window.firebase) return
+    try {
+      const ref = window.firebase.database().ref('queryCount')
+      await ref.transaction((current: number) => (current || 0) + 1)
+      globalCount.value = (globalCount.value || 0) + 1
+    } catch {
+      // ignore
+    }
+  }
+
+  return { init, refreshCount, incQueryCount, globalCount }
+}

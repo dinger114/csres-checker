@@ -12,7 +12,7 @@
         <span class="cursor">_</span> 等待输入
       </div>
       <table v-else class="result-table">
-        <thead id="thead">
+        <thead>
           <tr>
             <th class="col-num">#</th>
             <th>QUERY</th>
@@ -25,7 +25,7 @@
             <th>搜建筑</th>
           </tr>
         </thead>
-        <tbody id="tbody">
+        <tbody>
           <tr v-for="(r, idx) in results" :key="idx">
             <td class="col-num">{{ idx + 1 }}</td>
             <td class="clickable" @click="copyCell($event, r.query)">{{ r.query }}</td>
@@ -55,6 +55,10 @@ import type { StandardResult } from '../types'
 
 defineProps<{
   results: StandardResult[]
+}>()
+
+defineEmits<{
+  'copy-md': []
 }>()
 
 function doc88Url(r: StandardResult): string {
