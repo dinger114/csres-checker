@@ -11,7 +11,6 @@
           />
           <ResultsTable
             :results="results"
-            @copy-md="handleCopyMd"
           />
         </div>
         <TerminalLog />
@@ -99,65 +98,16 @@ onMounted(() => {
 <style scoped>
 .app {
   display: flex;
-  flex-direction: row;
   height: 100vh;
   overflow: hidden;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
 }
 
 .main-panel {
   flex: 1;
+  padding: 20px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px;
-  overflow-y: auto;
-  min-width: 0;
-  height: 100%;
-}
-
-.terminal-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.terminal-box {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  overflow: hidden;
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.dot-red { background: #ff5f56; }
-.dot-yellow { background: #ffbd2e; }
-.dot-green { background: #27c93f; }
-
-.terminal-title {
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
-  letter-spacing: 1px;
-}
-
-@media (max-width: 768px) {
-  .app {
-    flex-direction: column;
-    overflow-y: auto;
-  }
-
-  .main-panel {
-    overflow-y: visible;
-  }
 }
 </style>
