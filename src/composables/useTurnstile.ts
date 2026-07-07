@@ -13,21 +13,10 @@ export function useTurnstile() {
   const pending = ref(false)
   const enabled = !TURNSTILE_SITE_KEY.includes('Placeholder')
   const widgetId = ref<string | null>(null)
+  const inited = ref(false)
   const { add } = useLog()
 
-  function init(containerEl: HTMLElement | null) {
-    if (!enabled) {
-      add('Turnstile: 未配置 site key，跳过', 'warn')
-      return
-    }
-    if (!window.turnstile) {
-      add('Turnstile: script 未加载', 'warn')
-      return
-    }
-    if (!containerEl) {
-      add('Turnstile: 容器元素不存在', 'error')
-      return
-    }
+  function renderWidget(containerEl: HTMLElement) {
     try {
       widgetId.value = window.turnstile.render(containerEl, {
         sitekey: TURNSTILE_SITE_KEY,
@@ -41,15 +30,51 @@ export function useTurnstile() {
           token.value = ''
           add('Turnstile: token 已过期', 'warn')
         },
-        'error-callback': (e: any) => {
+        'error-callback': () => {
           token.value = ''
           add('Turnstile: 验证失败', 'error')
         },
       })
-      add('Turnstile: widget 已初始化', 'info')
+      inited.value = true
+      add('Turnstile: widget 已初始化', 'success')
     } catch (e: any) {
       add(`Turnstile: render 失败 - ${e.message}`, 'error')
     }
+  }
+
+  function init(containerEl: HTMLElement | null) {
+    if (!enabled) {
+      add('Turnstile: 未配置 site key，跳过', 'warn')
+      return
+    }
+    if (!containerEl) {
+      add('Turnstile: 容器元素不存在', 'error')
+      return
+    }
+    if (inited.value) return
+
+    // Script already loaded
+    if (window.turnstile) {
+      renderWidget(containerEl)
+      return
+    }
+
+    // Script not loaded yet — poll for it
+    add('Turnstile: 等待 script 加载...', 'info')
+    const check = setInterval(() => {
+      if (window.turnstile) {
+        clearInterval(check)
+        renderWidget(containerEl)
+      }
+    }, 200)
+
+    // Stop polling after 15s
+    setTimeout(() => {
+      clearInterval(check)
+      if (!inited.value) {
+        add('Turnstile: script 加载超时', 'error')
+      }
+    }, 15000)
   }
 
   function execute(): Promise<string> {
@@ -58,20 +83,12 @@ export function useTurnstile() {
         resolve('')
         return
       }
-      // 已有 token 直接返回
       if (token.value) {
         resolve(token.value)
         return
       }
-      // CDN 未加载则直接跳过，不阻塞查询
-      if (!window.turnstile) {
-        add('Turnstile: script 未加载，跳过验证', 'warn')
-        resolve('')
-        return
-      }
-      // widget 未创建则跳过
-      if (widgetId.value === null) {
-        add('Turnstile: widget 未初始化，跳过验证', 'warn')
+      if (!window.turnstile || widgetId.value === null) {
+        add('Turnstile: 未就绪，跳过验证', 'warn')
         resolve('')
         return
       }
@@ -86,8 +103,6 @@ export function useTurnstile() {
         return
       }
 
-      // 轮询等待 token
-      const startTime = Date.now()
       const check = setInterval(() => {
         if (token.value) {
           clearInterval(check)
@@ -96,7 +111,6 @@ export function useTurnstile() {
         }
       }, 200)
 
-      // 10s 超时兜底
       setTimeout(() => {
         clearInterval(check)
         if (!token.value) {
