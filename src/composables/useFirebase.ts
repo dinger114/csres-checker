@@ -1,10 +1,13 @@
+import { ref } from 'vue'
+import { FIREBASE_CONFIG } from '../utils/constants'
+
 declare global {
   interface Window {
     firebase?: any
   }
 }
 
-import { FIREBASE_CONFIG } from '../utils/constants'
+const globalCount = ref(0)
 
 export function useFirebase() {
   function init() {
@@ -19,25 +22,26 @@ export function useFirebase() {
     }
   }
 
-  async function getQueryCount(): Promise<number> {
-    if (!window.firebase) return 0
+  async function refreshCount() {
+    if (!window.firebase) return
     try {
       const snapshot = await window.firebase.database().ref('queryCount').once('value')
-      return snapshot.val() || 0
+      globalCount.value = snapshot.val() || 0
     } catch {
-      return 0
+      // ignore
     }
   }
 
   async function incQueryCount() {
     if (!window.firebase) return
     try {
-      const ref = window.firebase.database().ref('queryCount')
-      ref.transaction((current: number) => (current || 0) + 1)
+      const r = window.firebase.database().ref('queryCount')
+      await r.transaction((current: number) => (current || 0) + 1)
+      globalCount.value = (globalCount.value || 0) + 1
     } catch {
       // ignore
     }
   }
 
-  return { init, getQueryCount, incQueryCount }
+  return { init, refreshCount, incQueryCount, globalCount }
 }
