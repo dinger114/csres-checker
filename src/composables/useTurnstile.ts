@@ -132,7 +132,7 @@ export function useTurnstile() {
               add('Turnstile: 验证超时，查询被阻止', 'error')
               resolve('')
             }
-          }, 10000)
+          }, 20000)
         }
       }, 200)
 
