@@ -1,9 +1,8 @@
 name: Deploy to GitHub Pages
 
 on:
-  workflow_run:
-    workflows: ["pages-build-deployment"]
-    types: [completed]
+  push:
+    branches: [refactor/vue3-worker-edge]
   workflow_dispatch:
 
 permissions:
@@ -17,10 +16,6 @@ concurrency:
 
 jobs:
   build-and-deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,17 +32,17 @@ jobs:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           VITE_TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
         run: |
-          chmod +x build.sh
-          ./build.sh
+          npm ci
+          npm run build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Prepare dist
+        run: |
+          cp CNAME dist/ 2>/dev/null || true
+          cp .nojekyll dist/ 2>/dev/null || true
+          cp robots.txt dist/ 2>/dev/null || true
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          path: 'dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
