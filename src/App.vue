@@ -7,6 +7,7 @@
           <QueryInput
             :running="running"
             :progress="progress"
+            :hasResults="results.length > 0"
             @run="handleRun"
           />
           <ResultsTable

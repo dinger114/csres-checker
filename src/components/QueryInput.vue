@@ -9,13 +9,14 @@
     <div class="terminal-body">
       <label>// 标准编号（每行一个）</label>
       <textarea
+        ref="textareaRef"
         v-model="keywords"
         placeholder="GB 50222-2017&#10;50010&#10;GB 50311-2016"
         :disabled="running"
       ></textarea>
       <div class="btn-row">
         <button :disabled="running" @click="handleRun">[ RUN ]</button>
-        <button :disabled="running" @click="emit('copy-md')">[ COPY MD ]</button>
+        <button :disabled="running || !hasResults" @click="emit('copy-md')">[ COPY MD ]</button>
       </div>
       <div ref="turnstileEl" id="turnstileWidget"></div>
       <div v-if="progress.pct > 0" class="progress-wrap">
@@ -38,6 +39,7 @@ import type { ProgressState } from '../types'
 defineProps<{
   running: boolean
   progress: ProgressState
+  hasResults: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,6 +48,7 @@ const emit = defineEmits<{
 }>()
 
 const keywords = ref('')
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const turnstileEl = ref<HTMLElement | null>(null)
 
 function handleRun() {
