@@ -3,7 +3,6 @@ name: Build and Deploy
 on:
   push:
     branches: [refactor/vue3-worker-edge]
-  workflow_dispatch:
 
 permissions:
   contents: write
