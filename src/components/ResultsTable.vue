@@ -22,32 +22,34 @@
           <thead>
             <tr>
               <th class="num">#</th>
-              <th>QUERY</th>
-              <th>STD NO</th>
-              <th>TITLE</th>
-              <th>STATUS</th>
-              <th>PUBLISHED</th>
-              <th>IMPLEMENTED</th>
-              <th>道客巴巴</th>
-              <th>搜建筑</th>
+              <th
+                v-for="col in columns"
+                :key="col.key"
+                :class="{ draggable: col.draggable }"
+                :draggable="col.draggable"
+                @dragstart="onDragStart($event, col.key)"
+                @dragover.prevent="onDragOver($event, col.key)"
+                @dragend="onDragEnd"
+                @drop="onDrop($event, col.key)"
+              >{{ col.label }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(r, idx) in filteredResults" :key="idx">
               <td class="num">{{ idx + 1 }}</td>
-              <td class="clickable" @click="copyCell($event, r.query)">{{ r.query }}</td>
-              <td class="clickable" @click="copyCell($event, r.standard_number)">{{ r.standard_number }}</td>
-              <td class="clickable" @click="copyCell($event, r.title)">{{ r.title }}</td>
-              <td>
-                <StatusBadge :status="r.status" :replacedBy="r.replaced_by" />
-              </td>
-              <td class="clickable" @click="copyCell($event, r.publish_date)">{{ r.publish_date }}</td>
-              <td class="clickable" @click="copyCell($event, r.implement_date)">{{ r.implement_date }}</td>
-              <td>
-                <a :href="doc88Url(r)" target="_blank" rel="noopener">道客巴巴</a>
-              </td>
-              <td>
-                <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
+              <td v-for="col in columns" :key="col.key" :class="getCellClass(col)">
+                <template v-if="col.key === 'status'">
+                  <StatusBadge :status="r.status" :replacedBy="r.replaced_by" />
+                </template>
+                <template v-else-if="col.key === 'doc88'">
+                  <a :href="doc88Url(r)" target="_blank" rel="noopener">道客巴巴</a>
+                </template>
+                <template v-else-if="col.key === 'soujz'">
+                  <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
+                </template>
+                <template v-else>
+                  <span class="clickable" @click="copyCell($event, getValue(r, col.key))">{{ getValue(r, col.key) }}</span>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -65,6 +67,31 @@ import type { StandardResult } from '../types'
 const props = defineProps<{
   results: StandardResult[]
 }>()
+
+const emit = defineEmits<{
+  'update:columns': [columns: ColumnDef[]]
+}>()
+
+export interface ColumnDef {
+  key: string
+  label: string
+  draggable: boolean
+  exportable: boolean
+}
+
+const defaultColumns: ColumnDef[] = [
+  { key: 'query', label: 'QUERY', draggable: true, exportable: true },
+  { key: 'standard_number', label: 'STD NO', draggable: true, exportable: true },
+  { key: 'title', label: 'TITLE', draggable: true, exportable: true },
+  { key: 'status', label: 'STATUS', draggable: true, exportable: true },
+  { key: 'publish_date', label: 'PUBLISHED', draggable: true, exportable: true },
+  { key: 'implement_date', label: 'IMPLEMENTED', draggable: true, exportable: true },
+  { key: 'doc88', label: '道客巴巴', draggable: true, exportable: false },
+  { key: 'soujz', label: '搜建筑', draggable: true, exportable: false },
+]
+
+const columns = ref<ColumnDef[]>([...defaultColumns])
+const dragKey = ref<string | null>(null)
 
 const filters = [
   { label: 'ALL', value: 'all' },
@@ -84,6 +111,41 @@ watch(() => props.results, () => {
   statusFilter.value = 'all'
 })
 
+watch(columns, (cols) => {
+  emit('update:columns', cols)
+}, { deep: true, immediate: true })
+
+function onDragStart(e: DragEvent, key: string) {
+  dragKey.value = key
+  e.dataTransfer!.effectAllowed = 'move'
+}
+
+function onDragOver(e: DragEvent, key: string) {
+  e.dataTransfer!.dropEffect = 'move'
+}
+
+function onDrop(e: DragEvent, targetKey: string) {
+  if (!dragKey.value || dragKey.value === targetKey) return
+  const fromIdx = columns.value.findIndex((c) => c.key === dragKey.value)
+  const toIdx = columns.value.findIndex((c) => c.key === targetKey)
+  if (fromIdx === -1 || toIdx === -1) return
+  const item = columns.value.splice(fromIdx, 1)[0]
+  columns.value.splice(toIdx, 0, item)
+}
+
+function onDragEnd() {
+  dragKey.value = null
+}
+
+function getValue(r: StandardResult, key: string): string {
+  return (r as any)[key] ?? ''
+}
+
+function getCellClass(col: ColumnDef): string {
+  if (['doc88', 'soujz', 'status'].includes(col.key)) return ''
+  return 'clickable'
+}
+
 function doc88Url(r: StandardResult): string {
   return `https://www.doc88.com/tag/${encodeURIComponent(r.standard_number || '')}`
 }
@@ -99,6 +161,8 @@ function copyCell(e: MouseEvent, text: string) {
     setTimeout(() => (el.style.color = ''), 500)
   })
 }
+
+defineExpose({ columns })
 </script>
 
 <style scoped>
@@ -128,5 +192,18 @@ function copyCell(e: MouseEvent, text: string) {
   background: var(--primary);
   color: var(--bg);
   border-color: var(--primary);
+}
+
+th.draggable {
+  cursor: grab;
+  user-select: none;
+}
+
+th.draggable:active {
+  cursor: grabbing;
+}
+
+th.dragging-over {
+  border-left: 2px solid var(--primary);
 }
 </style>

@@ -14,7 +14,9 @@
             @export-xlsx="handleExportXlsx"
           />
           <ResultsTable
+            ref="resultsTableRef"
             :results="results"
+            @update:columns="handleColumnsUpdate"
           />
         </div>
         <TerminalLog
@@ -36,6 +38,7 @@ import { NConfigProvider, NMessageProvider, darkTheme, lightTheme } from 'naive-
 import AppHeader from './components/AppHeader.vue'
 import QueryInput from './components/QueryInput.vue'
 import ResultsTable from './components/ResultsTable.vue'
+import type { ColumnDef } from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
 import DonatePanel from './components/DonatePanel.vue'
 import Toast from './components/Toast.vue'
@@ -58,6 +61,8 @@ const { add: logAdd } = useLog()
 const { history, add: addHistory, remove: removeHistory, clear: clearHistory } = useHistory()
 
 const queryInputRef = ref<InstanceType<typeof QueryInput> | null>(null)
+const resultsTableRef = ref<InstanceType<typeof ResultsTable> | null>(null)
+const currentColumns = ref<ColumnDef[]>([])
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
@@ -75,8 +80,12 @@ function handleRun(keywords: string[]) {
   query(keywords)
 }
 
+function handleColumnsUpdate(columns: ColumnDef[]) {
+  currentColumns.value = columns
+}
+
 async function handleCopyMd() {
-  const md = exportMarkdown(results.value as any)
+  const md = exportMarkdown(results.value as any, currentColumns.value)
   if (!md) {
     toast.show('暂无结果可复制')
     return
@@ -90,7 +99,7 @@ function handleExportXlsx() {
     toast.show('暂无结果可导出')
     return
   }
-  exportXlsx(results.value as any)
+  exportXlsx(results.value as any, currentColumns.value)
   toast.show('已导出 Excel 文件')
 }
 
