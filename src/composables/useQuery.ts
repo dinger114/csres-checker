@@ -12,6 +12,24 @@ import { useCache } from './useCache'
 
 const SEPARATOR = '────────────────────────────────'
 
+function dedupResults(items: StandardResult[]): StandardResult[] {
+  const map = new Map<string, StandardResult>()
+  for (const r of items) {
+    const key = r.standard_number.toLowerCase().replace(/\s/g, '')
+    const existing = map.get(key)
+    if (!existing) {
+      map.set(key, r)
+    } else {
+      const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
+      const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
+      if (newScore > existingScore) {
+        map.set(key, r)
+      }
+    }
+  }
+  return Array.from(map.values())
+}
+
 export function useQuery() {
   const results = ref<StandardResult[]>([])
   const progress = ref<ProgressState>({ current: 0, total: 0, pct: 0 })
@@ -27,6 +45,10 @@ export function useQuery() {
   const cache = useCache()
 
   const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+  function updateResults(items: StandardResult[]) {
+    results.value = dedupResults(items)
+  }
 
   async function query(keywords: string[], sources: string[] = []) {
     if (running.value) return
@@ -78,7 +100,7 @@ export function useQuery() {
       add(uncachedKeywords.length + ' items need fetching', 'info')
     }
 
-    results.value = [...allResults]
+    updateResults(allResults)
 
     if (uncachedKeywords.length > 0) {
       async function runPhase(
@@ -102,7 +124,7 @@ export function useQuery() {
               empty.push(batch[idx])
             }
           })
-          results.value = [...allResults]
+          updateResults(allResults)
           if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
         return empty
@@ -126,7 +148,6 @@ export function useQuery() {
           add('──── ' + name + ' ────', 'info')
           for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
             const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-            // Only query keywords not yet found
             const toQuery = batch.filter((kw) => !foundInTier1.has(kw))
             if (toQuery.length === 0) continue
             const batchResults = await Promise.allSettled(toQuery.map((kw) => source.query(kw)))
@@ -137,7 +158,7 @@ export function useQuery() {
                 foundInTier1.add(toQuery[idx])
               }
             })
-            results.value = [...allResults]
+            updateResults(allResults)
             if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
           }
         }
@@ -181,7 +202,7 @@ export function useQuery() {
                 foundKeywords.add(batch[idx])
               }
             })
-            results.value = [...allResults]
+            updateResults(allResults)
             if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
           }
         }
@@ -210,7 +231,7 @@ export function useQuery() {
                   stillEmpty.push(batch[idx])
                 }
               })
-              results.value = [...allResults]
+              updateResults(allResults)
               if (i + BATCH_SIZE < remaining.length) await delay(BATCH_DELAY)
             }
 
@@ -221,24 +242,6 @@ export function useQuery() {
       }
     }
 
-    // Deduplicate by standard number (keep result with most complete data)
-    const dedupedMap = new Map<string, StandardResult>()
-    for (const r of allResults) {
-      const key = r.standard_number.toLowerCase().replace(/\s/g, '')
-      const existing = dedupedMap.get(key)
-      if (!existing) {
-        dedupedMap.set(key, r)
-      } else {
-        // Keep the one with more complete data
-        const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
-        const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
-        if (newScore > existingScore) {
-          dedupedMap.set(key, r)
-        }
-      }
-    }
-    const dedupedResults = Array.from(dedupedMap.values())
-
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
     progress.value = { current: normalizedKws.length, total: normalizedKws.length, pct: 100 }
 
@@ -248,13 +251,10 @@ export function useQuery() {
     })
 
     add(SEPARATOR, 'info')
-    add('═══ COMPLETE: ' + dedupedResults.length + ' results (deduped from ' + allResults.length + '), ' + elapsed + 's ═══', 'highlight')
+    add('═══ COMPLETE: ' + results.value.length + ' results, ' + elapsed + 's ═══', 'highlight')
     if (cacheEnabled.value) {
       add('cache: ' + cache.size() + ' entries', 'info')
     }
-
-    // Update results with deduped data
-    results.value = dedupedResults
 
     incQueryCount()
     running.value = false
