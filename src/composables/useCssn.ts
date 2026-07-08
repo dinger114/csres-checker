@@ -6,7 +6,7 @@ import { useLog } from './useLog'
 const CSSN_URL = 'https://www.cssn.net.cn/api/standards/'
 
 export function useCssn() {
-  const { race } = useProxy()
+  const { race, fetchDirect } = useProxy()
   const { add } = useLog()
 
   async function query(keyword: string): Promise<StandardResult[]> {
@@ -16,11 +16,31 @@ export function useCssn() {
     try {
       add(`cssn: "${normalized}"`, 'info')
       const t0 = Date.now()
-      const resp = await race(url)
+
+      // cssn.net.cn supports CORS, try direct fetch first
+      let resp: string | null = null
+      try {
+        resp = await fetchDirect(url)
+        if (resp && resp.startsWith('{')) {
+          add(`cssn: direct fetch OK`, 'info')
+        } else {
+          resp = null
+        }
+      } catch {
+        resp = null
+      }
+
+      // Fall back to proxy if direct fails
       if (!resp) {
-        add(`cssn: 代理全部失败`, 'error')
+        add(`cssn: direct failed, trying proxy`, 'warn')
+        resp = await race(url)
+      }
+
+      if (!resp) {
+        add(`cssn: all methods failed`, 'error')
         return []
       }
+
       const data = JSON.parse(resp)
       add(`cssn response: ${data.results?.length || 0} results, ${Date.now() - t0}ms`, 'info')
 
