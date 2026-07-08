@@ -12,35 +12,6 @@ import { useCache } from './useCache'
 
 const SEPARATOR = '────────────────────────────────'
 
-function dedupResults(items: StandardResult[]): StandardResult[] {
-  const groups = new Map<string, StandardResult[]>()
-  for (const r of items) {
-    const q = r.query
-    if (!groups.has(q)) groups.set(q, [])
-    groups.get(q)!.push(r)
-  }
-
-  const result: StandardResult[] = []
-  for (const [, group] of groups) {
-    const dedupedMap = new Map<string, StandardResult>()
-    for (const r of group) {
-      const key = r.standard_number.toLowerCase().replace(/\s/g, '')
-      const existing = dedupedMap.get(key)
-      if (!existing) {
-        dedupedMap.set(key, r)
-      } else {
-        const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
-        const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
-        if (newScore > existingScore) {
-          dedupedMap.set(key, r)
-        }
-      }
-    }
-    result.push(...dedupedMap.values())
-  }
-  return result
-}
-
 export function useQuery() {
   const results = ref<StandardResult[]>([])
   const progress = ref<ProgressState>({ current: 0, total: 0, pct: 0 })
@@ -56,10 +27,6 @@ export function useQuery() {
   const cache = useCache()
 
   const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
-
-  function updateResults(items: StandardResult[]) {
-    results.value = dedupResults(items)
-  }
 
   async function query(keywords: string[], source: string = '') {
     if (running.value) return
@@ -118,19 +85,18 @@ export function useQuery() {
       add(uncachedKeywords.length + ' items need fetching', 'info')
     }
 
-    updateResults(allResults)
+    results.value = [...allResults]
 
     if (uncachedKeywords.length > 0) {
       async function runSource(
         name: string,
         src: { query: (kw: string) => Promise<StandardResult[]> },
         kws: string[]
-      ): Promise<{ found: string[], failed: string[] }> {
-        if (kws.length === 0) return { found: [], failed: [] }
+      ): Promise<string[]> {
+        if (kws.length === 0) return []
         add(SEPARATOR, 'info')
         add('phase: ' + name + ' (' + kws.length + ' items)', 'info')
 
-        const found: string[] = []
         const failed: string[] = []
         for (let i = 0; i < kws.length; i += BATCH_SIZE) {
           const batch = kws.slice(i, i + BATCH_SIZE)
@@ -139,68 +105,35 @@ export function useQuery() {
             if (r.status === 'fulfilled' && r.value.length > 0) {
               allResults.push(...r.value)
               if (cacheEnabled.value) cache.set(batch[idx], r.value)
-              found.push(batch[idx])
             } else {
               failed.push(batch[idx])
             }
           })
-          updateResults(allResults)
+          results.value = [...allResults]
           if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
-        return { found, failed }
+        return failed
       }
 
       if (useDefault) {
-        // Default logic:
-        // 1. CSSN + bzsou in parallel
-        // 2. If either fails, use gongbiaoku
-        // 3. CSRes as final fallback
-        add('plan: cssn + bzsou → gongbiaoku (if fail) → csres (fallback)', 'info')
-        add(SEPARATOR, 'info')
+        // Default: cssn first, then bzsou for failures, then gongbiaoku, then csres
+        add('plan: cssn → bzsou (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
 
-        // Phase 1: CSSN + bzsou in parallel
-        add('phase1: cssn + bzsou (parallel)', 'info')
+        // Phase 1: CSSN
+        const failedAfterCssn = await runSource('cssn.net.cn', cssn, uncachedKeywords)
 
-        const foundInPhase1 = new Set<number>()
-        const phase1Sources = [
-          { name: 'cssn', source: cssn },
-          { name: 'bzsou', source: bzsou },
-        ]
+        // Phase 2: bzsou for keywords cssn didn't find
+        const failedAfterBzsou = await runSource('bzsou.cn', bzsou, failedAfterCssn)
 
-        for (const { name, source: src } of phase1Sources) {
-          add('──── ' + name + ' ────', 'info')
-          for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
-            const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-            const toQuery = batch.map((kw, idx) => ({ kw, idx: i + idx })).filter(({ idx }) => !foundInPhase1.has(idx))
-            if (toQuery.length === 0) continue
-            const batchResults = await Promise.allSettled(toQuery.map(({ kw }) => src.query(kw)))
-            batchResults.forEach((r, idx) => {
-              if (r.status === 'fulfilled' && r.value.length > 0) {
-                allResults.push(...r.value)
-                if (cacheEnabled.value) cache.set(toQuery[idx].kw, r.value)
-                foundInPhase1.add(toQuery[idx].idx)
-              }
-            })
-            updateResults(allResults)
-            if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
-          }
-        }
+        // Phase 3: gongbiaoku for keywords bzsou didn't find
+        const failedAfterGong = await runSource('gongbiaoku.com', gongbiaoku, failedAfterBzsou)
 
-        // Phase 2: gongbiaoku for keywords not found in phase1
-        const phase2Keywords = uncachedKeywords.filter((_, idx) => !foundInPhase1.has(idx))
-        if (phase2Keywords.length > 0) {
-          await runSource('gongbiaoku.com', gongbiaoku, phase2Keywords)
-        }
-
-        // Phase 3: csres for remaining keywords
-        const phase3Keywords = uncachedKeywords.filter((kw) => {
-          return !allResults.some((r) => r.query === kw)
-        })
-        if (phase3Keywords.length > 0) {
-          await runSource('csres.com', csres, phase3Keywords)
+        // Phase 4: csres for remaining
+        if (failedAfterGong.length > 0) {
+          await runSource('csres.com', csres, failedAfterGong)
         }
       } else {
-        // Single source selected: query that source, csres as fallback
+        // Single source: query that source, csres as fallback
         const sourceMap: Record<string, { query: (kw: string) => Promise<StandardResult[]> }> = {
           cssn,
           bzsou,
@@ -215,9 +148,9 @@ export function useQuery() {
           return
         }
 
-        const { found, failed } = await runSource(source, selectedSrc, uncachedKeywords)
+        const failed = await runSource(source, selectedSrc, uncachedKeywords)
 
-        // CSRes fallback for failed keywords (unless csres was the selected source)
+        // CSRes fallback (unless csres was selected)
         if (source !== 'csres' && failed.length > 0) {
           add(SEPARATOR, 'info')
           add('fallback: csres.com (' + failed.length + ' items)', 'warn')
