@@ -5,6 +5,7 @@ import { normalizeKeyword } from '../utils/normalize'
 import { useCssn } from './useCssn'
 import { useGongbiaoku } from './useGongbiaoku'
 import { useCsres } from './useCsres'
+import { useBzsou } from './useBzsou'
 import { useLog } from './useLog'
 import { useFirebase } from './useFirebase'
 import { useCache } from './useCache'
@@ -17,6 +18,7 @@ export function useQuery() {
   const cssn = useCssn()
   const gongbiaoku = useGongbiaoku()
   const csres = useCsres()
+  const bzsou = useBzsou()
   const { add, updateStats } = useLog()
   const { incQueryCount } = useFirebase()
   const cache = useCache()
@@ -69,6 +71,7 @@ export function useQuery() {
       add(`phase1: cssn.net.cn`, 'info')
       add(`phase2: gongbiaoku.com fallback`, 'info')
       add(`phase3: csres.com fallback`, 'info')
+      add(`phase4: bzsou.cn fallback`, 'info')
       add(`────────────────────────────────`, 'info')
 
       const emptyKeywords: string[] = []
@@ -118,6 +121,7 @@ export function useQuery() {
       }
 
       // Phase 3: Csres fallback - parallel batches
+      const stillEmpty2: string[] = []
       if (stillEmpty.length > 0) {
         add(`────────────────────────────────`, 'info')
         add(`phase3: csres.com fallback (${stillEmpty.length} items)`, 'warn')
@@ -128,10 +132,30 @@ export function useQuery() {
             if (r.status === 'fulfilled' && r.value.length > 0) {
               allResults.push(...r.value)
               cache.set(batch[idx], r.value)
+            } else {
+              stillEmpty2.push(batch[idx])
             }
           })
           results.value = [...allResults]
           if (i + BATCH_SIZE < stillEmpty.length) await delay(BATCH_DELAY)
+        }
+      }
+
+      // Phase 4: Bzsou fallback - parallel batches
+      if (stillEmpty2.length > 0) {
+        add(`────────────────────────────────`, 'info')
+        add(`phase4: bzsou.cn fallback (${stillEmpty2.length} items)`, 'warn')
+        for (let i = 0; i < stillEmpty2.length; i += BATCH_SIZE) {
+          const batch = stillEmpty2.slice(i, i + BATCH_SIZE)
+          const batchResults = await Promise.allSettled(batch.map((kw) => bzsou.query(kw)))
+          batchResults.forEach((r, idx) => {
+            if (r.status === 'fulfilled' && r.value.length > 0) {
+              allResults.push(...r.value)
+              cache.set(batch[idx], r.value)
+            }
+          })
+          results.value = [...allResults]
+          if (i + BATCH_SIZE < stillEmpty2.length) await delay(BATCH_DELAY)
         }
       }
     }
