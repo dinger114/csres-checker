@@ -13,28 +13,27 @@
 - 废止标准点击查看替代标准编号
 - 外链快捷入口：道客巴巴、搜建筑
 - Firebase 全网查询计数
-- 复制 Markdown 表格
-- XSS 防护（DOMPurify）、Worker SSRF 白名单
+- 导出 Markdown 表格 / Excel 文件
 
 ## 使用方式
 
-### 1. GitHub Pages（推荐）
+### GitHub Pages（推荐）
 
-推送到 `main` 分支自动部署，无需后端。
+推送到 `refactor/vue3-worker-edge` 分支自动部署，无需后端。
 
 ```bash
-git push origin main
+git push origin refactor/vue3-worker-edge
 ```
-
-CI 通过 `build.sh` 构建 `dist/` 目录，替换 Firebase API Key 后部署。
 
 **前置配置**：在仓库 Settings → Secrets → Actions 中添加：
 
-| Secret | 值 |
-|---|---|
-| `FIREBASE_API_KEY` | Firebase Web API Key |
+| Secret | 说明 | 必需 |
+|---|---|---|
+| `FIREBASE_API_KEY` | Firebase Web API Key | 否（不配置则计数功能不生效） |
 
-### 2. 命令行
+### 命令行（Python CLI）
+
+独立的 Python 工具，可用于批量查询并导出 JSON。
 
 ```bash
 pip install -r requirements.txt
@@ -47,9 +46,6 @@ python csres_checker.py 50222 50010 50311
 
 # 从文件查询
 python csres_checker.py -f examples/sample.txt
-
-# 仅终端显示，不输出文件
-python csres_checker.py --no-file 50222 50010
 ```
 
 | 参数 | 说明 |
@@ -60,103 +56,63 @@ python csres_checker.py --no-file 50222 50010
 | `-d, --delay` | 查询间隔秒数（默认 1.0） |
 | `--no-file` | 不输出 JSON 文件，仅终端显示 |
 
-### 3. Web 界面（Flask）
-
-```bash
-pip install -r requirements.txt
-python app.py
-# 访问 http://localhost:8080
-```
-
-#### Docker 部署
-
-```bash
-docker compose up -d
-# 访问 http://localhost:8080
-```
-
-## Web API
-
-```
-POST /api/query
-Content-Type: application/json
-
-{
-  "keywords": "50222\n50010\n50311"
-}
-```
-
-响应：
-
-```json
-{
-  "results": [
-    {
-      "query": "50222",
-      "standard_number": "GB 50222-2017",
-      "title": "建筑内部装修设计防火规范",
-      "status": "现行",
-      "publish_date": "2017-07-31"
-    }
-  ],
-  "total": 1
-}
-```
-
 ## 自建代理（Cloudflare Worker）
 
 GitHub Pages 部署时，浏览器直接请求 gongbiaoku.com 会被 CORS 拦截。通过 Cloudflare Worker 中转解决。
 
-Worker 内置 URL 白名单（`gongbiaoku.com`、`csres.com`），仅允许转发到这两个域名，防止 SSRF。
+Worker 内置 URL 白名单（`gongbiaoku.com`、`cssn.net.cn`、`csres.com`），仅允许转发到这三个域名，防止 SSRF。
 
 ```bash
-npm install -g wrangler
-wrangler login
 cd worker
 wrangler deploy
 ```
-
-部署后在网页代理设置中填入：
-
-```
-https://your-proxy.workers.dev?url={url}
-```
-
-## GitHub Secrets 配置
-
-在仓库 Settings → Secrets and variables → Actions → New repository secret 中添加：
-
-| Secret | 说明 | 示例 |
-|---|---|---|
-| `FIREBASE_API_KEY` | Firebase Web API Key | `AIzaSy...` |
-
-不配置此 Secret 时，Firebase 全网计数功能不生效，其余功能正常。
 
 ## 项目结构
 
 ```
 csres-checker/
-├── index.html              # GitHub Pages 前端（纯静态）
-├── app.py                  # Flask Web 应用
-├── csres_checker.py        # 核心查询逻辑（CLI + Flask 共用）
-├── build.sh                # CI 构建脚本
-├── templates/
-│   └── index.html          # Flask 模板（与 index.html 功能同步）
+├── index.html                  # Vite 入口
+├── src/
+│   ├── main.ts                 # 应用启动
+│   ├── App.vue                 # 根组件
+│   ├── types/index.ts          # TypeScript 类型定义
+│   ├── styles/variables.css    # 主题 CSS 变量
+│   ├── utils/                  # 工具函数
+│   │   ├── constants.ts        # 常量配置
+│   │   ├── normalize.ts        # 标准编号归一化
+│   │   ├── htmlParser.ts       # HTML 解析器
+│   │   └── theme.ts            # 主题工具
+│   ├── composables/            # Vue 3 组合式函数
+│   │   ├── useQuery.ts         # 查询编排（三阶段 fallback）
+│   │   ├── useProxy.ts         # 代理竞速
+│   │   ├── useCssn.ts          # cssn.net.cn 数据源
+│   │   ├── useGongbiaoku.ts    # 工标库数据源
+│   │   ├── useCsres.ts         # csres.com 数据源
+│   │   ├── useFirebase.ts      # Firebase 计数
+│   │   ├── useTheme.ts         # 主题切换
+│   │   ├── useLog.ts           # 日志系统
+│   │   ├── useClipboard.ts     # 复制/导出 Markdown
+│   │   ├── useXlsx.ts          # 导出 Excel
+│   │   └── useToast.ts         # Toast 通知
+│   └── components/             # Vue 组件
+│       ├── AppHeader.vue       # 标题栏
+│       ├── QueryInput.vue      # 输入面板
+│       ├── ResultsTable.vue    # 结果表格
+│       ├── StatusBadge.vue     # 状态徽章
+│       ├── TerminalLog.vue     # 终端日志
+│       ├── LogStats.vue        # 统计信息
+│       └── Toast.vue           # Toast 组件
 ├── worker/
-│   ├── index.js            # Cloudflare Worker 代理（含 SSRF 白名单）
-│   ├── wrangler.toml       # Worker 配置
-│   └── README.md           # 代理部署教程
-├── examples/
-│   └── sample.txt          # 示例标准编号列表
-├── .github/workflows/
-│   └── deploy.yml          # GitHub Actions 自动部署
-├── robots.txt              # 爬虫规则
-├── CNAME                   # 自定义域名
-├── .nojekyll               # 禁用 Jekyll
-├── Dockerfile              # Docker 镜像
-├── docker-compose.yml      # Docker Compose 配置
-├── requirements.txt        # Python 依赖
-├── LICENSE                 # MIT
+│   ├── index.js                # Cloudflare Worker 代理
+│   └── wrangler.toml           # Worker 配置
+├── csres_checker.py            # Python CLI 工具
+├── requirements.txt            # Python 依赖
+├── examples/sample.txt         # 示例标准编号
+├── .github/workflows/deploy.yml  # GitHub Actions 部署
+├── vite.config.ts              # Vite 构建配置
+├── tsconfig.json               # TypeScript 配置
+├── CNAME                       # 自定义域名
+├── LICENSE                     # MIT
 └── .gitignore
 ```
 
