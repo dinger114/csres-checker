@@ -10,10 +10,13 @@ import { useLog } from './useLog'
 import { useFirebase } from './useFirebase'
 import { useCache } from './useCache'
 
+const SEPARATOR = '────────────────────────────────'
+
 export function useQuery() {
   const results = ref<StandardResult[]>([])
   const progress = ref<ProgressState>({ current: 0, total: 0, pct: 0 })
   const running = ref(false)
+  const cacheEnabled = ref(true)
 
   const cssn = useCssn()
   const gongbiaoku = useGongbiaoku()
@@ -41,79 +44,115 @@ export function useQuery() {
       return
     }
 
-    add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')
-    add(`cache: ${cache.size()} entries`, 'info')
-    if (!useAllSources) {
-      add(`selected: ${sources.join(', ')}`, 'info')
+    add('═══ START: ' + normalizedKws.length + ' items ═══', 'highlight')
+    if (!cacheEnabled.value) {
+      add('cache: disabled', 'warn')
+    } else {
+      add('cache: ' + cache.size() + ' entries', 'info')
     }
-    add(`────────────────────────────────`, 'info')
+    if (!useAllSources) {
+      add('selected: ' + sources.join(', '), 'info')
+    }
+    add(SEPARATOR, 'info')
 
     const allResults: StandardResult[] = []
     const uncachedKeywords: string[] = []
 
-    // Check cache first
-    for (const kw of normalizedKws) {
-      const cached = cache.get(kw)
-      if (cached) {
-        add(`cache hit: "${kw}"`, 'success')
-        allResults.push(...cached)
-      } else {
-        uncachedKeywords.push(kw)
+    if (cacheEnabled.value) {
+      for (const kw of normalizedKws) {
+        const cached = cache.get(kw)
+        if (cached) {
+          add('cache hit: "' + kw + '"', 'success')
+          allResults.push(...cached)
+        } else {
+          uncachedKeywords.push(kw)
+        }
       }
+    } else {
+      uncachedKeywords.push(...normalizedKws)
     }
 
     if (uncachedKeywords.length === 0) {
-      add(`all ${normalizedKws.length} items from cache`, 'success')
+      add('all ' + normalizedKws.length + ' items from cache', 'success')
     } else {
-      add(`${uncachedKeywords.length} items need fetching`, 'info')
+      add(uncachedKeywords.length + ' items need fetching', 'info')
     }
 
     results.value = [...allResults]
 
     if (uncachedKeywords.length > 0) {
-      // Helper to run a phase
       async function runPhase(
         name: string,
         source: { query: (kw: string) => Promise<StandardResult[]> },
-        keywords: string[]
+        kws: string[]
       ): Promise<string[]> {
-        if (keywords.length === 0) return []
-        add(`────────────────────────────────`, 'info')
-        add(`phase: ${name} (${keywords.length} items)`, 'info')
+        if (kws.length === 0) return []
+        add(SEPARATOR, 'info')
+        add('phase: ' + name + ' (' + kws.length + ' items)', 'info')
 
         const empty: string[] = []
-        for (let i = 0; i < keywords.length; i += BATCH_SIZE) {
-          const batch = keywords.slice(i, i + BATCH_SIZE)
+        for (let i = 0; i < kws.length; i += BATCH_SIZE) {
+          const batch = kws.slice(i, i + BATCH_SIZE)
           const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
           batchResults.forEach((r, idx) => {
             if (r.status === 'fulfilled' && r.value.length > 0) {
               allResults.push(...r.value)
-              cache.set(batch[idx], r.value)
+              if (cacheEnabled.value) cache.set(batch[idx], r.value)
             } else {
               empty.push(batch[idx])
             }
           })
           results.value = [...allResults]
-          if (i + BATCH_SIZE < keywords.length) await delay(BATCH_DELAY)
+          if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
         return empty
       }
 
       if (useAllSources) {
-        // Default flow: cssn → gongbiaoku → csres → bzsou
-        add(`phase1: cssn.net.cn`, 'info')
-        add(`phase2: gongbiaoku.com fallback`, 'info')
-        add(`phase3: csres.com fallback`, 'info')
-        add(`phase4: bzsou.cn fallback`, 'info')
+        add('tier1: cssn.net.cn + bzsou.cn (parallel)', 'info')
+        add('tier2: gongbiaoku.com fallback', 'info')
+        add('tier3: csres.com fallback', 'info')
 
-        let empty = await runPhase('cssn.net.cn', cssn, uncachedKeywords)
-        empty = await runPhase('gongbiaoku.com', gongbiaoku, empty)
-        empty = await runPhase('csres.com', csres, empty)
-        await runPhase('bzsou.cn', bzsou, empty)
+        add(SEPARATOR, 'info')
+        add('tier1: running cssn + bzsou', 'info')
+
+        const foundInTier1 = new Set<string>()
+        const tier1Sources = [
+          { name: 'cssn', source: cssn },
+          { name: 'bzsou', source: bzsou },
+        ]
+
+        for (const { name, source } of tier1Sources) {
+          add('──── ' + name + ' ────', 'info')
+          for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
+            const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
+            const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
+            batchResults.forEach((r, idx) => {
+              if (r.status === 'fulfilled' && r.value.length > 0) {
+                allResults.push(...r.value)
+                if (cacheEnabled.value) cache.set(batch[idx], r.value)
+                foundInTier1.add(batch[idx])
+              }
+            })
+            results.value = [...allResults]
+            if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
+          }
+        }
+
+        const tier2Keywords = uncachedKeywords.filter((kw) => !foundInTier1.has(kw))
+        if (tier2Keywords.length > 0) {
+          await runPhase('gongbiaoku.com', gongbiaoku, tier2Keywords)
+        }
+
+        const tier3Keywords = uncachedKeywords.filter((kw) => {
+          return !allResults.some((r) => r.query === kw)
+        })
+        if (tier3Keywords.length > 0) {
+          await runPhase('csres.com', csres, tier3Keywords)
+        }
       } else {
-        // Custom source selection: run all selected in parallel
-        add(`────────────────────────────────`, 'info')
-        add(`running selected sources in parallel`, 'info')
+        add(SEPARATOR, 'info')
+        add('running selected sources in parallel', 'info')
 
         const sourceMap: Record<string, { query: (kw: string) => Promise<StandardResult[]> }> = {
           cssn,
@@ -127,7 +166,7 @@ export function useQuery() {
 
         for (const srcKey of selectedSources) {
           const source = sourceMap[srcKey]
-          add(`──── ${srcKey} ────`, 'info')
+          add('──── ' + srcKey + ' ────', 'info')
 
           for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
             const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
@@ -135,7 +174,7 @@ export function useQuery() {
             batchResults.forEach((r, idx) => {
               if (r.status === 'fulfilled' && r.value.length > 0) {
                 allResults.push(...r.value)
-                cache.set(batch[idx], r.value)
+                if (cacheEnabled.value) cache.set(batch[idx], r.value)
                 foundKeywords.add(batch[idx])
               }
             })
@@ -144,13 +183,12 @@ export function useQuery() {
           }
         }
 
-        // For keywords not found by selected sources, try remaining sources
         const remaining = uncachedKeywords.filter((kw) => !foundKeywords.has(kw))
         if (remaining.length > 0) {
-          add(`────────────────────────────────`, 'info')
-          add(`fallback: ${remaining.length} items not found`, 'warn')
+          add(SEPARATOR, 'info')
+          add('fallback: ' + remaining.length + ' items not found', 'warn')
 
-          const remainingSources = ['cssn', 'gongbiaoku', 'csres', 'bzsou'].filter(
+          const remainingSources = ['cssn', 'bzsou', 'gongbiaoku', 'csres'].filter(
             (s) => !sources.includes(s)
           )
 
@@ -164,7 +202,7 @@ export function useQuery() {
               batchResults.forEach((r, idx) => {
                 if (r.status === 'fulfilled' && r.value.length > 0) {
                   allResults.push(...r.value)
-                  cache.set(batch[idx], r.value)
+                  if (cacheEnabled.value) cache.set(batch[idx], r.value)
                 } else {
                   stillEmpty.push(batch[idx])
                 }
@@ -188,19 +226,27 @@ export function useQuery() {
       queries: normalizedKws.length,
     })
 
-    add(`────────────────────────────────`, 'info')
-    add(`═══ COMPLETE: ${allResults.length} results, ${elapsed}s ═══`, 'highlight')
-    add(`cache: ${cache.size()} entries`, 'info')
+    add(SEPARATOR, 'info')
+    add('═══ COMPLETE: ' + allResults.length + ' results, ' + elapsed + 's ═══', 'highlight')
+    if (cacheEnabled.value) {
+      add('cache: ' + cache.size() + ' entries', 'info')
+    }
 
     incQueryCount()
     running.value = false
+  }
+
+  function toggleCache() {
+    cacheEnabled.value = !cacheEnabled.value
   }
 
   return {
     results: computed(() => results.value),
     progress: computed(() => progress.value),
     running: computed(() => running.value),
+    cacheEnabled: computed(() => cacheEnabled.value),
     query,
+    toggleCache,
     clearCache: cache.clear,
     cacheSize: cache.size,
   }
