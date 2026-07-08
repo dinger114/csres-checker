@@ -19,6 +19,7 @@ export const FIREBASE_CONFIG = {
   appId: '1:000000000000:web:0000000000000000000000',
 }
 
-export const BATCH_SIZE = 4
+export const BATCH_SIZE = 2
+export const BATCH_DELAY = 500
 export const FETCH_RETRIES = 3
 export const FETCH_TIMEOUT = 15000

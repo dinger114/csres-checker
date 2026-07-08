@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import type { StandardResult, ProgressState } from '../types'
-import { BATCH_SIZE } from '../utils/constants'
+import { BATCH_SIZE, BATCH_DELAY } from '../utils/constants'
 import { normalizeKeyword } from '../utils/normalize'
 import { useCssn } from './useCssn'
 import { useGongbiaoku } from './useGongbiaoku'
@@ -18,6 +18,8 @@ export function useQuery() {
   const csres = useCsres()
   const { add, updateStats } = useLog()
   const { incQueryCount } = useFirebase()
+
+  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
   async function query(keywords: string[]) {
     if (running.value) return
@@ -62,6 +64,7 @@ export function useQuery() {
       })
 
       results.value = [...allResults]
+      if (i + BATCH_SIZE < normalizedKws.length) await delay(BATCH_DELAY)
     }
 
     // Phase 2: GongBiaoKu fallback - parallel batches
@@ -80,6 +83,7 @@ export function useQuery() {
           }
         })
         results.value = [...allResults]
+        if (i + BATCH_SIZE < emptyKeywords.length) await delay(BATCH_DELAY)
       }
     }
 
@@ -96,6 +100,7 @@ export function useQuery() {
           }
         })
         results.value = [...allResults]
+        if (i + BATCH_SIZE < stillEmpty.length) await delay(BATCH_DELAY)
       }
     }
 
