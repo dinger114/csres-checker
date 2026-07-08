@@ -19,7 +19,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NTooltip, useMessage } from 'naive-ui'
-import DOMPurify from 'dompurify'
 
 const props = defineProps<{
   status: string
@@ -44,9 +43,8 @@ function handleClick() {
 }
 
 function copyReplace() {
-  const sanitized = DOMPurify.sanitize(props.replacedBy)
-  navigator.clipboard.writeText(sanitized).then(() => {
-    message.success('已复制: ' + sanitized)
+  navigator.clipboard.writeText(props.replacedBy).then(() => {
+    message.success('已复制: ' + props.replacedBy)
   })
 }
 </script>
