@@ -13,7 +13,6 @@ import { useCache } from './useCache'
 const SEPARATOR = '────────────────────────────────'
 
 function dedupResults(items: StandardResult[]): StandardResult[] {
-  // Group by query keyword, then dedup within each group by standard number
   const groups = new Map<string, StandardResult[]>()
   for (const r of items) {
     const q = r.query
@@ -23,7 +22,6 @@ function dedupResults(items: StandardResult[]): StandardResult[] {
 
   const result: StandardResult[] = []
   for (const [, group] of groups) {
-    // Dedup by standard number within this query group
     const dedupedMap = new Map<string, StandardResult>()
     for (const r of group) {
       const key = r.standard_number.toLowerCase().replace(/\s/g, '')
@@ -31,7 +29,6 @@ function dedupResults(items: StandardResult[]): StandardResult[] {
       if (!existing) {
         dedupedMap.set(key, r)
       } else {
-        // Keep the one with more complete data
         const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
         const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
         if (newScore > existingScore) {
@@ -48,7 +45,6 @@ export function useQuery() {
   const results = ref<StandardResult[]>([])
   const progress = ref<ProgressState>({ current: 0, total: 0, pct: 0 })
   const running = ref(false)
-  // Cache disabled by default, enabled after first run if not expired
   const cacheEnabled = ref(false)
 
   const cssn = useCssn()
@@ -65,7 +61,7 @@ export function useQuery() {
     results.value = dedupResults(items)
   }
 
-  async function query(keywords: string[], sources: string[] = []) {
+  async function query(keywords: string[], source: string = '') {
     if (running.value) return
     running.value = true
     results.value = []
@@ -73,7 +69,7 @@ export function useQuery() {
 
     const startTime = Date.now()
     const normalizedKws = keywords.map(normalizeKeyword).filter(Boolean)
-    const useAllSources = sources.length === 0
+    const useDefault = source === ''
 
     if (normalizedKws.length === 0) {
       add('请输入标准编号', 'warn')
@@ -83,7 +79,6 @@ export function useQuery() {
 
     add('═══ START: ' + normalizedKws.length + ' items ═══', 'highlight')
 
-    // Check cache expiry - disable if expired
     if (cacheEnabled.value && cache.isExpired()) {
       cacheEnabled.value = false
       add('cache: expired (>4h), disabled', 'warn')
@@ -94,8 +89,9 @@ export function useQuery() {
     } else {
       add('cache: ' + cache.size() + ' entries', 'info')
     }
-    if (!useAllSources) {
-      add('selected: ' + sources.join(', '), 'info')
+
+    if (!useDefault) {
+      add('selected: ' + source, 'info')
     }
     add(SEPARATOR, 'info')
 
@@ -125,59 +121,64 @@ export function useQuery() {
     updateResults(allResults)
 
     if (uncachedKeywords.length > 0) {
-      async function runPhase(
+      async function runSource(
         name: string,
-        source: { query: (kw: string) => Promise<StandardResult[]> },
+        src: { query: (kw: string) => Promise<StandardResult[]> },
         kws: string[]
-      ): Promise<string[]> {
-        if (kws.length === 0) return []
+      ): Promise<{ found: string[], failed: string[] }> {
+        if (kws.length === 0) return { found: [], failed: [] }
         add(SEPARATOR, 'info')
         add('phase: ' + name + ' (' + kws.length + ' items)', 'info')
 
-        const empty: string[] = []
+        const found: string[] = []
+        const failed: string[] = []
         for (let i = 0; i < kws.length; i += BATCH_SIZE) {
           const batch = kws.slice(i, i + BATCH_SIZE)
-          const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
+          const batchResults = await Promise.allSettled(batch.map((kw) => src.query(kw)))
           batchResults.forEach((r, idx) => {
             if (r.status === 'fulfilled' && r.value.length > 0) {
               allResults.push(...r.value)
               if (cacheEnabled.value) cache.set(batch[idx], r.value)
+              found.push(batch[idx])
             } else {
-              empty.push(batch[idx])
+              failed.push(batch[idx])
             }
           })
           updateResults(allResults)
           if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
-        return empty
+        return { found, failed }
       }
 
-      if (useAllSources) {
-        add('tier1: cssn.net.cn + bzsou.cn (parallel)', 'info')
-        add('tier2: gongbiaoku.com fallback', 'info')
-        add('tier3: csres.com fallback', 'info')
-
+      if (useDefault) {
+        // Default logic:
+        // 1. CSSN + bzsou in parallel
+        // 2. If either fails, use gongbiaoku
+        // 3. CSRes as final fallback
+        add('plan: cssn + bzsou → gongbiaoku (if fail) → csres (fallback)', 'info')
         add(SEPARATOR, 'info')
-        add('tier1: running cssn + bzsou', 'info')
 
-        const foundInTier1 = new Set<number>() // Track by index, not by keyword
-        const tier1Sources = [
+        // Phase 1: CSSN + bzsou in parallel
+        add('phase1: cssn + bzsou (parallel)', 'info')
+
+        const foundInPhase1 = new Set<number>()
+        const phase1Sources = [
           { name: 'cssn', source: cssn },
           { name: 'bzsou', source: bzsou },
         ]
 
-        for (const { name, source } of tier1Sources) {
+        for (const { name, source: src } of phase1Sources) {
           add('──── ' + name + ' ────', 'info')
           for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
             const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-            const toQuery = batch.map((kw, idx) => ({ kw, idx: i + idx })).filter(({ idx }) => !foundInTier1.has(idx))
+            const toQuery = batch.map((kw, idx) => ({ kw, idx: i + idx })).filter(({ idx }) => !foundInPhase1.has(idx))
             if (toQuery.length === 0) continue
-            const batchResults = await Promise.allSettled(toQuery.map(({ kw }) => source.query(kw)))
+            const batchResults = await Promise.allSettled(toQuery.map(({ kw }) => src.query(kw)))
             batchResults.forEach((r, idx) => {
               if (r.status === 'fulfilled' && r.value.length > 0) {
                 allResults.push(...r.value)
                 if (cacheEnabled.value) cache.set(toQuery[idx].kw, r.value)
-                foundInTier1.add(toQuery[idx].idx)
+                foundInPhase1.add(toQuery[idx].idx)
               }
             })
             updateResults(allResults)
@@ -185,81 +186,42 @@ export function useQuery() {
           }
         }
 
-        const tier2Keywords = uncachedKeywords.filter((kw) => !foundInTier1.has(kw))
-        if (tier2Keywords.length > 0) {
-          await runPhase('gongbiaoku.com', gongbiaoku, tier2Keywords)
+        // Phase 2: gongbiaoku for keywords not found in phase1
+        const phase2Keywords = uncachedKeywords.filter((_, idx) => !foundInPhase1.has(idx))
+        if (phase2Keywords.length > 0) {
+          await runSource('gongbiaoku.com', gongbiaoku, phase2Keywords)
         }
 
-        const tier3Keywords = uncachedKeywords.filter((kw) => {
+        // Phase 3: csres for remaining keywords
+        const phase3Keywords = uncachedKeywords.filter((kw) => {
           return !allResults.some((r) => r.query === kw)
         })
-        if (tier3Keywords.length > 0) {
-          await runPhase('csres.com', csres, tier3Keywords)
+        if (phase3Keywords.length > 0) {
+          await runSource('csres.com', csres, phase3Keywords)
         }
       } else {
-        add(SEPARATOR, 'info')
-        add('running selected sources in parallel', 'info')
-
+        // Single source selected: query that source, csres as fallback
         const sourceMap: Record<string, { query: (kw: string) => Promise<StandardResult[]> }> = {
           cssn,
+          bzsou,
           gongbiaoku,
           csres,
-          bzsou,
         }
 
-        const selectedSources = sources.filter((s) => sourceMap[s])
-        const foundKeywords = new Set<string>()
-
-        for (const srcKey of selectedSources) {
-          const source = sourceMap[srcKey]
-          add('──── ' + srcKey + ' ────', 'info')
-
-          for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
-            const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-            const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
-            batchResults.forEach((r, idx) => {
-              if (r.status === 'fulfilled' && r.value.length > 0) {
-                allResults.push(...r.value)
-                if (cacheEnabled.value) cache.set(batch[idx], r.value)
-                foundKeywords.add(batch[idx])
-              }
-            })
-            updateResults(allResults)
-            if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
-          }
+        const selectedSrc = sourceMap[source]
+        if (!selectedSrc) {
+          add('unknown source: ' + source, 'error')
+          running.value = false
+          return
         }
 
-        const remaining = uncachedKeywords.filter((kw) => !foundKeywords.has(kw))
-        if (remaining.length > 0) {
+        const { found, failed } = await runSource(source, selectedSrc, uncachedKeywords)
+
+        // CSRes fallback for failed keywords (unless csres was the selected source)
+        if (source !== 'csres' && failed.length > 0) {
           add(SEPARATOR, 'info')
-          add('fallback: ' + remaining.length + ' items not found', 'warn')
-
-          const remainingSources = ['cssn', 'bzsou', 'gongbiaoku', 'csres'].filter(
-            (s) => !sources.includes(s)
-          )
-
-          for (const srcKey of remainingSources) {
-            const source = sourceMap[srcKey]
-            const stillEmpty: string[] = []
-
-            for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
-              const batch = remaining.slice(i, i + BATCH_SIZE)
-              const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
-              batchResults.forEach((r, idx) => {
-                if (r.status === 'fulfilled' && r.value.length > 0) {
-                  allResults.push(...r.value)
-                  if (cacheEnabled.value) cache.set(batch[idx], r.value)
-                } else {
-                  stillEmpty.push(batch[idx])
-                }
-              })
-              updateResults(allResults)
-              if (i + BATCH_SIZE < remaining.length) await delay(BATCH_DELAY)
-            }
-
-            remaining.splice(0, remaining.length, ...stillEmpty)
-            if (remaining.length === 0) break
-          }
+          add('fallback: csres.com (' + failed.length + ' items)', 'warn')
+          await runSource('csres.com', csres, failed)
         }
       }
     }
@@ -275,7 +237,6 @@ export function useQuery() {
     add(SEPARATOR, 'info')
     add('═══ COMPLETE: ' + results.value.length + ' results, ' + elapsed + 's ═══', 'highlight')
 
-    // Enable cache after first run
     if (!cacheEnabled.value) {
       cacheEnabled.value = true
       add('cache: enabled for next query', 'info')

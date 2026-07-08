@@ -19,11 +19,14 @@
       ></textarea>
       <div class="source-row">
         <span class="source-label">数据源:</span>
+        <label class="source-check">
+          <input type="radio" value="" v-model="selectedSource" :disabled="running" />
+          <span>默认</span>
+        </label>
         <label v-for="src in sources" :key="src.key" class="source-check">
-          <input type="checkbox" :value="src.key" v-model="selectedSources" :disabled="running" />
+          <input type="radio" :value="src.key" v-model="selectedSource" :disabled="running" />
           <span>{{ src.label }}</span>
         </label>
-        <span class="source-hint" v-if="selectedSources.length === 0">默认全部</span>
       </div>
       <div class="btn-row">
         <button class="btn-run" :disabled="running" @click="handleRun">
@@ -72,27 +75,27 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  run: [keywords: string[], sources: string[]]
+  run: [keywords: string[], source: string]
   'copy-md': []
   'export-xlsx': []
 }>()
 
 const sources = [
   { key: 'cssn', label: 'CSSN' },
+  { key: 'bzsou', label: '标准搜' },
   { key: 'gongbiaoku', label: '工标库' },
   { key: 'csres', label: 'CSRes' },
-  { key: 'bzsou', label: '标准搜' },
 ]
 
 const keywords = ref('')
-const selectedSources = ref<string[]>([])
+const selectedSource = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 function handleRun() {
   const lines = parseKeywords(keywords.value)
   if (lines.length === 0) return
-  emit('run', lines, selectedSources.value)
+  emit('run', lines, selectedSource.value)
 }
 
 function triggerUpload() {
