@@ -126,12 +126,15 @@ export function useQuery() {
           add('──── ' + name + ' ────', 'info')
           for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
             const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-            const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
+            // Only query keywords not yet found
+            const toQuery = batch.filter((kw) => !foundInTier1.has(kw))
+            if (toQuery.length === 0) continue
+            const batchResults = await Promise.allSettled(toQuery.map((kw) => source.query(kw)))
             batchResults.forEach((r, idx) => {
               if (r.status === 'fulfilled' && r.value.length > 0) {
                 allResults.push(...r.value)
-                if (cacheEnabled.value) cache.set(batch[idx], r.value)
-                foundInTier1.add(batch[idx])
+                if (cacheEnabled.value) cache.set(toQuery[idx], r.value)
+                foundInTier1.add(toQuery[idx])
               }
             })
             results.value = [...allResults]
