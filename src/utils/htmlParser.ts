@@ -90,5 +90,30 @@ export function parseCsresHtml(html: string, keyword: string): StandardResult[] 
     })
   })
 
+  // Fix: if multiple versions exist, older ones marked as 现行 should be 被代替
+  if (results.length > 1) {
+    // Group by base number (without year)
+    const groups = new Map<string, typeof results>()
+    results.forEach((r) => {
+      const base = r.standard_number.replace(/[-–]\d{4}.*$/, '').replace(/\s/g, '')
+      if (!groups.has(base)) groups.set(base, [])
+      groups.get(base)!.push(r)
+    })
+
+    // For each group with multiple versions, mark older ones as 被代替
+    for (const [, group] of groups) {
+      if (group.length <= 1) continue
+      // Sort by standard number descending (newer first)
+      group.sort((a, b) => b.standard_number.localeCompare(a.standard_number))
+      const latest = group[0]
+      for (let i = 1; i < group.length; i++) {
+        if (group[i].status === '现行') {
+          group[i].status = '被代替'
+          group[i].replaced_by = latest.standard_number
+        }
+      }
+    }
+  }
+
   return results
 }
