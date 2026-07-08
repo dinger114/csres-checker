@@ -9,6 +9,8 @@
             :progress="progress"
             :hasResults="results.length > 0"
             @run="handleRun"
+            @copy-md="handleCopyMd"
+            @export-xlsx="handleExportXlsx"
           />
           <ResultsTable
             :results="results"
@@ -38,10 +40,12 @@ import { useToast } from './composables/useToast'
 import { useFirebase } from './composables/useFirebase'
 import { useTurnstile } from './composables/useTurnstile'
 import { useLog } from './composables/useLog'
+import { useXlsx } from './composables/useXlsx'
 
 const { theme, toggleTheme, initTheme } = useTheme()
 const { results, progress, running, query } = useQuery()
 const { exportMarkdown, copy } = useClipboard()
+const { exportXlsx } = useXlsx()
 const toast = useToast()
 const firebase = useFirebase()
 const turnstile = useTurnstile()
@@ -79,6 +83,15 @@ async function handleCopyMd() {
   }
   const ok = await copy(md)
   toast.show(ok ? '已复制 Markdown 到剪贴板' : '复制失败')
+}
+
+function handleExportXlsx() {
+  if (results.value.length === 0) {
+    toast.show('暂无结果可导出')
+    return
+  }
+  exportXlsx(results.value as any)
+  toast.show('已导出 Excel 文件')
 }
 
 let turnstileInited = false

@@ -17,6 +17,7 @@
       <div class="btn-row">
         <button :disabled="running" @click="handleRun">[ RUN ]</button>
         <button :disabled="running || !hasResults" @click="emit('copy-md')">[ COPY MD ]</button>
+        <button :disabled="running || !hasResults" @click="emit('export-xlsx')">[ EXPORT XLSX ]</button>
       </div>
       <div ref="turnstileEl" id="turnstileWidget"></div>
       <div v-if="progress.pct > 0" class="progress-wrap">
@@ -45,6 +46,7 @@ defineProps<{
 const emit = defineEmits<{
   run: [keywords: string[]]
   'copy-md': []
+  'export-xlsx': []
 }>()
 
 const keywords = ref('')

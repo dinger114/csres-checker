@@ -11,7 +11,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'firebase': ['firebase/app', 'firebase/database'],
-          'vue-vendor': ['vue'],
+          'xlsx': ['xlsx'],
         },
       },
     },
