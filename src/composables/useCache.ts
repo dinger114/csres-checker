@@ -3,7 +3,7 @@ import type { StandardResult } from '../types'
 
 const CACHE_KEY = 'csres-query-cache'
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
-const MAX_CACHE_SIZE = 200
+const MAX_CACHE_SIZE = 1000
 
 interface CacheEntry {
   data: StandardResult[]
