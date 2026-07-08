@@ -16,3 +16,6 @@ dist/
 __pycache__/
 venv/
 results.json
+
+# IDE/Tools
+.workbuddy/
