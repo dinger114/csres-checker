@@ -1,6 +1,7 @@
 <template>
   <div class="title-row">
     <h1>标准查新工具</h1>
+    <span class="global-count">TOTAL:{{ globalCount }}</span>
     <div class="header-actions">
       <button class="help-btn" @click="$emit('show-help')">HELP</button>
       <button class="theme-toggle" @click="$emit('toggle-theme')">
@@ -13,6 +14,7 @@
 
 <script setup lang="ts">
 import type { ThemeMode } from '../types'
+import { useFirebase } from '../composables/useFirebase'
 
 defineProps<{
   theme: ThemeMode
@@ -22,6 +24,8 @@ defineEmits<{
   'toggle-theme': []
   'show-help': []
 }>()
+
+const { globalCount } = useFirebase()
 </script>
 
 <style scoped>
@@ -29,6 +33,13 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.global-count {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  margin-left: 8px;
 }
 
 .header-actions {
@@ -39,21 +50,26 @@ defineEmits<{
 }
 
 .help-btn {
-  background: none;
+  background: var(--panel);
   border: 1px solid var(--border);
-  color: var(--text-dim);
-  font-size: 10px;
+  border-radius: 20px;
   padding: 6px 12px;
   cursor: pointer;
-  border-radius: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   transition: all 0.3s;
+  min-width: 36px;
+  height: 36px;
   font-family: inherit;
+  color: var(--text-dim);
   letter-spacing: 1px;
 }
 
 .help-btn:hover {
   background: var(--primary);
   color: #fff;
-  border-color: var(--primary);
 }
 </style>

@@ -10,14 +10,12 @@
       </button>
       <button v-if="cacheEnabled && cacheSize > 0" class="clear-cache-btn" @click="handleClearCache">CLEAR</button>
     </span>
-    <span style="margin-left:auto;color:var(--primary);font-weight:600;">TOTAL:{{ globalCount }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useLog } from '../composables/useLog'
-import { useFirebase } from '../composables/useFirebase'
 import { useCache } from '../composables/useCache'
 
 defineProps<{
@@ -30,7 +28,6 @@ const emit = defineEmits<{
 }>()
 
 const { stats } = useLog()
-const { globalCount } = useFirebase()
 const { size, clear } = useCache()
 
 const cacheSize = ref(size())
