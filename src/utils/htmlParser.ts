@@ -103,13 +103,16 @@ export function parseCsresHtml(html: string, keyword: string): StandardResult[] 
     // For each group with multiple versions, mark older ones as 被代替
     for (const [, group] of groups) {
       if (group.length <= 1) continue
+      // Filter out English versions (ending with E) for determining the latest
+      const chineseVersions = group.filter((r) => !r.standard_number.endsWith('E'))
+      if (chineseVersions.length <= 1) continue
       // Sort by standard number descending (newer first)
-      group.sort((a, b) => b.standard_number.localeCompare(a.standard_number))
-      const latest = group[0]
-      for (let i = 1; i < group.length; i++) {
-        if (group[i].status === '现行') {
-          group[i].status = '被代替'
-          group[i].replaced_by = latest.standard_number
+      chineseVersions.sort((a, b) => b.standard_number.localeCompare(a.standard_number))
+      const latest = chineseVersions[0]
+      for (let i = 1; i < chineseVersions.length; i++) {
+        if (chineseVersions[i].status === '现行') {
+          chineseVersions[i].status = '被代替'
+          chineseVersions[i].replaced_by = latest.standard_number
         }
       }
     }
