@@ -47,6 +47,12 @@
                 <template v-else-if="col.key === 'soujz'">
                   <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
                 </template>
+                <template v-else-if="col.key === 'standard_number'">
+                  <span class="clickable" @click="handleStdClick($event, r)">
+                    {{ getValue(r, col.key) }}
+                    <span v-if="r.versions && r.versions.length > 1" class="version-badge" title="点击查看版本历史">v{{ r.versions.length }}</span>
+                  </span>
+                </template>
                 <template v-else>
                   <span class="clickable" @click="copyCell($event, getValue(r, col.key))">{{ getValue(r, col.key) }}</span>
                 </template>
@@ -70,6 +76,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:columns': [columns: ColumnDef[]]
+  'show-versions': [versions: import('../types').StandardVersion[]]
 }>()
 
 export interface ColumnDef {
@@ -162,6 +169,14 @@ function copyCell(e: MouseEvent, text: string) {
   })
 }
 
+function handleStdClick(e: MouseEvent, r: StandardResult) {
+  if (r.versions && r.versions.length > 1) {
+    emit('show-versions', r.versions)
+  } else {
+    copyCell(e, r.standard_number)
+  }
+}
+
 defineExpose({ columns })
 </script>
 
@@ -205,5 +220,17 @@ th.draggable:active {
 
 th.dragging-over {
   border-left: 2px solid var(--primary);
+}
+
+.version-badge {
+  display: inline-block;
+  font-size: 9px;
+  background: var(--primary);
+  color: var(--bg);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+  cursor: pointer;
 }
 </style>

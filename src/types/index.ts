@@ -9,6 +9,15 @@ export interface StandardResult {
   publisher: string
   category: string
   ics: string
+  versions?: StandardVersion[]
+}
+
+export interface StandardVersion {
+  standard_number: string
+  title: string
+  status: string
+  publish_date: string
+  implement_date: string
 }
 
 export interface LogEntry {

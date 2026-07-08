@@ -17,6 +17,7 @@
             ref="resultsTableRef"
             :results="results"
             @update:columns="handleColumnsUpdate"
+            @show-versions="handleShowVersions"
           />
         </div>
         <TerminalLog
@@ -27,6 +28,11 @@
         />
         <DonatePanel />
         <Toast />
+        <VersionHistory
+          :visible="showVersionHistory"
+          :versions="selectedVersions"
+          @close="handleCloseVersions"
+        />
       </div>
     </n-message-provider>
   </n-config-provider>
@@ -40,6 +46,7 @@ import QueryInput from './components/QueryInput.vue'
 import ResultsTable from './components/ResultsTable.vue'
 import type { ColumnDef } from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
+import VersionHistory from './components/VersionHistory.vue'
 import DonatePanel from './components/DonatePanel.vue'
 import Toast from './components/Toast.vue'
 import { useTheme } from './composables/useTheme'
@@ -50,6 +57,7 @@ import { useFirebase } from './composables/useFirebase'
 import { useLog } from './composables/useLog'
 import { useXlsx } from './composables/useXlsx'
 import { useHistory } from './composables/useHistory'
+import type { StandardVersion } from './types'
 
 const { theme, toggleTheme, initTheme } = useTheme()
 const { results, progress, running, query } = useQuery()
@@ -63,6 +71,8 @@ const { history, add: addHistory, remove: removeHistory, clear: clearHistory } =
 const queryInputRef = ref<InstanceType<typeof QueryInput> | null>(null)
 const resultsTableRef = ref<InstanceType<typeof ResultsTable> | null>(null)
 const currentColumns = ref<ColumnDef[]>([])
+const showVersionHistory = ref(false)
+const selectedVersions = ref<StandardVersion[]>([])
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
@@ -113,6 +123,16 @@ function handleHistoryDelete(index: number) {
 
 function handleHistoryClear() {
   clearHistory()
+}
+
+function handleShowVersions(versions: StandardVersion[]) {
+  selectedVersions.value = versions
+  showVersionHistory.value = true
+}
+
+function handleCloseVersions() {
+  showVersionHistory.value = false
+  selectedVersions.value = []
 }
 
 onMounted(() => {
