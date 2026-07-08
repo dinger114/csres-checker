@@ -23,6 +23,7 @@
         <input ref="fileInputRef" type="file" accept=".txt" @change="handleFileUpload" hidden />
         <button :disabled="running || !hasResults" @click="emit('copy-md')">[ COPY MD ]</button>
         <button :disabled="running || !hasResults" @click="emit('export-xlsx')">[ EXPORT XLSX ]</button>
+        <button :disabled="running || !keywords.trim()" @click="handleShare">[ SHARE ]</button>
       </div>
       <div v-if="progress.pct > 0" class="progress-wrap">
         <div class="progress-info">
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import type { ProgressState } from '../types'
 
 defineProps<{
@@ -110,10 +111,39 @@ function readFile(file: File) {
   reader.readAsText(file)
 }
 
+function handleShare() {
+  const lines = parseKeywords(keywords.value)
+  if (lines.length === 0) return
+  const params = new URLSearchParams()
+  params.set('q', lines.join(','))
+  const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
+  navigator.clipboard.writeText(url).then(() => {
+    // Update URL without reload
+    window.history.replaceState({}, '', `?${params.toString()}`)
+  })
+}
+
 function setText(text: string) {
   keywords.value = text
   textareaRef.value?.focus()
 }
+
+function loadFromUrl() {
+  const params = new URLSearchParams(window.location.search)
+  const q = params.get('q')
+  if (q) {
+    keywords.value = q.split(',').join('\n')
+    return params.get('auto') === '1'
+  }
+  return false
+}
+
+onMounted(() => {
+  const shouldAutoRun = loadFromUrl()
+  if (shouldAutoRun && keywords.value.trim()) {
+    handleRun()
+  }
+})
 
 defineExpose({ setText })
 </script>
