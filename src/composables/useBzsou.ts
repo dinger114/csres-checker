@@ -14,6 +14,10 @@ export function useBzsou() {
     return status
   }
 
+  function stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, '').replace(/&mdash;/g, '—').replace(/&nbsp;/g, ' ')
+  }
+
   function matchStdNo(queryNorm: string, stdNorm: string): boolean {
     // Exact match
     if (queryNorm === stdNorm) return true
@@ -105,8 +109,8 @@ export function useBzsou() {
 
       return filtered.map((r: any) => ({
         query: keyword,
-        standard_number: r.STAN_NUM || '',
-        title: r.STAN_CNNAME || '',
+        standard_number: stripHtml(r.STAN_NUM || ''),
+        title: stripHtml(r.STAN_CNNAME || ''),
         status: mapStatus(r.STAN_STATUS || ''),
         publish_date: r.PUB_DATE ? new Date(r.PUB_DATE).toISOString().split('T')[0] : (r.STAN_PART_YEAR ? String(r.STAN_PART_YEAR) : ''),
         implement_date: r.IMPL_DATE ? new Date(r.IMPL_DATE).toISOString().split('T')[0] : '',
