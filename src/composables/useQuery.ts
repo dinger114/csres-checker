@@ -48,7 +48,8 @@ export function useQuery() {
   const results = ref<StandardResult[]>([])
   const progress = ref<ProgressState>({ current: 0, total: 0, pct: 0 })
   const running = ref(false)
-  const cacheEnabled = ref(true)
+  // Cache disabled by default, enabled after first run if not expired
+  const cacheEnabled = ref(false)
 
   const cssn = useCssn()
   const gongbiaoku = useGongbiaoku()
@@ -81,6 +82,13 @@ export function useQuery() {
     }
 
     add('═══ START: ' + normalizedKws.length + ' items ═══', 'highlight')
+
+    // Check cache expiry - disable if expired
+    if (cacheEnabled.value && cache.isExpired()) {
+      cacheEnabled.value = false
+      add('cache: expired (>4h), disabled', 'warn')
+    }
+
     if (!cacheEnabled.value) {
       add('cache: disabled', 'warn')
     } else {
@@ -266,6 +274,13 @@ export function useQuery() {
 
     add(SEPARATOR, 'info')
     add('═══ COMPLETE: ' + results.value.length + ' results, ' + elapsed + 's ═══', 'highlight')
+
+    // Enable cache after first run
+    if (!cacheEnabled.value) {
+      cacheEnabled.value = true
+      add('cache: enabled for next query', 'info')
+    }
+
     if (cacheEnabled.value) {
       add('cache: ' + cache.size() + ' entries', 'info')
     }
