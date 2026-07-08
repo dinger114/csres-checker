@@ -149,7 +149,8 @@ function getValue(r: StandardResult, key: string): string {
 }
 
 function getCellClass(col: ColumnDef): string {
-  if (['doc88', 'soujz', 'status'].includes(col.key)) return ''
+  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz'].includes(col.key)) return 'text-center'
+  if (col.key === 'num') return 'num'
   return 'clickable'
 }
 

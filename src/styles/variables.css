@@ -188,6 +188,8 @@ td {
   transition: background 0.15s;
 }
 
+td.text-center { text-align: center; }
+
 tr:hover td { background: var(--row-hover); }
 td.num { text-align: center; color: var(--text-dim); width: 35px; }
 td.clickable { cursor: pointer; }
