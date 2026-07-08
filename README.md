@@ -19,10 +19,10 @@
 
 ### GitHub Pages（推荐）
 
-推送到 `refactor/vue3-worker-edge` 分支自动部署，无需后端。
+推送到 `main` 分支自动部署，无需后端。
 
 ```bash
-git push origin refactor/vue3-worker-edge
+git push origin main
 ```
 
 **前置配置**：在仓库 Settings → Secrets → Actions 中添加：
