@@ -170,7 +170,7 @@ th {
   background: var(--header-bg);
   color: var(--text-dim);
   font-weight: 600;
-  text-align: left;
+  text-align: center;
   padding: 10px 12px;
   border-bottom: 2px solid var(--border);
   text-transform: uppercase;

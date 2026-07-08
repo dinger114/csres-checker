@@ -157,5 +157,7 @@ export function useQuery() {
     progress: computed(() => progress.value),
     running: computed(() => running.value),
     query,
+    clearCache: cache.clear,
+    cacheSize: cache.size,
   }
 }
