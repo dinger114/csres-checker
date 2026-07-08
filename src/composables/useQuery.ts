@@ -7,6 +7,7 @@ import { useGongbiaoku } from './useGongbiaoku'
 import { useCsres } from './useCsres'
 import { useLog } from './useLog'
 import { useFirebase } from './useFirebase'
+import { useCache } from './useCache'
 
 export function useQuery() {
   const results = ref<StandardResult[]>([])
@@ -18,6 +19,7 @@ export function useQuery() {
   const csres = useCsres()
   const { add, updateStats } = useLog()
   const { incQueryCount } = useFirebase()
+  const cache = useCache()
 
   const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -37,70 +39,100 @@ export function useQuery() {
     }
 
     add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')
-    add(`phase1: cssn.net.cn (parallel)`, 'info')
-    add(`phase2: gongbiaoku.com fallback (parallel)`, 'info')
-    add(`phase3: csres.com fallback (parallel)`, 'info')
+    add(`cache: ${cache.size()} entries`, 'info')
     add(`────────────────────────────────`, 'info')
 
     const allResults: StandardResult[] = []
-    const emptyKeywords: string[] = []
+    const uncachedKeywords: string[] = []
 
-    // Phase 1: CSSN - parallel batches
-    for (let i = 0; i < normalizedKws.length; i += BATCH_SIZE) {
-      const batch = normalizedKws.slice(i, i + BATCH_SIZE)
-      progress.value = {
-        current: Math.min(i + BATCH_SIZE, normalizedKws.length),
-        total: normalizedKws.length,
-        pct: Math.round((i / normalizedKws.length) * 100),
+    // Check cache first
+    for (const kw of normalizedKws) {
+      const cached = cache.get(kw)
+      if (cached) {
+        add(`cache hit: "${kw}"`, 'success')
+        allResults.push(...cached)
+      } else {
+        uncachedKeywords.push(kw)
       }
-
-      const batchResults = await Promise.allSettled(batch.map((kw) => cssn.query(kw)))
-      batchResults.forEach((r, idx) => {
-        if (r.status === 'fulfilled' && r.value.length > 0) {
-          allResults.push(...r.value)
-        } else {
-          emptyKeywords.push(batch[idx])
-        }
-      })
-
-      results.value = [...allResults]
-      if (i + BATCH_SIZE < normalizedKws.length) await delay(BATCH_DELAY)
     }
 
-    // Phase 2: GongBiaoKu fallback - parallel batches
-    const stillEmpty: string[] = []
-    if (emptyKeywords.length > 0) {
+    if (uncachedKeywords.length === 0) {
+      add(`all ${normalizedKws.length} items from cache`, 'success')
+    } else {
+      add(`${uncachedKeywords.length} items need fetching`, 'info')
+    }
+
+    results.value = [...allResults]
+
+    if (uncachedKeywords.length > 0) {
       add(`────────────────────────────────`, 'info')
-      add(`phase2: gongbiaoku.com fallback (${emptyKeywords.length} items)`, 'warn')
-      for (let i = 0; i < emptyKeywords.length; i += BATCH_SIZE) {
-        const batch = emptyKeywords.slice(i, i + BATCH_SIZE)
-        const batchResults = await Promise.allSettled(batch.map((kw) => gongbiaoku.query(kw)))
+      add(`phase1: cssn.net.cn`, 'info')
+      add(`phase2: gongbiaoku.com fallback`, 'info')
+      add(`phase3: csres.com fallback`, 'info')
+      add(`────────────────────────────────`, 'info')
+
+      const emptyKeywords: string[] = []
+
+      // Phase 1: CSSN - parallel batches
+      for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
+        const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
+        progress.value = {
+          current: Math.min(i + BATCH_SIZE, uncachedKeywords.length),
+          total: uncachedKeywords.length,
+          pct: Math.round((i / uncachedKeywords.length) * 100),
+        }
+
+        const batchResults = await Promise.allSettled(batch.map((kw) => cssn.query(kw)))
         batchResults.forEach((r, idx) => {
           if (r.status === 'fulfilled' && r.value.length > 0) {
             allResults.push(...r.value)
+            cache.set(batch[idx], r.value)
           } else {
-            stillEmpty.push(batch[idx])
+            emptyKeywords.push(batch[idx])
           }
         })
-        results.value = [...allResults]
-        if (i + BATCH_SIZE < emptyKeywords.length) await delay(BATCH_DELAY)
-      }
-    }
 
-    // Phase 3: Csres fallback - parallel batches
-    if (stillEmpty.length > 0) {
-      add(`────────────────────────────────`, 'info')
-      add(`phase3: csres.com fallback (${stillEmpty.length} items)`, 'warn')
-      for (let i = 0; i < stillEmpty.length; i += BATCH_SIZE) {
-        const batch = stillEmpty.slice(i, i + BATCH_SIZE)
-        const batchResults = await Promise.allSettled(batch.map((kw) => csres.query(kw)))
-        batchResults.forEach((r) => {
-          if (r.status === 'fulfilled' && r.value.length > 0) {
-            allResults.push(...r.value)
-          }
-        })
         results.value = [...allResults]
-        if (i + BATCH_SIZE < stillEmpty.length) await delay(BATCH_DELAY)
+        if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
+      }
+
+      // Phase 2: GongBiaoKu fallback - parallel batches
+      const stillEmpty: string[] = []
+      if (emptyKeywords.length > 0) {
+        add(`────────────────────────────────`, 'info')
+        add(`phase2: gongbiaoku.com fallback (${emptyKeywords.length} items)`, 'warn')
+        for (let i = 0; i < emptyKeywords.length; i += BATCH_SIZE) {
+          const batch = emptyKeywords.slice(i, i + BATCH_SIZE)
+          const batchResults = await Promise.allSettled(batch.map((kw) => gongbiaoku.query(kw)))
+          batchResults.forEach((r, idx) => {
+            if (r.status === 'fulfilled' && r.value.length > 0) {
+              allResults.push(...r.value)
+              cache.set(batch[idx], r.value)
+            } else {
+              stillEmpty.push(batch[idx])
+            }
+          })
+          results.value = [...allResults]
+          if (i + BATCH_SIZE < emptyKeywords.length) await delay(BATCH_DELAY)
+        }
+      }
+
+      // Phase 3: Csres fallback - parallel batches
+      if (stillEmpty.length > 0) {
+        add(`────────────────────────────────`, 'info')
+        add(`phase3: csres.com fallback (${stillEmpty.length} items)`, 'warn')
+        for (let i = 0; i < stillEmpty.length; i += BATCH_SIZE) {
+          const batch = stillEmpty.slice(i, i + BATCH_SIZE)
+          const batchResults = await Promise.allSettled(batch.map((kw) => csres.query(kw)))
+          batchResults.forEach((r, idx) => {
+            if (r.status === 'fulfilled' && r.value.length > 0) {
+              allResults.push(...r.value)
+              cache.set(batch[idx], r.value)
+            }
+          })
+          results.value = [...allResults]
+          if (i + BATCH_SIZE < stillEmpty.length) await delay(BATCH_DELAY)
+        }
       }
     }
 
@@ -114,6 +146,7 @@ export function useQuery() {
 
     add(`────────────────────────────────`, 'info')
     add(`═══ COMPLETE: ${allResults.length} results, ${elapsed}s ═══`, 'highlight')
+    add(`cache: ${cache.size()} entries`, 'info')
 
     incQueryCount()
     running.value = false
