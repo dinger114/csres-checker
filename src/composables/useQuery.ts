@@ -221,6 +221,24 @@ export function useQuery() {
       }
     }
 
+    // Deduplicate by standard number (keep result with most complete data)
+    const dedupedMap = new Map<string, StandardResult>()
+    for (const r of allResults) {
+      const key = r.standard_number.toLowerCase().replace(/\s/g, '')
+      const existing = dedupedMap.get(key)
+      if (!existing) {
+        dedupedMap.set(key, r)
+      } else {
+        // Keep the one with more complete data
+        const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
+        const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
+        if (newScore > existingScore) {
+          dedupedMap.set(key, r)
+        }
+      }
+    }
+    const dedupedResults = Array.from(dedupedMap.values())
+
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
     progress.value = { current: normalizedKws.length, total: normalizedKws.length, pct: 100 }
 
@@ -230,10 +248,13 @@ export function useQuery() {
     })
 
     add(SEPARATOR, 'info')
-    add('═══ COMPLETE: ' + allResults.length + ' results, ' + elapsed + 's ═══', 'highlight')
+    add('═══ COMPLETE: ' + dedupedResults.length + ' results (deduped from ' + allResults.length + '), ' + elapsed + 's ═══', 'highlight')
     if (cacheEnabled.value) {
       add('cache: ' + cache.size() + ' entries', 'info')
     }
+
+    // Update results with deduped data
+    results.value = dedupedResults
 
     incQueryCount()
     running.value = false
