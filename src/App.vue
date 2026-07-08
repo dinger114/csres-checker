@@ -3,7 +3,7 @@
     <n-message-provider>
       <div class="app" :class="{ 'theme-dark': theme === 'dark', 'theme-light': theme === 'light' }">
         <div class="main-panel">
-          <AppHeader :theme="theme" @toggle-theme="toggleTheme" />
+          <AppHeader :theme="theme" @toggle-theme="toggleTheme" @show-help="showHelp = true" />
           <QueryInput
             ref="queryInputRef"
             :running="running"
@@ -36,6 +36,10 @@
           :versions="selectedVersions"
           @close="handleCloseVersions"
         />
+        <HelpPanel
+          :visible="showHelp"
+          @close="showHelp = false"
+        />
       </div>
     </n-message-provider>
   </n-config-provider>
@@ -50,6 +54,7 @@ import ResultsTable from './components/ResultsTable.vue'
 import type { ColumnDef } from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
 import VersionHistory from './components/VersionHistory.vue'
+import HelpPanel from './components/HelpPanel.vue'
 import DonatePanel from './components/DonatePanel.vue'
 import Toast from './components/Toast.vue'
 import { useTheme } from './composables/useTheme'
@@ -76,6 +81,7 @@ const resultsTableRef = ref<InstanceType<typeof ResultsTable> | null>(null)
 const currentColumns = ref<ColumnDef[]>([])
 const showVersionHistory = ref(false)
 const selectedVersions = ref<StandardVersion[]>([])
+const showHelp = ref(false)
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
