@@ -125,7 +125,7 @@ export function useQuery() {
         add(SEPARATOR, 'info')
         add('tier1: running cssn + bzsou', 'info')
 
-        const foundInTier1 = new Set<string>()
+        const foundInTier1 = new Set<number>() // Track by index, not by keyword
         const tier1Sources = [
           { name: 'cssn', source: cssn },
           { name: 'bzsou', source: bzsou },
@@ -135,14 +135,14 @@ export function useQuery() {
           add('──── ' + name + ' ────', 'info')
           for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
             const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-            const toQuery = batch.filter((kw) => !foundInTier1.has(kw))
+            const toQuery = batch.map((kw, idx) => ({ kw, idx: i + idx })).filter(({ idx }) => !foundInTier1.has(idx))
             if (toQuery.length === 0) continue
-            const batchResults = await Promise.allSettled(toQuery.map((kw) => source.query(kw)))
+            const batchResults = await Promise.allSettled(toQuery.map(({ kw }) => source.query(kw)))
             batchResults.forEach((r, idx) => {
               if (r.status === 'fulfilled' && r.value.length > 0) {
                 allResults.push(...r.value)
-                if (cacheEnabled.value) cache.set(toQuery[idx], r.value)
-                foundInTier1.add(toQuery[idx])
+                if (cacheEnabled.value) cache.set(toQuery[idx].kw, r.value)
+                foundInTier1.add(toQuery[idx].idx)
               }
             })
             updateResults(allResults)
