@@ -74,7 +74,7 @@ export function useBzsou() {
       const data = JSON.parse(resp)
       add(`bzsou response: ${data.totalCount || 0} results, ${Date.now() - t0}ms`, 'info')
 
-      const results = data.results || []
+      const results = data.result || []
       if (!Array.isArray(results) || results.length === 0) return []
 
       return results.map((r: any) => ({
