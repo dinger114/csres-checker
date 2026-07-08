@@ -2,7 +2,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, refactor/vue3-worker-edge]
 
 permissions:
   contents: read
