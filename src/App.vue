@@ -17,15 +17,12 @@
             :results="results"
           />
         </div>
-        <div class="side-panel">
-          <HistoryPanel
-            :history="history"
-            @load="handleHistoryLoad"
-            @delete="handleHistoryDelete"
-            @clear="handleHistoryClear"
-          />
-          <TerminalLog />
-        </div>
+        <TerminalLog
+          :history="history"
+          @load="handleHistoryLoad"
+          @delete="handleHistoryDelete"
+          @clear="handleHistoryClear"
+        />
         <DonatePanel />
         <Toast />
       </div>
@@ -40,7 +37,6 @@ import AppHeader from './components/AppHeader.vue'
 import QueryInput from './components/QueryInput.vue'
 import ResultsTable from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
-import HistoryPanel from './components/HistoryPanel.vue'
 import DonatePanel from './components/DonatePanel.vue'
 import Toast from './components/Toast.vue'
 import { useTheme } from './composables/useTheme'
@@ -131,15 +127,5 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.side-panel {
-  width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  overflow-y: auto;
-  border-left: 1px solid var(--border);
 }
 </style>

@@ -223,15 +223,6 @@ td a:hover { text-decoration: underline; }
   flex-shrink: 0;
 }
 
-[data-theme="dark"] .log-panel::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 2px);
-  pointer-events: none;
-  z-index: 1;
-}
-
 .log-header {
   padding: 8px 12px;
   background: var(--header-bg);
@@ -245,8 +236,6 @@ td a:hover { text-decoration: underline; }
 }
 
 .log-header .title {
-  flex: 1;
-  text-align: center;
   font-size: 10px;
   color: var(--text-dim);
   letter-spacing: 1px;
@@ -254,6 +243,7 @@ td a:hover { text-decoration: underline; }
 
 .log-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px 12px;
   font-size: 11px;

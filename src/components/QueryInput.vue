@@ -19,10 +19,8 @@
       ></textarea>
       <div class="btn-row">
         <button :disabled="running" @click="handleRun">[ RUN ]</button>
-        <label class="upload-btn" :class="{ disabled: running }">
-          [ IMPORT TXT ]
-          <input type="file" accept=".txt" @change="handleFileUpload" hidden :disabled="running" />
-        </label>
+        <button :disabled="running" @click="triggerUpload">[ IMPORT TXT ]</button>
+        <input ref="fileInputRef" type="file" accept=".txt" @change="handleFileUpload" hidden />
         <button :disabled="running || !hasResults" @click="emit('copy-md')">[ COPY MD ]</button>
         <button :disabled="running || !hasResults" @click="emit('export-xlsx')">[ EXPORT XLSX ]</button>
       </div>
@@ -57,11 +55,16 @@ const emit = defineEmits<{
 
 const keywords = ref('')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 function handleRun() {
   const lines = parseKeywords(keywords.value)
   if (lines.length === 0) return
   emit('run', lines)
+}
+
+function triggerUpload() {
+  fileInputRef.value?.click()
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -120,17 +123,5 @@ defineExpose({ setText })
   color: var(--text-secondary);
   font-size: 11px;
   margin-left: 8px;
-}
-
-.upload-btn {
-  display: inline-block;
-  cursor: pointer;
-  opacity: 1;
-  transition: opacity 0.15s;
-}
-
-.upload-btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>
