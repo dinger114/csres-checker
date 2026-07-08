@@ -62,32 +62,53 @@ export function useQuery() {
     }
     add(SEPARATOR, 'info')
 
-    const allResults: StandardResult[] = []
+    // Deduplicate keywords for querying
+    const uniqueKws = [...new Set(normalizedKws)]
+    // Map unique keyword to all its indices in original input
+    const kwToIndices = new Map<string, number[]>()
+    normalizedKws.forEach((kw, idx) => {
+      if (!kwToIndices.has(kw)) kwToIndices.set(kw, [])
+      kwToIndices.get(kw)!.push(idx)
+    })
+
+    // Cache: unique keyword -> results
+    const cacheResults = new Map<string, StandardResult[]>()
     const uncachedKeywords: string[] = []
 
     if (cacheEnabled.value) {
-      for (const kw of normalizedKws) {
+      for (const kw of uniqueKws) {
         const cached = cache.get(kw)
         if (cached) {
           add('cache hit: "' + kw + '"', 'success')
-          allResults.push(...cached)
+          cacheResults.set(kw, cached)
         } else {
           uncachedKeywords.push(kw)
         }
       }
     } else {
-      uncachedKeywords.push(...normalizedKws)
+      uncachedKeywords.push(...uniqueKws)
     }
 
     if (uncachedKeywords.length === 0) {
-      add('all ' + normalizedKws.length + ' items from cache', 'success')
+      add('all ' + uniqueKws.length + ' unique items from cache', 'success')
     } else {
-      add(uncachedKeywords.length + ' items need fetching', 'info')
+      add(uncachedKeywords.length + ' unique items need fetching', 'info')
     }
 
+    // Build initial results from cache
+    const allResults: StandardResult[] = []
+    for (const [kw, cachedResults] of cacheResults) {
+      const indices = kwToIndices.get(kw) || []
+      for (const idx of indices) {
+        allResults.push(...cachedResults.map((r) => ({ ...r, query: normalizedKws[idx] })))
+      }
+    }
     results.value = [...allResults]
 
     if (uncachedKeywords.length > 0) {
+      // Query results for unique keywords
+      const queryResults = new Map<string, StandardResult[]>()
+
       async function runSource(
         name: string,
         src: { query: (kw: string) => Promise<StandardResult[]> },
@@ -102,38 +123,53 @@ export function useQuery() {
           const batch = kws.slice(i, i + BATCH_SIZE)
           const batchResults = await Promise.allSettled(batch.map((kw) => src.query(kw)))
           batchResults.forEach((r, idx) => {
+            const kw = batch[idx]
             if (r.status === 'fulfilled' && r.value.length > 0) {
-              allResults.push(...r.value)
-              if (cacheEnabled.value) cache.set(batch[idx], r.value)
+              queryResults.set(kw, r.value)
+              if (cacheEnabled.value) cache.set(kw, r.value)
             } else {
-              failed.push(batch[idx])
+              failed.push(kw)
             }
           })
-          results.value = [...allResults]
+          // Rebuild allResults from cache + queryResults
+          rebuildResults()
           if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
         return failed
       }
 
+      function rebuildResults() {
+        const rebuilt: StandardResult[] = []
+        // Add cached results
+        for (const [kw, cachedResults] of cacheResults) {
+          const indices = kwToIndices.get(kw) || []
+          for (const idx of indices) {
+            rebuilt.push(...cachedResults.map((r) => ({ ...r, query: normalizedKws[idx] })))
+          }
+        }
+        // Add query results
+        for (const [kw, queryResult] of queryResults) {
+          const indices = kwToIndices.get(kw) || []
+          for (const idx of indices) {
+            rebuilt.push(...queryResult.map((r) => ({ ...r, query: normalizedKws[idx] })))
+          }
+        }
+        allResults.length = 0
+        allResults.push(...rebuilt)
+        results.value = [...allResults]
+      }
+
       if (useDefault) {
-        // Default: cssn first, then bzsou for failures, then gongbiaoku, then csres
         add('plan: cssn → bzsou (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
 
-        // Phase 1: CSSN
         const failedAfterCssn = await runSource('cssn.net.cn', cssn, uncachedKeywords)
-
-        // Phase 2: bzsou for keywords cssn didn't find
         const failedAfterBzsou = await runSource('bzsou.cn', bzsou, failedAfterCssn)
-
-        // Phase 3: gongbiaoku for keywords bzsou didn't find
         const failedAfterGong = await runSource('gongbiaoku.com', gongbiaoku, failedAfterBzsou)
 
-        // Phase 4: csres for remaining
         if (failedAfterGong.length > 0) {
           await runSource('csres.com', csres, failedAfterGong)
         }
       } else {
-        // Single source: query that source, csres as fallback
         const sourceMap: Record<string, { query: (kw: string) => Promise<StandardResult[]> }> = {
           cssn,
           bzsou,
@@ -150,7 +186,6 @@ export function useQuery() {
 
         const failed = await runSource(source, selectedSrc, uncachedKeywords)
 
-        // CSRes fallback (unless csres was selected)
         if (source !== 'csres' && failed.length > 0) {
           add(SEPARATOR, 'info')
           add('fallback: csres.com (' + failed.length + ' items)', 'warn')
