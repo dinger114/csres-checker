@@ -5,6 +5,15 @@
       <span class="dot dot-y"></span>
       <span class="dot dot-g"></span>
       <span class="title">OUTPUT</span>
+      <div v-if="results.length > 0" class="filter-group">
+        <button
+          v-for="f in filters"
+          :key="f.value"
+          class="filter-btn"
+          :class="{ active: statusFilter === f.value }"
+          @click="statusFilter = f.value"
+        >{{ f.label }}</button>
+      </div>
     </div>
     <div class="terminal-body" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;">
       <div v-if="results.length === 0" class="empty-state"></div>
@@ -24,7 +33,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, idx) in results" :key="idx">
+            <tr v-for="(r, idx) in filteredResults" :key="idx">
               <td class="num">{{ idx + 1 }}</td>
               <td class="clickable" @click="copyCell($event, r.query)">{{ r.query }}</td>
               <td class="clickable" @click="copyCell($event, r.standard_number)">{{ r.standard_number }}</td>
@@ -49,12 +58,31 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import StatusBadge from './StatusBadge.vue'
 import type { StandardResult } from '../types'
 
-defineProps<{
+const props = defineProps<{
   results: StandardResult[]
 }>()
+
+const filters = [
+  { label: 'ALL', value: 'all' },
+  { label: '现行', value: '现行' },
+  { label: '废止', value: '废止' },
+  { label: '即将实施', value: '即将实施' },
+]
+
+const statusFilter = ref('all')
+
+const filteredResults = computed(() => {
+  if (statusFilter.value === 'all') return props.results
+  return props.results.filter((r) => r.status === statusFilter.value)
+})
+
+watch(() => props.results, () => {
+  statusFilter.value = 'all'
+})
 
 function doc88Url(r: StandardResult): string {
   return `https://www.doc88.com/tag/${encodeURIComponent(r.standard_number || '')}`
@@ -72,3 +100,33 @@ function copyCell(e: MouseEvent, text: string) {
   })
 }
 </script>
+
+<style scoped>
+.filter-group {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.filter-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 10px;
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.filter-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.filter-btn.active {
+  background: var(--primary);
+  color: var(--bg);
+  border-color: var(--primary);
+}
+</style>

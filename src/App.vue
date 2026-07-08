@@ -5,6 +5,7 @@
         <div class="main-panel">
           <AppHeader :theme="theme" @toggle-theme="toggleTheme" />
           <QueryInput
+            ref="queryInputRef"
             :running="running"
             :progress="progress"
             :hasResults="results.length > 0"
@@ -16,7 +17,15 @@
             :results="results"
           />
         </div>
-        <TerminalLog />
+        <div class="side-panel">
+          <HistoryPanel
+            :history="history"
+            @load="handleHistoryLoad"
+            @delete="handleHistoryDelete"
+            @clear="handleHistoryClear"
+          />
+          <TerminalLog />
+        </div>
         <DonatePanel />
         <Toast />
       </div>
@@ -25,12 +34,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { NConfigProvider, NMessageProvider, darkTheme, lightTheme } from 'naive-ui'
 import AppHeader from './components/AppHeader.vue'
 import QueryInput from './components/QueryInput.vue'
 import ResultsTable from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
+import HistoryPanel from './components/HistoryPanel.vue'
 import DonatePanel from './components/DonatePanel.vue'
 import Toast from './components/Toast.vue'
 import { useTheme } from './composables/useTheme'
@@ -40,6 +50,7 @@ import { useToast } from './composables/useToast'
 import { useFirebase } from './composables/useFirebase'
 import { useLog } from './composables/useLog'
 import { useXlsx } from './composables/useXlsx'
+import { useHistory } from './composables/useHistory'
 
 const { theme, toggleTheme, initTheme } = useTheme()
 const { results, progress, running, query } = useQuery()
@@ -48,6 +59,9 @@ const { exportXlsx } = useXlsx()
 const toast = useToast()
 const firebase = useFirebase()
 const { add: logAdd } = useLog()
+const { history, add: addHistory, remove: removeHistory, clear: clearHistory } = useHistory()
+
+const queryInputRef = ref<InstanceType<typeof QueryInput> | null>(null)
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
@@ -61,6 +75,7 @@ const themeOverrides = computed(() => ({
 
 function handleRun(keywords: string[]) {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
+  addHistory(keywords)
   query(keywords)
 }
 
@@ -81,6 +96,18 @@ function handleExportXlsx() {
   }
   exportXlsx(results.value as any)
   toast.show('已导出 Excel 文件')
+}
+
+function handleHistoryLoad(entry: string) {
+  queryInputRef.value?.setText(entry)
+}
+
+function handleHistoryDelete(index: number) {
+  removeHistory(index)
+}
+
+function handleHistoryClear() {
+  clearHistory()
 }
 
 onMounted(() => {
@@ -104,5 +131,15 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.side-panel {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
 }
 </style>
