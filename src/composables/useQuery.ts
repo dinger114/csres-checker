@@ -13,21 +13,34 @@ import { useCache } from './useCache'
 const SEPARATOR = '────────────────────────────────'
 
 function dedupResults(items: StandardResult[]): StandardResult[] {
-  const map = new Map<string, StandardResult>()
+  // Group by query keyword
+  const groups = new Map<string, StandardResult[]>()
   for (const r of items) {
-    const key = r.standard_number.toLowerCase().replace(/\s/g, '')
-    const existing = map.get(key)
-    if (!existing) {
-      map.set(key, r)
-    } else {
-      const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
-      const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
-      if (newScore > existingScore) {
-        map.set(key, r)
+    const q = r.query
+    if (!groups.has(q)) groups.set(q, [])
+    groups.get(q)!.push(r)
+  }
+
+  // For each query, dedup by standard number (keep most complete)
+  const result: StandardResult[] = []
+  for (const [, group] of groups) {
+    const dedupedMap = new Map<string, StandardResult>()
+    for (const r of group) {
+      const key = r.standard_number.toLowerCase().replace(/\s/g, '')
+      const existing = dedupedMap.get(key)
+      if (!existing) {
+        dedupedMap.set(key, r)
+      } else {
+        const existingScore = [existing.title, existing.publish_date, existing.implement_date, existing.replaced_by].filter(Boolean).length
+        const newScore = [r.title, r.publish_date, r.implement_date, r.replaced_by].filter(Boolean).length
+        if (newScore > existingScore) {
+          dedupedMap.set(key, r)
+        }
       }
     }
+    result.push(...dedupedMap.values())
   }
-  return Array.from(map.values())
+  return result
 }
 
 export function useQuery() {
