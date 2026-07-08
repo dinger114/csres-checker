@@ -210,7 +210,7 @@ td a:hover { text-decoration: underline; }
 .badge-upcoming { color: #1967d2; border: 1px solid #1967d2; }
 
 .log-panel {
-  width: 320px;
+  width: 360px;
   background: var(--panel);
   border: 1px solid var(--border);
   display: flex;
@@ -289,13 +289,15 @@ td a:hover { text-decoration: underline; }
   padding: 8px 12px;
   border-top: 1px solid var(--border);
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   font-size: 10px;
   color: var(--text-dim);
   position: relative;
   z-index: 2;
   background: var(--header-bg);
   transition: background 0.3s;
+  min-height: 32px;
 }
 
 .log-stats span { display: flex; align-items: center; gap: 4px; }

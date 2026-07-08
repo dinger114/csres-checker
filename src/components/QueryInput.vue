@@ -173,14 +173,15 @@ defineExpose({ setText })
 .source-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   margin-top: 8px;
-  flex-wrap: wrap;
+  padding: 6px 0;
 }
 
 .source-label {
   font-size: 11px;
   color: var(--text-dim);
+  flex-shrink: 0;
 }
 
 .source-check {
@@ -190,6 +191,7 @@ defineExpose({ setText })
   font-size: 11px;
   color: var(--text-dim);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .source-check input[type="checkbox"] {
