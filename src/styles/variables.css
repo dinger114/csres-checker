@@ -330,17 +330,15 @@ td a:hover { text-decoration: underline; }
   .log-panel {
     width: 100%;
     margin: 0;
-    padding: 0 12px;
     height: 220px;
-    border: none;
-    border-top: 1px solid var(--border);
+    border: 1px solid var(--border);
     flex-shrink: 0;
     background: var(--panel);
-    border-radius: 0;
+    border-radius: 8px;
     overflow: hidden;
   }
-  .log-header { border-radius: 0; }
-  .log-stats { border-radius: 0; }
+  .log-header { border-radius: 7px 7px 0 0; }
+  .log-stats { border-radius: 0 0 7px 7px; }
   .table-wrap { max-height: 50vh; overflow: auto; }
   table { min-width: 700px; font-size: 10px; }
   th, td { padding: 6px 8px; }

@@ -1,5 +1,5 @@
 <template>
-  <aside class="log-panel">
+  <aside class="log-panel" @click="handlePanelClick">
     <div class="log-header">
       <span class="dot dot-r"></span>
       <span class="dot dot-y"></span>
@@ -9,21 +9,21 @@
         v-if="history.length > 0"
         class="tab-btn"
         :class="{ active: showHistory }"
-        @click="showHistory = !showHistory"
+        @click.stop="showHistory = !showHistory"
       >HIST</button>
     </div>
 
     <div v-if="showHistory && history.length > 0" class="history-section">
       <div class="history-header">
         <span class="history-label">最近查询</span>
-        <button class="clear-btn" @click="emit('clear')">清空</button>
+        <button class="clear-btn" @click.stop="emit('clear')">清空</button>
       </div>
       <div class="history-list">
         <div
           v-for="(item, i) in history"
           :key="i"
           class="history-item"
-          @click="emit('load', item)"
+          @click.stop="emit('load', item)"
         >
           <span class="history-text">{{ item.split('\n')[0] }}{{ item.split('\n').length > 1 ? '...' : '' }}</span>
           <button class="delete-btn" @click.stop="emit('delete', i)">×</button>
@@ -64,6 +64,12 @@ const { lines } = useLog()
 const logBodyRef = ref<HTMLElement | null>(null)
 const showHistory = ref(false)
 
+function handlePanelClick() {
+  if (showHistory.value) {
+    showHistory.value = false
+  }
+}
+
 watch(
   lines,
   async () => {
@@ -91,7 +97,7 @@ watch(
 
 .tab-btn {
   margin-left: auto;
-  background: none;
+  background: var(--header-bg);
   border: 1px solid var(--border-subtle);
   color: var(--text-dim);
   font-size: 9px;
@@ -118,6 +124,7 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--panel);
 }
 
 .history-header {
