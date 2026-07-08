@@ -25,7 +25,7 @@ export function useQuery() {
 
   const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-  async function query(keywords: string[]) {
+  async function query(keywords: string[], sources: string[] = []) {
     if (running.value) return
     running.value = true
     results.value = []
@@ -33,6 +33,7 @@ export function useQuery() {
 
     const startTime = Date.now()
     const normalizedKws = keywords.map(normalizeKeyword).filter(Boolean)
+    const useAllSources = sources.length === 0
 
     if (normalizedKws.length === 0) {
       add('请输入标准编号', 'warn')
@@ -42,6 +43,9 @@ export function useQuery() {
 
     add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')
     add(`cache: ${cache.size()} entries`, 'info')
+    if (!useAllSources) {
+      add(`selected: ${sources.join(', ')}`, 'info')
+    }
     add(`────────────────────────────────`, 'info')
 
     const allResults: StandardResult[] = []
@@ -67,95 +71,111 @@ export function useQuery() {
     results.value = [...allResults]
 
     if (uncachedKeywords.length > 0) {
-      add(`────────────────────────────────`, 'info')
-      add(`phase1: cssn.net.cn`, 'info')
-      add(`phase2: gongbiaoku.com fallback`, 'info')
-      add(`phase3: csres.com fallback`, 'info')
-      add(`phase4: bzsou.cn fallback`, 'info')
-      add(`────────────────────────────────`, 'info')
+      // Helper to run a phase
+      async function runPhase(
+        name: string,
+        source: { query: (kw: string) => Promise<StandardResult[]> },
+        keywords: string[]
+      ): Promise<string[]> {
+        if (keywords.length === 0) return []
+        add(`────────────────────────────────`, 'info')
+        add(`phase: ${name} (${keywords.length} items)`, 'info')
 
-      const emptyKeywords: string[] = []
+        const empty: string[] = []
+        for (let i = 0; i < keywords.length; i += BATCH_SIZE) {
+          const batch = keywords.slice(i, i + BATCH_SIZE)
+          const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
+          batchResults.forEach((r, idx) => {
+            if (r.status === 'fulfilled' && r.value.length > 0) {
+              allResults.push(...r.value)
+              cache.set(batch[idx], r.value)
+            } else {
+              empty.push(batch[idx])
+            }
+          })
+          results.value = [...allResults]
+          if (i + BATCH_SIZE < keywords.length) await delay(BATCH_DELAY)
+        }
+        return empty
+      }
 
-      // Phase 1: CSSN - parallel batches
-      for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
-        const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
-        progress.value = {
-          current: Math.min(i + BATCH_SIZE, uncachedKeywords.length),
-          total: uncachedKeywords.length,
-          pct: Math.round((i / uncachedKeywords.length) * 100),
+      if (useAllSources) {
+        // Default flow: cssn → gongbiaoku → csres → bzsou
+        add(`phase1: cssn.net.cn`, 'info')
+        add(`phase2: gongbiaoku.com fallback`, 'info')
+        add(`phase3: csres.com fallback`, 'info')
+        add(`phase4: bzsou.cn fallback`, 'info')
+
+        let empty = await runPhase('cssn.net.cn', cssn, uncachedKeywords)
+        empty = await runPhase('gongbiaoku.com', gongbiaoku, empty)
+        empty = await runPhase('csres.com', csres, empty)
+        await runPhase('bzsou.cn', bzsou, empty)
+      } else {
+        // Custom source selection: run all selected in parallel
+        add(`────────────────────────────────`, 'info')
+        add(`running selected sources in parallel`, 'info')
+
+        const sourceMap: Record<string, { query: (kw: string) => Promise<StandardResult[]> }> = {
+          cssn,
+          gongbiaoku,
+          csres,
+          bzsou,
         }
 
-        const batchResults = await Promise.allSettled(batch.map((kw) => cssn.query(kw)))
-        batchResults.forEach((r, idx) => {
-          if (r.status === 'fulfilled' && r.value.length > 0) {
-            allResults.push(...r.value)
-            cache.set(batch[idx], r.value)
-          } else {
-            emptyKeywords.push(batch[idx])
+        const selectedSources = sources.filter((s) => sourceMap[s])
+        const foundKeywords = new Set<string>()
+
+        for (const srcKey of selectedSources) {
+          const source = sourceMap[srcKey]
+          add(`──── ${srcKey} ────`, 'info')
+
+          for (let i = 0; i < uncachedKeywords.length; i += BATCH_SIZE) {
+            const batch = uncachedKeywords.slice(i, i + BATCH_SIZE)
+            const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
+            batchResults.forEach((r, idx) => {
+              if (r.status === 'fulfilled' && r.value.length > 0) {
+                allResults.push(...r.value)
+                cache.set(batch[idx], r.value)
+                foundKeywords.add(batch[idx])
+              }
+            })
+            results.value = [...allResults]
+            if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
           }
-        })
-
-        results.value = [...allResults]
-        if (i + BATCH_SIZE < uncachedKeywords.length) await delay(BATCH_DELAY)
-      }
-
-      // Phase 2: GongBiaoKu fallback - parallel batches
-      const stillEmpty: string[] = []
-      if (emptyKeywords.length > 0) {
-        add(`────────────────────────────────`, 'info')
-        add(`phase2: gongbiaoku.com fallback (${emptyKeywords.length} items)`, 'warn')
-        for (let i = 0; i < emptyKeywords.length; i += BATCH_SIZE) {
-          const batch = emptyKeywords.slice(i, i + BATCH_SIZE)
-          const batchResults = await Promise.allSettled(batch.map((kw) => gongbiaoku.query(kw)))
-          batchResults.forEach((r, idx) => {
-            if (r.status === 'fulfilled' && r.value.length > 0) {
-              allResults.push(...r.value)
-              cache.set(batch[idx], r.value)
-            } else {
-              stillEmpty.push(batch[idx])
-            }
-          })
-          results.value = [...allResults]
-          if (i + BATCH_SIZE < emptyKeywords.length) await delay(BATCH_DELAY)
         }
-      }
 
-      // Phase 3: Csres fallback - parallel batches
-      const stillEmpty2: string[] = []
-      if (stillEmpty.length > 0) {
-        add(`────────────────────────────────`, 'info')
-        add(`phase3: csres.com fallback (${stillEmpty.length} items)`, 'warn')
-        for (let i = 0; i < stillEmpty.length; i += BATCH_SIZE) {
-          const batch = stillEmpty.slice(i, i + BATCH_SIZE)
-          const batchResults = await Promise.allSettled(batch.map((kw) => csres.query(kw)))
-          batchResults.forEach((r, idx) => {
-            if (r.status === 'fulfilled' && r.value.length > 0) {
-              allResults.push(...r.value)
-              cache.set(batch[idx], r.value)
-            } else {
-              stillEmpty2.push(batch[idx])
-            }
-          })
-          results.value = [...allResults]
-          if (i + BATCH_SIZE < stillEmpty.length) await delay(BATCH_DELAY)
-        }
-      }
+        // For keywords not found by selected sources, try remaining sources
+        const remaining = uncachedKeywords.filter((kw) => !foundKeywords.has(kw))
+        if (remaining.length > 0) {
+          add(`────────────────────────────────`, 'info')
+          add(`fallback: ${remaining.length} items not found`, 'warn')
 
-      // Phase 4: Bzsou fallback - parallel batches
-      if (stillEmpty2.length > 0) {
-        add(`────────────────────────────────`, 'info')
-        add(`phase4: bzsou.cn fallback (${stillEmpty2.length} items)`, 'warn')
-        for (let i = 0; i < stillEmpty2.length; i += BATCH_SIZE) {
-          const batch = stillEmpty2.slice(i, i + BATCH_SIZE)
-          const batchResults = await Promise.allSettled(batch.map((kw) => bzsou.query(kw)))
-          batchResults.forEach((r, idx) => {
-            if (r.status === 'fulfilled' && r.value.length > 0) {
-              allResults.push(...r.value)
-              cache.set(batch[idx], r.value)
+          const remainingSources = ['cssn', 'gongbiaoku', 'csres', 'bzsou'].filter(
+            (s) => !sources.includes(s)
+          )
+
+          for (const srcKey of remainingSources) {
+            const source = sourceMap[srcKey]
+            const stillEmpty: string[] = []
+
+            for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
+              const batch = remaining.slice(i, i + BATCH_SIZE)
+              const batchResults = await Promise.allSettled(batch.map((kw) => source.query(kw)))
+              batchResults.forEach((r, idx) => {
+                if (r.status === 'fulfilled' && r.value.length > 0) {
+                  allResults.push(...r.value)
+                  cache.set(batch[idx], r.value)
+                } else {
+                  stillEmpty.push(batch[idx])
+                }
+              })
+              results.value = [...allResults]
+              if (i + BATCH_SIZE < remaining.length) await delay(BATCH_DELAY)
             }
-          })
-          results.value = [...allResults]
-          if (i + BATCH_SIZE < stillEmpty2.length) await delay(BATCH_DELAY)
+
+            remaining.splice(0, remaining.length, ...stillEmpty)
+            if (remaining.length === 0) break
+          }
         }
       }
     }

@@ -84,10 +84,10 @@ const themeOverrides = computed(() => ({
   },
 }))
 
-function handleRun(keywords: string[]) {
+function handleRun(keywords: string[], sources: string[] = []) {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   addHistory(keywords)
-  query(keywords)
+  query(keywords, sources)
 }
 
 function handleColumnsUpdate(columns: ColumnDef[]) {

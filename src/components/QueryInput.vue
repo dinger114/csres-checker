@@ -17,6 +17,14 @@
         @drop.prevent="handleDrop"
         @dragover.prevent
       ></textarea>
+      <div class="source-row">
+        <span class="source-label">数据源:</span>
+        <label v-for="src in sources" :key="src.key" class="source-check">
+          <input type="checkbox" :value="src.key" v-model="selectedSources" :disabled="running" />
+          <span>{{ src.label }}</span>
+        </label>
+        <span class="source-hint" v-if="selectedSources.length === 0">默认全部</span>
+      </div>
       <div class="btn-row">
         <button :disabled="running" @click="handleRun">[ RUN ]</button>
         <button :disabled="running" @click="triggerUpload">[ IMPORT TXT ]</button>
@@ -49,19 +57,27 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  run: [keywords: string[]]
+  run: [keywords: string[], sources: string[]]
   'copy-md': []
   'export-xlsx': []
 }>()
 
+const sources = [
+  { key: 'cssn', label: 'CSSN' },
+  { key: 'gongbiaoku', label: '工标库' },
+  { key: 'csres', label: 'CSRes' },
+  { key: 'bzsou', label: '标准搜' },
+]
+
 const keywords = ref('')
+const selectedSources = ref<string[]>([])
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 function handleRun() {
   const lines = parseKeywords(keywords.value)
   if (lines.length === 0) return
-  emit('run', lines)
+  emit('run', lines, selectedSources.value)
 }
 
 function triggerUpload() {
@@ -118,7 +134,6 @@ function handleShare() {
   params.set('q', lines.join(','))
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
   navigator.clipboard.writeText(url).then(() => {
-    // Update URL without reload
     window.history.replaceState({}, '', `?${params.toString()}`)
   })
 }
@@ -153,5 +168,44 @@ defineExpose({ setText })
   color: var(--text-secondary);
   font-size: 11px;
   margin-left: 8px;
+}
+
+.source-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.source-label {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.source-check {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.source-check input[type="checkbox"] {
+  width: 12px;
+  height: 12px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.source-check:hover {
+  color: var(--primary);
+}
+
+.source-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 </style>
