@@ -38,7 +38,6 @@ import { useQuery } from './composables/useQuery'
 import { useClipboard } from './composables/useClipboard'
 import { useToast } from './composables/useToast'
 import { useFirebase } from './composables/useFirebase'
-import { useTurnstile } from './composables/useTurnstile'
 import { useLog } from './composables/useLog'
 import { useXlsx } from './composables/useXlsx'
 
@@ -48,7 +47,6 @@ const { exportMarkdown, copy } = useClipboard()
 const { exportXlsx } = useXlsx()
 const toast = useToast()
 const firebase = useFirebase()
-const turnstile = useTurnstile()
 const { add: logAdd } = useLog()
 
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
@@ -61,17 +59,8 @@ const themeOverrides = computed(() => ({
   },
 }))
 
-async function handleRun(keywords: string[]) {
+function handleRun(keywords: string[]) {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
-  if (turnstile.enabled) {
-    logAdd('TURNSTILE: 等待验证...', 'info')
-    const token = await turnstile.execute()
-    if (!token) {
-      logAdd('TURNSTILE: 验证未通过，查询被阻止', 'error')
-      return
-    }
-    logAdd('TURNSTILE: 验证完毕，开始查询', 'info')
-  }
   query(keywords)
 }
 
@@ -94,22 +83,10 @@ function handleExportXlsx() {
   toast.show('已导出 Excel 文件')
 }
 
-let turnstileInited = false
-
-function initTurnstile(el: HTMLElement) {
-  if (!turnstileInited && el) {
-    turnstileInited = true
-    turnstile.init(el)
-  }
-}
-
 onMounted(() => {
   initTheme()
   firebase.init()
   firebase.refreshCount()
-  window.addEventListener('turnstile-mount', (e: any) => {
-    if (e.detail) initTurnstile(e.detail)
-  })
 })
 </script>
 

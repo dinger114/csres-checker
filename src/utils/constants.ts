@@ -9,8 +9,6 @@ export const PROXY_LIST = [
   (url: string) => `https://api2.dingyi.de/?url=${encodeURIComponent(url)}`,
 ]
 
-export const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAAPlaceholder'
-
 export const FIREBASE_CONFIG = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'placeholder_key',
   authDomain: 'ygyg-4a6c0.firebaseapp.com',
