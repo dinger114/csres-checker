@@ -328,8 +328,8 @@ td a:hover { text-decoration: underline; }
   .app { flex-direction: column; }
   .main-panel { padding: 12px; gap: 12px; overflow-y: auto; height: auto; width: 100%; }
   .log-panel {
-    width: 100%;
-    margin: 0;
+    width: calc(100% - 24px);
+    margin: 0 12px;
     height: 220px;
     border: 1px solid var(--border);
     flex-shrink: 0;
