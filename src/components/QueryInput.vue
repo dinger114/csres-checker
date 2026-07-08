@@ -26,12 +26,27 @@
         <span class="source-hint" v-if="selectedSources.length === 0">默认全部</span>
       </div>
       <div class="btn-row">
-        <button :disabled="running" @click="handleRun">[ RUN ]</button>
-        <button :disabled="running" @click="triggerUpload">[ IMPORT TXT ]</button>
+        <button class="btn-run" :disabled="running" @click="handleRun">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <span class="btn-text">RUN</span>
+        </button>
+        <button :disabled="running" @click="triggerUpload" title="导入 TXT 文件">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+          <span class="btn-text">IMPORT</span>
+        </button>
         <input ref="fileInputRef" type="file" accept=".txt" @change="handleFileUpload" hidden />
-        <button :disabled="running || !hasResults" @click="emit('copy-md')">[ COPY MD ]</button>
-        <button :disabled="running || !hasResults" @click="emit('export-xlsx')">[ EXPORT XLSX ]</button>
-        <button :disabled="running || !keywords.trim()" @click="handleShare">[ SHARE ]</button>
+        <button :disabled="running || !hasResults" @click="emit('copy-md')" title="复制 Markdown">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          <span class="btn-text">MD</span>
+        </button>
+        <button :disabled="running || !hasResults" @click="emit('export-xlsx')" title="导出 Excel">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span class="btn-text">XLSX</span>
+        </button>
+        <button :disabled="running || !keywords.trim()" @click="handleShare" title="分享链接">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          <span class="btn-text">SHARE</span>
+        </button>
       </div>
       <div v-if="progress.pct > 0" class="progress-wrap">
         <div class="progress-info">
@@ -176,6 +191,7 @@ defineExpose({ setText })
   gap: 16px;
   margin-top: 8px;
   padding: 6px 0;
+  flex-wrap: wrap;
 }
 
 .source-label {
@@ -209,5 +225,50 @@ defineExpose({ setText })
   font-size: 10px;
   color: var(--text-secondary);
   font-style: italic;
+}
+
+.icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.btn-run {
+  background: var(--primary) !important;
+  color: var(--bg) !important;
+  border-color: var(--primary) !important;
+}
+
+.btn-run:hover {
+  opacity: 0.9;
+}
+
+/* Mobile: show only icons, hide text */
+@media (max-width: 600px) {
+  .btn-text {
+    display: none;
+  }
+
+  .btn-row button {
+    padding: 8px;
+    min-width: 36px;
+    justify-content: center;
+  }
+
+  .hint {
+    display: none;
+  }
+
+  .source-row {
+    gap: 8px;
+  }
+
+  .source-label {
+    display: none;
+  }
+
+  .source-hint {
+    display: none;
+  }
 }
 </style>

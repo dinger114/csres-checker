@@ -340,9 +340,13 @@ td a:hover { text-decoration: underline; }
     overflow: hidden;
   }
   .log-header { border-radius: 7px 7px 0 0; }
-  .log-stats { border-radius: 0 0 7px 7px; }
+  .log-stats { border-radius: 0 0 7px 7px; flex-wrap: wrap; }
   .table-wrap { max-height: 50vh; overflow: auto; }
   table { min-width: 700px; font-size: 10px; }
   th, td { padding: 6px 8px; }
   .terminal-box { border-radius: 8px; }
+  .btn-row { flex-wrap: wrap; gap: 6px; }
+  .btn-row button { padding: 6px 10px; font-size: 11px; }
+  textarea { height: 80px; }
+  h1 { font-size: 16px; }
 }
