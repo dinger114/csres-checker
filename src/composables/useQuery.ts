@@ -218,6 +218,73 @@ export function useQuery() {
     running.value = false
   }
 
+  async function searchByName(keywords: string[], source: string = '') {
+    if (running.value) return
+    running.value = true
+    results.value = []
+    progress.value = { current: 0, total: keywords.length, pct: 0 }
+
+    const startTime = Date.now()
+    const normalizedKws = keywords.map(normalizeKeyword).filter(Boolean)
+
+    if (normalizedKws.length === 0) {
+      add('请输入标准名称关键词', 'warn')
+      running.value = false
+      return
+    }
+
+    add('═══ NAME SEARCH: ' + normalizedKws.length + ' items ═══', 'highlight')
+    add(SEPARATOR, 'info')
+    add('plan: cssn.net.cn only', 'info')
+    add(SEPARATOR, 'info')
+
+    // Deduplicate keywords
+    const uniqueKws = [...new Set(normalizedKws)]
+    const kwToIndices = new Map<string, number[]>()
+    normalizedKws.forEach((kw, idx) => {
+      if (!kwToIndices.has(kw)) kwToIndices.set(kw, [])
+      kwToIndices.get(kw)!.push(idx)
+    })
+
+    const queryResults = new Map<string, StandardResult[]>()
+
+    for (let i = 0; i < uniqueKws.length; i += BATCH_SIZE) {
+      const batch = uniqueKws.slice(i, i + BATCH_SIZE)
+      const batchResults = await Promise.allSettled(batch.map((kw) => cssn.queryByName(kw)))
+      batchResults.forEach((r, idx) => {
+        const kw = batch[idx]
+        if (r.status === 'fulfilled' && r.value.length > 0) {
+          queryResults.set(kw, r.value)
+        }
+      })
+      // Rebuild results
+      const rebuilt: StandardResult[] = []
+      for (const [kw, qr] of queryResults) {
+        const indices = kwToIndices.get(kw) || []
+        for (const idx of indices) {
+          rebuilt.push(...qr.map((r) => ({ ...r, query: normalizedKws[idx] })))
+        }
+      }
+      results.value = rebuilt
+      progress.value = { current: Math.min(i + BATCH_SIZE, uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + BATCH_SIZE, uniqueKws.length) / uniqueKws.length * 100) }
+      if (i + BATCH_SIZE < uniqueKws.length) await delay(BATCH_DELAY)
+    }
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+    progress.value = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
+
+    updateStats({
+      time: parseFloat(elapsed),
+      queries: normalizedKws.length,
+    })
+
+    add(SEPARATOR, 'info')
+    add('═══ COMPLETE: ' + results.value.length + ' results, ' + elapsed + 's ═══', 'highlight')
+
+    incQueryCount()
+    running.value = false
+  }
+
   function toggleCache() {
     cacheEnabled.value = !cacheEnabled.value
   }
@@ -228,6 +295,7 @@ export function useQuery() {
     running: computed(() => running.value),
     cacheEnabled: computed(() => cacheEnabled.value),
     query,
+    searchByName,
     toggleCache,
     clearCache: cache.clear,
     cacheSize: cache.size,

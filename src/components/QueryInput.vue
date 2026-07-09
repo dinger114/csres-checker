@@ -7,8 +7,9 @@
       <span class="title">INPUT</span>
     </div>
     <div class="terminal-body">
-      <label>// 标准编号（每行一个）<span class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span></label>
+      <label>// {{ searchMode === 'number' ? '标准编号（每行一个）' : '标准名称关键词' }}<span v-if="searchMode === 'number'" class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span><span v-else class="hint">Ctrl+Enter 运行 · Esc 清空</span></label>
       <textarea
+        v-if="searchMode === 'number'"
         ref="textareaRef"
         v-model="keywords"
         placeholder="GB 50222-2017&#10;50010&#10;GB 50311-2016"
@@ -17,7 +18,27 @@
         @drop.prevent="handleDrop"
         @dragover.prevent
       ></textarea>
+      <input
+        v-else
+        ref="nameInputRef"
+        v-model="keywords"
+        type="text"
+        placeholder="搜索标准名称关键词，例如：消防"
+        :disabled="running"
+        @keydown="handleKeydown"
+      />
       <div class="source-row">
+        <span class="source-label">模式:</span>
+        <label class="source-check">
+          <input type="radio" value="number" v-model="searchMode" :disabled="running" @change="handleModeChange" />
+          <span>编号查询</span>
+        </label>
+        <label class="source-check">
+          <input type="radio" value="name" v-model="searchMode" :disabled="running" @change="handleModeChange" />
+          <span>名称检索</span>
+        </label>
+      </div>
+      <div v-if="searchMode === 'number'" class="source-row">
         <span class="source-label">数据源:</span>
         <label class="source-check">
           <input type="radio" value="" v-model="selectedSource" :disabled="running" />
@@ -33,11 +54,11 @@
           <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           <span class="btn-text">RUN</span>
         </button>
-        <button :disabled="running" @click="triggerUpload" title="导入 TXT 文件">
+        <button v-if="searchMode === 'number'" :disabled="running" @click="triggerUpload" title="导入 TXT 文件">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
           <span class="btn-text">IMPORT</span>
         </button>
-        <input ref="fileInputRef" type="file" accept=".txt" @change="handleFileUpload" hidden />
+        <input v-if="searchMode === 'number'" ref="fileInputRef" type="file" accept=".txt" @change="handleFileUpload" hidden />
         <button :disabled="running || !hasResults" @click="emit('copy-md')" title="复制 Markdown">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           <span class="btn-text">MD</span>
@@ -75,7 +96,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  run: [keywords: string[], source: string]
+  run: [keywords: string[], source: string, mode: string]
   'copy-md': []
   'export-xlsx': []
 }>()
@@ -89,13 +110,20 @@ const sources = [
 
 const keywords = ref('')
 const selectedSource = ref('')
+const searchMode = ref('number')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const nameInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 function handleRun() {
   const lines = parseKeywords(keywords.value)
   if (lines.length === 0) return
-  emit('run', lines, selectedSource.value)
+  emit('run', lines, selectedSource.value, searchMode.value)
+}
+
+function handleModeChange() {
+  // Clear keywords when switching modes
+  keywords.value = ''
 }
 
 function triggerUpload() {
@@ -111,6 +139,7 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault()
     keywords.value = ''
     textareaRef.value?.focus()
+    nameInputRef.value?.focus()
   }
 }
 
@@ -159,6 +188,7 @@ function handleShare() {
 function setText(text: string) {
   keywords.value = text
   textareaRef.value?.focus()
+  nameInputRef.value?.focus()
 }
 
 function loadFromUrl() {

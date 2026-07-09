@@ -68,7 +68,7 @@ import { useHistory } from './composables/useHistory'
 import type { StandardVersion } from './types'
 
 const { theme, toggleTheme, initTheme } = useTheme()
-const { results, progress, running, cacheEnabled, query, toggleCache, clearCache, cacheSize } = useQuery()
+const { results, progress, running, cacheEnabled, query, searchByName, toggleCache, clearCache, cacheSize } = useQuery()
 const { exportMarkdown, copy } = useClipboard()
 const { exportXlsx } = useXlsx()
 const toast = useToast()
@@ -93,10 +93,14 @@ const themeOverrides = computed(() => ({
   },
 }))
 
-function handleRun(keywords: string[], source: string = '') {
+function handleRun(keywords: string[], source: string = '', mode: string = 'number') {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   addHistory(keywords)
-  query(keywords, source)
+  if (mode === 'name') {
+    searchByName(keywords, source)
+  } else {
+    query(keywords, source)
+  }
 }
 
 function handleColumnsUpdate(columns: ColumnDef[]) {

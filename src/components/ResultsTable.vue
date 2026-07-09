@@ -25,13 +25,14 @@
               <th
                 v-for="col in columns"
                 :key="col.key"
-                :class="{ draggable: col.draggable }"
+                :class="{ draggable: col.draggable, sortable: sortableKeys.includes(col.key), sorted: sortKey === col.key }"
                 :draggable="col.draggable"
                 @dragstart="onDragStart($event, col.key)"
                 @dragover.prevent="onDragOver($event, col.key)"
                 @dragend="onDragEnd"
                 @drop="onDrop($event, col.key)"
-              >{{ col.label }}</th>
+                @click="sortableKeys.includes(col.key) && handleSort(col.key)"
+              >{{ col.label }}<span v-if="sortableKeys.includes(col.key)" class="sort-icon">{{ getSortIcon(col.key) }}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -99,6 +100,10 @@ const defaultColumns: ColumnDef[] = [
 
 const columns = ref<ColumnDef[]>([...defaultColumns])
 const dragKey = ref<string | null>(null)
+const sortKey = ref<string | null>(null)
+const sortOrder = ref<'asc' | 'desc'>('asc')
+
+const sortableKeys = ['publish_date', 'implement_date']
 
 const filters = [
   { label: 'ALL', value: 'all' },
@@ -110,12 +115,27 @@ const filters = [
 const statusFilter = ref('all')
 
 const filteredResults = computed(() => {
-  if (statusFilter.value === 'all') return props.results
-  return props.results.filter((r) => r.status === statusFilter.value)
+  let list = props.results
+  if (statusFilter.value !== 'all') {
+    list = list.filter((r) => r.status === statusFilter.value)
+  }
+  if (sortKey.value) {
+    list = [...list].sort((a, b) => {
+      const av = (a as any)[sortKey.value!] || ''
+      const bv = (b as any)[sortKey.value!] || ''
+      if (!av && !bv) return 0
+      if (!av) return 1
+      if (!bv) return -1
+      const cmp = av.localeCompare(bv)
+      return sortOrder.value === 'desc' ? -cmp : cmp
+    })
+  }
+  return list
 })
 
 watch(() => props.results, () => {
   statusFilter.value = 'all'
+  sortKey.value = null
 })
 
 watch(columns, (cols) => {
@@ -142,6 +162,20 @@ function onDrop(e: DragEvent, targetKey: string) {
 
 function onDragEnd() {
   dragKey.value = null
+}
+
+function handleSort(colKey: string) {
+  if (sortKey.value === colKey) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = colKey
+    sortOrder.value = 'asc'
+  }
+}
+
+function getSortIcon(colKey: string): string {
+  if (sortKey.value !== colKey) return ''
+  return sortOrder.value === 'asc' ? '▲' : '▼'
 }
 
 function getValue(r: StandardResult, key: string): string {
@@ -233,5 +267,19 @@ th.dragging-over {
   margin-left: 4px;
   vertical-align: middle;
   cursor: pointer;
+}
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+th.sortable:hover {
+  color: var(--primary);
+}
+
+.sort-icon {
+  margin-left: 4px;
+  font-size: 8px;
 }
 </style>

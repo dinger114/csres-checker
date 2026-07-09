@@ -19,6 +19,19 @@ GB 50311-2016</pre>
         </div>
 
         <div class="help-section">
+          <h3>搜索模式</h3>
+          <table>
+            <thead>
+              <tr><th>模式</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>编号查询</td><td>按标准编号精确查找，多数据源 fallback，支持批量输入</td></tr>
+              <tr><td>名称检索</td><td>按标准名称关键词搜索，数据源为 cssn.net.cn，拉取前 3 页结果（约 60 条），按国标 > 行业标准 > 地方标准 > 国际标准优先级排序。输入限制为单行。</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="help-section">
           <h3>数据源</h3>
           <table>
             <thead>
@@ -31,13 +44,14 @@ GB 50311-2016</pre>
               <tr><td>CSRes</td><td>csres.com（兜底）</td></tr>
             </tbody>
           </table>
-          <p><strong>默认查询流程：</strong></p>
+          <p><strong>默认查询流程（编号查询）：</strong></p>
           <ol>
-            <li>Tier 1：CSSN + 标准搜（并行查询，速度最快）</li>
-            <li>Tier 2：工标库（Tier 1 未命中的 fallback）</li>
-            <li>Tier 3：CSRes（最终兜底）</li>
+            <li>Tier 1：CSSN — 速度最快，标准化数据</li>
+            <li>Tier 2：标准搜 (bzsou.cn) — Tier 1 未命中的 fallback</li>
+            <li>Tier 3：工标库 (gongbiaoku.com) — 继续未命中的 fallback</li>
+            <li>Tier 4：CSRes (csres.com) — 最终兜底</li>
           </ol>
-          <p>勾选数据源复选框可指定只查询特定源。</p>
+          <p>名称检索仅使用 CSSN 数据源，拉取前 3 页结果，自动过滤英文版标准。</p>
         </div>
 
         <div class="help-section">
@@ -73,6 +87,7 @@ GB 50311-2016</pre>
           <h3>结果表格</h3>
           <ul>
             <li><strong>列拖拽排序：</strong>拖动表头可调整列顺序，导出时保持新顺序</li>
+            <li><strong>日期排序：</strong>点击 PUBLISHED / IMPLEMENTED 表头可排序，空白日期置底，再次点击反转顺序</li>
             <li><strong>状态筛选：</strong>点击 ALL / 现行 / 废止 / 即将实施 按钮过滤结果</li>
             <li><strong>点击复制：</strong>点击单元格文本可复制到剪贴板</li>
             <li><strong>版本历史：</strong>标准号旁显示 <code>vN</code> 徽章时，点击可查看所有版本</li>
@@ -98,7 +113,7 @@ GB 50311-2016</pre>
         <div class="help-section">
           <h3>缓存</h3>
           <ul>
-            <li>查询结果自动缓存 24 小时（最多 1000 条）</li>
+            <li>查询结果自动缓存 4 小时（最多 1000 条）</li>
             <li>重复查询相同标准会直接返回缓存结果（显示 <code>cache hit</code>）</li>
             <li>点击底部 <code>CACHE:n</code> 按钮可禁用/启用缓存</li>
             <li>点击 <code>CLEAR</code> 按钮可清空缓存</li>
