@@ -43,17 +43,6 @@ export function useQuery() {
 
     add('═══ START: ' + normalizedKws.length + ' items ═══', 'highlight')
 
-    if (cacheEnabled.value && cache.isExpired()) {
-      cacheEnabled.value = false
-      add('cache: expired (>4h), disabled', 'warn')
-    }
-
-    if (!cacheEnabled.value) {
-      add('cache: disabled', 'warn')
-    } else {
-      add('cache: ' + cache.size() + ' entries', 'info')
-    }
-
     if (!useDefault) {
       add('selected: ' + source, 'info')
     }
@@ -108,7 +97,7 @@ export function useQuery() {
       if (useDefault) {
         add('plan: cssn → bzsou (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
 
-        const failedAfterCssn = await runSource('cssn.net.cn', cssn, uncachedKeywords)
+        const failedAfterCssn = await runSource('cssn.net.cn', cssn, uniqueKws)
         const failedAfterBzsou = await runSource('bzsou.cn', bzsou, failedAfterCssn)
         const failedAfterGong = await runSource('gongbiaoku.com', gongbiaoku, failedAfterBzsou)
 
@@ -130,7 +119,7 @@ export function useQuery() {
           return
         }
 
-        const failed = await runSource(source, selectedSrc, uncachedKeywords)
+        const failed = await runSource(source, selectedSrc, uniqueKws)
 
         if (source !== 'csres' && failed.length > 0) {
           add(SEPARATOR, 'info')
@@ -220,10 +209,6 @@ export function useQuery() {
 
     incQueryCount()
     running.value = false
-  }
-
-  function toggleCache() {
-    cacheEnabled.value = !cacheEnabled.value
   }
 
   return {
