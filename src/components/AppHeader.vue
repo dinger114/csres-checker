@@ -1,7 +1,7 @@
 <template>
   <div class="title-row">
     <h1>标准查新工具</h1>
-    <span class="global-count">TOTAL:{{ globalCount }}</span>
+    <span class="global-count">{{ globalCount }}</span>
     <div class="header-actions">
       <button class="help-btn" @click="$emit('show-help')">HELP</button>
       <button class="theme-toggle" @click="$emit('toggle-theme')">
@@ -36,10 +36,14 @@ const { globalCount } = useFirebase()
 }
 
 .global-count {
-  font-size: 12px;
-  color: var(--primary);
-  font-weight: 600;
-  margin-left: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 400;
+  opacity: 0.5;
+}
+
+.global-count::before {
+  content: 'TOTAL:';
 }
 
 .header-actions {
