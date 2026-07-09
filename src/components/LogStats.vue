@@ -8,18 +8,17 @@
       <button class="cache-toggle-btn" :class="{ disabled: !cacheEnabled }" @click="emit('toggle-cache')">
         CACHE:{{ cacheEnabled ? cacheSize : 'OFF' }}
       </button>
-      <button v-if="cacheEnabled && cacheSize > 0" class="clear-cache-btn" @click="handleClearCache">CLEAR</button>
+      <button v-if="cacheEnabled && cacheSize > 0" class="clear-cache-btn" @click="emit('clear-cache')">CLEAR</button>
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useLog } from '../composables/useLog'
-import { useCache } from '../composables/useCache'
 
 defineProps<{
   cacheEnabled: boolean
+  cacheSize: number
 }>()
 
 const emit = defineEmits<{
@@ -28,15 +27,6 @@ const emit = defineEmits<{
 }>()
 
 const { stats } = useLog()
-const { size, clear } = useCache()
-
-const cacheSize = ref(size())
-
-function handleClearCache() {
-  clear()
-  cacheSize.value = 0
-  emit('clear-cache')
-}
 </script>
 
 <style scoped>

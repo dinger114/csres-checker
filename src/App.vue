@@ -23,6 +23,7 @@
         <TerminalLog
           :history="history"
           :cacheEnabled="cacheEnabled"
+          :cacheSize="cacheSize"
           @load="handleHistoryLoad"
           @delete="handleHistoryDelete"
           @clear="handleHistoryClear"
@@ -139,6 +140,7 @@ function handleHistoryClear() {
 }
 
 function handleClearCache() {
+  clearCache()
   toast.show('缓存已清空')
 }
 
