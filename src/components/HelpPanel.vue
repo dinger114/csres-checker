@@ -86,6 +86,7 @@ GB 50311-2016</pre>
         <div class="help-section">
           <h3>结果表格</h3>
           <ul>
+            <li><strong>勾选引用：</strong>每行前的复选框可勾选所需标准，点击 <code>[ COPY SEL ]</code> 复制勾选的标号列表，用于编制方案模板</li>
             <li><strong>列拖拽排序：</strong>拖动表头可调整列顺序，导出时保持新顺序</li>
             <li><strong>日期排序：</strong>点击 PUBLISHED / IMPLEMENTED 表头可排序，空白日期置底，再次点击反转顺序</li>
             <li><strong>状态筛选：</strong>点击 ALL / 现行 / 废止 / 即将实施 按钮过滤结果</li>
@@ -179,6 +180,10 @@ const emit = defineEmits<{
   overflow-y: auto;
   padding: 20px !important;
 }
+
+.help-body::-webkit-scrollbar { width: 4px; height: 4px; }
+.help-body::-webkit-scrollbar-track { background: transparent; }
+.help-body::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
 
 .help-section {
   margin-bottom: 20px;

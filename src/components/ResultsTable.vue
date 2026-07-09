@@ -5,6 +5,8 @@
       <span class="dot dot-y"></span>
       <span class="dot dot-g"></span>
       <span class="title">OUTPUT</span>
+      <span v-if="selectedCount > 0" class="selected-hint">{{ selectedCount }} selected</span>
+      <button v-if="selectedCount > 0" class="copy-sel-btn" @click="copySelected">COPY SEL</button>
       <div v-if="results.length > 0" class="filter-group">
         <button
           v-for="f in filters"
@@ -21,6 +23,9 @@
         <table>
           <thead>
             <tr>
+              <th class="cb">
+                <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectAll" />
+              </th>
               <th class="num">#</th>
               <th
                 v-for="col in columns"
@@ -37,6 +42,9 @@
           </thead>
           <tbody>
             <tr v-for="(r, idx) in filteredResults" :key="idx">
+              <td class="cb">
+                <input type="checkbox" :checked="isSelected(r._idx)" @change="toggleSelect(r._idx!)" />
+              </td>
               <td class="num">{{ idx + 1 }}</td>
               <td v-for="col in columns" :key="col.key" :class="getCellClass(col)">
                 <template v-if="col.key === 'status'">
@@ -53,6 +61,9 @@
                     {{ getValue(r, col.key) }}
                     <span v-if="r.versions && r.versions.length > 1" class="version-badge" title="点击查看版本历史">v{{ r.versions.length }}</span>
                   </span>
+                </template>
+                <template v-else-if="col.key === 'title'">
+                  <span class="clickable" @click="copyCell($event, `《${getValue(r, col.key)}》`)">《{{ getValue(r, col.key) }}》</span>
                 </template>
                 <template v-else>
                   <span class="clickable" @click="copyCell($event, getValue(r, col.key))">{{ getValue(r, col.key) }}</span>
@@ -102,6 +113,7 @@ const columns = ref<ColumnDef[]>([...defaultColumns])
 const dragKey = ref<string | null>(null)
 const sortKey = ref<string | null>(null)
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const selectedIndices = ref(new Set<number>())
 
 const sortableKeys = ['publish_date', 'implement_date']
 
@@ -115,7 +127,7 @@ const filters = [
 const statusFilter = ref('all')
 
 const filteredResults = computed(() => {
-  let list = props.results
+  let list = props.results.map((r, i) => ({ ...r, _idx: i }))
   if (statusFilter.value !== 'all') {
     list = list.filter((r) => r.status === statusFilter.value)
   }
@@ -136,6 +148,7 @@ const filteredResults = computed(() => {
 watch(() => props.results, () => {
   statusFilter.value = 'all'
   sortKey.value = null
+  selectedIndices.value = new Set()
 })
 
 watch(columns, (cols) => {
@@ -176,6 +189,52 @@ function handleSort(colKey: string) {
 function getSortIcon(colKey: string): string {
   if (sortKey.value !== colKey) return ''
   return sortOrder.value === 'asc' ? '▲' : '▼'
+}
+
+const selectedCount = computed(() => {
+  return filteredResults.value.filter((r) => selectedIndices.value.has(r._idx!)).length
+})
+
+const allVisibleSelected = computed(() => {
+  const visible = filteredResults.value
+  if (visible.length === 0) return false
+  return visible.every((r) => selectedIndices.value.has(r._idx!))
+})
+
+function isSelected(idx: number): boolean {
+  return selectedIndices.value.has(idx)
+}
+
+function toggleSelect(idx: number) {
+  const next = new Set(selectedIndices.value)
+  if (next.has(idx)) {
+    next.delete(idx)
+  } else {
+    next.add(idx)
+  }
+  selectedIndices.value = next
+}
+
+function toggleSelectAll() {
+  const visible = filteredResults.value
+  const allSelected = visible.every((r) => selectedIndices.value.has(r._idx!))
+  const next = new Set(selectedIndices.value)
+  for (const r of visible) {
+    if (allSelected) {
+      next.delete(r._idx!)
+    } else {
+      next.add(r._idx!)
+    }
+  }
+  selectedIndices.value = next
+}
+
+async function copySelected() {
+  const nums = props.results
+    .filter((_, i) => selectedIndices.value.has(i))
+    .map((r) => r.standard_number)
+  if (nums.length === 0) return
+  await navigator.clipboard.writeText(nums.join('\n'))
 }
 
 function getValue(r: StandardResult, key: string): string {
@@ -281,5 +340,34 @@ th.sortable:hover {
 .sort-icon {
   margin-left: 4px;
   font-size: 8px;
+}
+
+th.cb, td.cb {
+  width: 28px;
+  text-align: center;
+  padding: 8px 4px !important;
+}
+
+th.cb input, td.cb input {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.selected-hint {
+  font-size: 10px;
+  color: var(--primary);
+  margin-left: 8px;
+}
+
+.copy-sel-btn {
+  background: var(--primary) !important;
+  color: var(--bg) !important;
+  border-color: var(--primary) !important;
+  font-size: 9px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  cursor: pointer;
 }
 </style>

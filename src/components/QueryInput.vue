@@ -12,6 +12,8 @@
         v-if="searchMode === 'number'"
         ref="textareaRef"
         v-model="keywords"
+        inputmode="latin"
+        spellcheck="false"
         placeholder="GB 50222-2017&#10;50010&#10;GB 50311-2016"
         :disabled="running"
         @keydown="handleKeydown"
