@@ -22,12 +22,9 @@
         </div>
         <TerminalLog
           :history="history"
-          :cacheEnabled="cacheEnabled"
           @load="handleHistoryLoad"
           @delete="handleHistoryDelete"
           @clear="handleHistoryClear"
-          @toggle-cache="toggleCache"
-          @clear-cache="handleClearCache"
         />
         <DonatePanel />
         <Toast />
@@ -68,7 +65,7 @@ import { useHistory } from './composables/useHistory'
 import type { StandardVersion } from './types'
 
 const { theme, toggleTheme, initTheme } = useTheme()
-const { results, progress, running, cacheEnabled, query, searchByName, toggleCache, clearCache, cacheSize } = useQuery()
+const { results, progress, running, query, searchByName } = useQuery()
 const { exportMarkdown, copy } = useClipboard()
 const { exportXlsx } = useXlsx()
 const toast = useToast()
@@ -136,10 +133,6 @@ function handleHistoryDelete(index: number) {
 
 function handleHistoryClear() {
   clearHistory()
-}
-
-function handleClearCache() {
-  toast.show('缓存已清空')
 }
 
 function handleShowVersions(versions: StandardVersion[]) {
