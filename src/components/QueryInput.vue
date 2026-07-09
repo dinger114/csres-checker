@@ -29,15 +29,14 @@
         :disabled="running"
         @keydown="handleKeydown"
       />
-      <div class="source-row">
-        <span class="source-label">模式:</span>
-        <label class="source-check">
+      <div class="mode-tabs">
+        <label class="mode-tab" :class="{ active: searchMode === 'number' }">
           <input type="radio" value="number" v-model="searchMode" :disabled="running" @change="handleModeChange" />
-          <span>编号查询</span>
+          <span># 编号查询</span>
         </label>
-        <label class="source-check">
+        <label class="mode-tab" :class="{ active: searchMode === 'name' }">
           <input type="radio" value="name" v-model="searchMode" :disabled="running" @change="handleModeChange" />
-          <span>名称检索</span>
+          <span>$ 名称检索</span>
         </label>
       </div>
       <div v-if="searchMode === 'number'" class="source-row">
@@ -220,11 +219,45 @@ defineExpose({ setText })
   margin-left: 8px;
 }
 
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 6px;
+}
+
+.mode-tab {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 3px 10px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.15s;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  user-select: none;
+}
+
+.mode-tab:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.mode-tab.active {
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.mode-tab input { display: none; }
+
 .source-row {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 8px;
+  margin-top: 0;
   padding: 6px 0;
   flex-wrap: wrap;
 }
@@ -279,14 +312,14 @@ defineExpose({ setText })
 }
 
 /* Mobile: show only icons, hide text */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .btn-text {
     display: none;
   }
 
   .btn-row button {
     padding: 8px;
-    min-width: 36px;
+    min-width: 44px;
     justify-content: center;
   }
 
@@ -305,5 +338,10 @@ defineExpose({ setText })
   .source-hint {
     display: none;
   }
+}
+
+@media (max-width: 375px) {
+  .btn-row { gap: 4px; }
+  .btn-row button { min-width: 40px; padding: 6px; }
 }
 </style>

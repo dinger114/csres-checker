@@ -41,7 +41,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, idx) in filteredResults" :key="idx">
+            <tr v-for="(r, idx) in filteredResults" :key="idx" :class="{ selected: isSelected(r._idx!) }">
               <td class="cb">
                 <input type="checkbox" :checked="isSelected(r._idx)" @change="toggleSelect(r._idx!)" />
               </td>
@@ -370,4 +370,7 @@ th.cb input, td.cb input {
   margin-left: 8px;
   cursor: pointer;
 }
+
+tr.selected td { background: var(--selected-bg); }
+tr.selected td:first-child { border-left: 2px solid var(--primary); }
 </style>

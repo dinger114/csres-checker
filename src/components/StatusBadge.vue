@@ -60,22 +60,22 @@ function copyReplace() {
 }
 
 .badge-active {
-  background: rgba(39, 201, 63, 0.15);
+  background: var(--badge-active-bg);
   color: #27c93f;
-  border: 1px solid rgba(39, 201, 63, 0.3);
+  border: 1px solid var(--badge-active-border);
 }
 
 .badge-deprecated {
-  background: rgba(255, 95, 86, 0.15);
+  background: var(--badge-deprecated-bg);
   color: #ff5f56;
-  border: 1px solid rgba(255, 95, 86, 0.3);
+  border: 1px solid var(--badge-deprecated-border);
   cursor: pointer;
 }
 
 .badge-upcoming {
-  background: rgba(255, 189, 46, 0.15);
+  background: var(--badge-upcoming-bg);
   color: #ffbd2e;
-  border: 1px solid rgba(255, 189, 46, 0.3);
+  border: 1px solid var(--badge-upcoming-border);
 }
 
 .replace-number {
