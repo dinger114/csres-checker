@@ -76,4 +76,3 @@ jobs:
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           projectName: csres-checker
           directory: dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
