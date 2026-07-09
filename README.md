@@ -23,15 +23,25 @@
 - 外链快捷入口：道客巴巴、搜建筑
 - Firebase 全网查询计数
 
-## 使用方式
+## 部署方式
 
-### GitHub Pages（推荐）
+### Cloudflare Pages（推荐）
 
-推送到 `main` 分支自动部署，无需后端。
+推送到 `main` 分支自动部署（GitHub Actions）。Cloudflare 全球 CDN，免费额度充足。
 
-```bash
-git push origin main
-```
+**前置配置**：在仓库 Settings → Secrets and variables → Actions 中添加：
+
+| Secret | 说明 | 必需 |
+|---|---|---|
+| `CF_API_TOKEN` | Cloudflare API Token（Pages 权限） | 是 |
+| `CF_ACCOUNT_ID` | Cloudflare Account ID | 是 |
+| `FIREBASE_API_KEY` | Firebase Web API Key | 否（不配置则计数功能不生效） |
+
+> 获取 `CF_API_TOKEN`：Cloudflare Dashboard → 右上角头像 → My Profile → API Tokens → Create Token → 选 "Cloudflare Pages"，授权当前账户，生成后复制。
+
+### GitHub Pages
+
+推送到 `main` 或 `refactor/vue3-worker-edge` 分支自动部署。
 
 **前置配置**：在仓库 Settings → Secrets → Actions 中添加：
 

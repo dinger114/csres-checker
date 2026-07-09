@@ -1,0 +1,10 @@
+# Cloudflare Pages Headers
+# Vite copies files from public/ into dist/ during build
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*
+  Cache-Control: public, max-age=3600
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
