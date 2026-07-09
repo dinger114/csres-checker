@@ -8,7 +8,6 @@ import { useCsres } from './useCsres'
 import { useBzsou } from './useBzsou'
 import { useLog } from './useLog'
 import { useFirebase } from './useFirebase'
-import { useCache } from './useCache'
 
 const SEPARATOR = '────────────────────────────────'
 
@@ -16,7 +15,6 @@ export function useQuery() {
   const results = ref<StandardResult[]>([])
   const progress = ref<ProgressState>({ current: 0, total: 0, pct: 0 })
   const running = ref(false)
-  const cacheEnabled = ref(false)
 
   const cssn = useCssn()
   const gongbiaoku = useGongbiaoku()
@@ -24,7 +22,6 @@ export function useQuery() {
   const bzsou = useBzsou()
   const { add, updateStats } = useLog()
   const { incQueryCount } = useFirebase()
-  const cache = useCache()
 
   const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
@@ -64,49 +61,13 @@ export function useQuery() {
 
     // Deduplicate keywords for querying
     const uniqueKws = [...new Set(normalizedKws)]
-    // Map unique keyword to all its indices in original input
     const kwToIndices = new Map<string, number[]>()
     normalizedKws.forEach((kw, idx) => {
       if (!kwToIndices.has(kw)) kwToIndices.set(kw, [])
       kwToIndices.get(kw)!.push(idx)
     })
 
-    // Cache: unique keyword -> results
-    const cacheResults = new Map<string, StandardResult[]>()
-    const uncachedKeywords: string[] = []
-
-    if (cacheEnabled.value) {
-      for (const kw of uniqueKws) {
-        const cached = cache.get(kw)
-        if (cached) {
-          add('cache hit: "' + kw + '"', 'success')
-          cacheResults.set(kw, cached)
-        } else {
-          uncachedKeywords.push(kw)
-        }
-      }
-    } else {
-      uncachedKeywords.push(...uniqueKws)
-    }
-
-    if (uncachedKeywords.length === 0) {
-      add('all ' + uniqueKws.length + ' unique items from cache', 'success')
-    } else {
-      add(uncachedKeywords.length + ' unique items need fetching', 'info')
-    }
-
-    // Build initial results from cache
-    const allResults: StandardResult[] = []
-    for (const [kw, cachedResults] of cacheResults) {
-      const indices = kwToIndices.get(kw) || []
-      for (const idx of indices) {
-        allResults.push(...cachedResults.map((r) => ({ ...r, query: normalizedKws[idx] })))
-      }
-    }
-    results.value = [...allResults]
-
-    if (uncachedKeywords.length > 0) {
-      // Query results for unique keywords
+    if (uniqueKws.length > 0) {
       const queryResults = new Map<string, StandardResult[]>()
 
       async function runSource(
@@ -126,37 +87,22 @@ export function useQuery() {
             const kw = batch[idx]
             if (r.status === 'fulfilled' && r.value.length > 0) {
               queryResults.set(kw, r.value)
-              if (cacheEnabled.value) cache.set(kw, r.value)
             } else {
               failed.push(kw)
             }
           })
-          // Rebuild allResults from cache + queryResults
-          rebuildResults()
+          // Rebuild results from queryResults
+          const allResults: StandardResult[] = []
+          for (const [kw2, queryResult] of queryResults) {
+            const indices = kwToIndices.get(kw2) || []
+            for (const idx of indices) {
+              allResults.push(...queryResult.map((r) => ({ ...r, query: normalizedKws[idx] })))
+            }
+          }
+          results.value = allResults
           if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
         return failed
-      }
-
-      function rebuildResults() {
-        const rebuilt: StandardResult[] = []
-        // Add cached results
-        for (const [kw, cachedResults] of cacheResults) {
-          const indices = kwToIndices.get(kw) || []
-          for (const idx of indices) {
-            rebuilt.push(...cachedResults.map((r) => ({ ...r, query: normalizedKws[idx] })))
-          }
-        }
-        // Add query results
-        for (const [kw, queryResult] of queryResults) {
-          const indices = kwToIndices.get(kw) || []
-          for (const idx of indices) {
-            rebuilt.push(...queryResult.map((r) => ({ ...r, query: normalizedKws[idx] })))
-          }
-        }
-        allResults.length = 0
-        allResults.push(...rebuilt)
-        results.value = [...allResults]
       }
 
       if (useDefault) {
@@ -204,15 +150,6 @@ export function useQuery() {
 
     add(SEPARATOR, 'info')
     add('═══ COMPLETE: ' + results.value.length + ' results, ' + elapsed + 's ═══', 'highlight')
-
-    if (!cacheEnabled.value) {
-      cacheEnabled.value = true
-      add('cache: enabled for next query', 'info')
-    }
-
-    if (cacheEnabled.value) {
-      add('cache: ' + cache.size() + ' entries', 'info')
-    }
 
     incQueryCount()
     running.value = false
@@ -293,11 +230,7 @@ export function useQuery() {
     results: computed(() => results.value),
     progress: computed(() => progress.value),
     running: computed(() => running.value),
-    cacheEnabled: computed(() => cacheEnabled.value),
     query,
     searchByName,
-    toggleCache,
-    clearCache: cache.clear,
-    cacheSize: cache.size,
   }
 }

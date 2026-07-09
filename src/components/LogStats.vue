@@ -4,75 +4,31 @@
     <span><i class="dot dot-r"></i>EMPTY:{{ stats.empty }}</span>
     <span>TIME:{{ stats.time }}s</span>
     <span>Q:{{ stats.queries }}</span>
-    <span class="cache-info">
-      <button class="cache-toggle-btn" :class="{ disabled: !cacheEnabled }" @click="emit('toggle-cache')">
-        CACHE:{{ cacheEnabled ? cacheSize : 'OFF' }}
-      </button>
-      <button v-if="cacheEnabled && cacheSize > 0" class="clear-cache-btn" @click="emit('clear-cache')">CLEAR</button>
-    </span>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useLog } from '../composables/useLog'
 
-defineProps<{
-  cacheEnabled: boolean
-  cacheSize: number
-}>()
-
-const emit = defineEmits<{
-  'toggle-cache': []
-  'clear-cache': []
-}>()
-
 const { stats } = useLog()
 </script>
 
 <style scoped>
-.cache-info {
+.log-stats {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
   display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.cache-toggle-btn {
-  background: none;
-  border: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 10px;
   color: var(--text-dim);
-  font-size: 8px;
-  padding: 1px 4px;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: all 0.15s;
-  font-family: inherit;
+  position: relative;
+  z-index: 2;
+  background: var(--header-bg);
+  transition: background 0.3s;
+  min-height: 32px;
 }
 
-.cache-toggle-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.cache-toggle-btn.disabled {
-  opacity: 0.5;
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-.clear-cache-btn {
-  background: none;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-dim);
-  font-size: 8px;
-  padding: 1px 4px;
-  cursor: pointer;
-  border-radius: 2px;
-  transition: all 0.15s;
-  font-family: inherit;
-}
-
-.clear-cache-btn:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-}
+.log-stats span { display: flex; align-items: center; gap: 4px; }
+.log-stats .dot { width: 6px; height: 6px; border-radius: 50%; }
 </style>

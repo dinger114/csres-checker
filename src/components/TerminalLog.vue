@@ -41,7 +41,7 @@
         <span class="log-msg" :class="line.type">{{ line.message }}</span>
       </div>
     </div>
-    <LogStats :cacheEnabled="cacheEnabled" :cacheSize="cacheSize" @toggle-cache="emit('toggle-cache')" @clear-cache="emit('clear-cache')" />
+    <LogStats />
   </aside>
 </template>
 
@@ -52,16 +52,12 @@ import { useLog } from '../composables/useLog'
 
 defineProps<{
   history: string[]
-  cacheEnabled: boolean
-  cacheSize: number
 }>()
 
 const emit = defineEmits<{
   load: [entry: string]
-  delete: [index: number]
+  delete: [number]
   clear: []
-  'toggle-cache': []
-  'clear-cache': []
 }>()
 
 const { lines } = useLog()
