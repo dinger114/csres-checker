@@ -252,7 +252,7 @@ function doc88Url(r: StandardResult): string {
 }
 
 function sjzUrl(r: StandardResult): string {
-  return `https://www.soujianzhu.cn/Search/SouGuifan.aspx?skey=${encodeURIComponent((r.standard_number || '').toLowerCase())}`
+  return `https://www.soujianzhu.cn/Search/Sou.aspx?skey=${encodeURIComponent(r.title || '')}`
 }
 
 function copyCell(e: MouseEvent, text: string) {
