@@ -1,16 +1,16 @@
 # 标准查新工具 (csres-checker)
 
-批量查询国家标准/行业标准现行状态，数据来源 [cssn.net.cn](https://www.cssn.net.cn)（主）+ [工标库](https://www.gongbiaoku.com)（备用）+ [csres.com](http://www.csres.com)（备用）。
+批量查询国家标准/行业标准现行状态，数据来源 [cssn.net.cn](https://www.cssn.net.cn)（主）+ [标准搜](https://www.bzsou.cn)（备用）+ [工标库](https://www.gongbiaoku.com)（备用）+ [csres.com](http://www.csres.com)（兜底）。
 
 **在线使用：https://csres.yeye.moe**
 
 ## 功能特性
 
 - 支持 GB、行业标准等编号查询（`GB50222` → `GB 50222` 自动格式化）
-- 三数据源：cssn.net.cn 直连 + 工标库 fallback + csres.com fallback
+- 四数据源：cssn.net.cn + 标准搜 + 工标库 + csres.com，自动 fallback
 - 并行批量查询（2 个一批，500ms 间隔），实时进度条 + 日志面板
 - Dark / Light 主题切换，跟随系统偏好
-- 查询结果缓存（localStorage，24h TTL，最多 1000 条）
+- 查询结果缓存（localStorage，4h TTL，最多 1000 条）
 - 查询历史记录，一键回填
 - 文件导入（.txt 文件上传 / 拖拽）
 - 键盘快捷键（Ctrl+Enter 运行，Esc 清空）
@@ -78,7 +78,7 @@ python csres_checker.py -f examples/sample.txt
 
 GitHub Pages 部署时，浏览器直接请求 gongbiaoku.com 会被 CORS 拦截。通过 Cloudflare Worker 中转解决。
 
-Worker 内置 URL 白名单（`gongbiaoku.com`、`cssn.net.cn`、`csres.com`），仅允许转发到这三个域名，防止 SSRF。
+Worker 内置 URL 白名单（`cssn.net.cn`、`bzsou.cn`、`gongbiaoku.com`、`csres.com`），仅允许转发到这四个域名，防止 SSRF。
 
 ```bash
 cd worker
@@ -104,6 +104,7 @@ csres-checker/
 │   │   ├── useQuery.ts         # 查询编排（三阶段 fallback）
 │   │   ├── useProxy.ts         # 代理竞速
 │   │   ├── useCssn.ts          # cssn.net.cn 数据源
+│   │   ├── useBzsou.ts         # bzsou.cn 数据源
 │   │   ├── useGongbiaoku.ts    # 工标库数据源
 │   │   ├── useCsres.ts         # csres.com 数据源
 │   │   ├── useFirebase.ts      # Firebase 计数
@@ -122,6 +123,9 @@ csres-checker/
 │       ├── VersionHistory.vue  # 版本历史弹窗
 │       ├── TerminalLog.vue     # 终端日志 + 历史
 │       ├── LogStats.vue        # 统计信息
+│       ├── HelpPanel.vue       # 帮助面板
+│       ├── DonatePanel.vue     # 捐赠面板
+│       ├── ProgressBar.vue     # 进度条
 │       └── Toast.vue           # Toast 组件
 ├── worker/
 │   ├── index.js                # Cloudflare Worker 代理
