@@ -75,20 +75,18 @@ export function useQuery() {
           batchResults.forEach((r, idx) => {
             const kw = batch[idx]
             if (r.status === 'fulfilled' && r.value.length > 0) {
+              if (!queryResults.has(kw)) {
+                // New keyword — append results incrementally
+                const indices = kwToIndices.get(kw) || []
+                for (const idx of indices) {
+                  results.value.push(...r.value.map((res) => ({ ...res, query: normalizedKws[idx] })))
+                }
+              }
               queryResults.set(kw, r.value)
             } else {
               failed.push(kw)
             }
           })
-          // Rebuild results from queryResults
-          const allResults: StandardResult[] = []
-          for (const [kw2, queryResult] of queryResults) {
-            const indices = kwToIndices.get(kw2) || []
-            for (const idx of indices) {
-              allResults.push(...queryResult.map((r) => ({ ...r, query: normalizedKws[idx] })))
-            }
-          }
-          results.value = allResults
           if (i + BATCH_SIZE < kws.length) await delay(BATCH_DELAY)
         }
         return failed
@@ -180,18 +178,15 @@ export function useQuery() {
       batchResults.forEach((r, idx) => {
         const kw = batch[idx]
         if (r.status === 'fulfilled' && r.value.length > 0) {
+          if (!queryResults.has(kw)) {
+            const indices = kwToIndices.get(kw) || []
+            for (const idx of indices) {
+              results.value.push(...r.value.map((res) => ({ ...res, query: normalizedKws[idx] })))
+            }
+          }
           queryResults.set(kw, r.value)
         }
       })
-      // Rebuild results
-      const rebuilt: StandardResult[] = []
-      for (const [kw, qr] of queryResults) {
-        const indices = kwToIndices.get(kw) || []
-        for (const idx of indices) {
-          rebuilt.push(...qr.map((r) => ({ ...r, query: normalizedKws[idx] })))
-        }
-      }
-      results.value = rebuilt
       progress.value = { current: Math.min(i + BATCH_SIZE, uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + BATCH_SIZE, uniqueKws.length) / uniqueKws.length * 100) }
       if (i + BATCH_SIZE < uniqueKws.length) await delay(BATCH_DELAY)
     }

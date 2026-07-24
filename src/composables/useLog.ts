@@ -10,13 +10,13 @@ export function useLog() {
   }
 
   function add(message: string, type: LogType = 'info') {
-    lines.value = [...lines.value, { time: now(), message, type }]
-    if (type === 'success') stats.value = { ...stats.value, ok: stats.value.ok + 1 }
-    if (type === 'warn') stats.value = { ...stats.value, empty: stats.value.empty + 1 }
+    lines.value.push({ time: now(), message, type })
+    if (type === 'success') stats.value.ok++
+    if (type === 'warn') stats.value.empty++
   }
 
   function updateStats(patch: Partial<LogStats>) {
-    stats.value = { ...stats.value, ...patch }
+    Object.assign(stats.value, patch)
   }
 
   function clear() {

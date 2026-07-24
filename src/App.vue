@@ -2,23 +2,23 @@
   <n-config-provider :theme="naiveTheme" :theme-overrides="themeOverrides">
     <n-message-provider>
       <div class="app" :class="{ 'theme-dark': theme === 'dark', 'theme-light': theme === 'light' }">
+        <!-- Mobile tab bar (always visible) -->
+        <div class="mobile-tabs">
+          <button
+            v-for="tab in mobileTabs"
+            :key="tab.key"
+            class="mobile-tab"
+            :class="{ active: mobileActiveTab === tab.key }"
+            @click="mobileActiveTab = tab.key"
+          >
+            <span class="tab-icon">{{ tab.icon }}</span>
+            <span class="tab-label">{{ tab.label }}</span>
+            <span v-if="tab.key === 'output' && results.length > 0" class="tab-badge">{{ results.length }}</span>
+            <span v-if="tab.key === 'terminal' && terminalCount > 0" class="tab-badge">{{ terminalCount }}</span>
+          </button>
+        </div>
         <div class="main-panel">
           <AppHeader :theme="theme" @toggle-theme="toggleTheme" @show-help="showHelp = true" />
-          <!-- Mobile tab bar -->
-          <div class="mobile-tabs">
-            <button
-              v-for="tab in mobileTabs"
-              :key="tab.key"
-              class="mobile-tab"
-              :class="{ active: mobileActiveTab === tab.key }"
-              @click="mobileActiveTab = tab.key"
-            >
-              <span class="tab-icon">{{ tab.icon }}</span>
-              <span class="tab-label">{{ tab.label }}</span>
-              <span v-if="tab.key === 'output' && results.length > 0" class="tab-badge">{{ results.length }}</span>
-              <span v-if="tab.key === 'terminal' && terminalCount > 0" class="tab-badge">{{ terminalCount }}</span>
-            </button>
-          </div>
           <!-- Desktop: show all; Mobile: show only active -->
           <div class="panel-input" :class="{ 'mobile-hidden': mobileActiveTab !== 'input' }">
             <QueryInput
@@ -42,6 +42,9 @@
         </div>
         <!-- Desktop: sidebar; Mobile: full panel when terminal tab active -->
         <div class="terminal-wrapper" :class="{ 'mobile-hidden': mobileActiveTab !== 'terminal' }">
+          <div class="mobile-back-btn">
+            <button @click="mobileActiveTab = 'output'">&larr; 返回</button>
+          </div>
           <TerminalLog
             :history="history"
             @load="handleHistoryLoad"
@@ -218,16 +221,13 @@ onMounted(() => {
   display: none;
 }
 
+.mobile-back-btn {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .app {
     flex-direction: column;
-  }
-
-  .main-panel {
-    padding: 0;
-    overflow-y: hidden;
-    flex: 1;
-    min-height: 0;
   }
 
   .mobile-tabs {
@@ -238,7 +238,7 @@ onMounted(() => {
     flex-shrink: 0;
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 30;
   }
 
   .mobile-tab {
@@ -287,6 +287,13 @@ onMounted(() => {
     line-height: 14px;
   }
 
+  .main-panel {
+    padding: 0;
+    overflow-y: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+
   .panel-input,
   .panel-output {
     flex: 1;
@@ -302,22 +309,49 @@ onMounted(() => {
     display: none !important;
   }
 
+  .mobile-back-btn {
+    display: block;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .mobile-back-btn button {
+    width: 100%;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    min-height: 44px;
+  }
+
+  .mobile-back-btn button:hover {
+    background: var(--hover-bg);
+  }
+
   .terminal-wrapper {
     position: fixed;
-    top: 0;
+    top: 44px;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 20;
     background: var(--bg);
+    display: flex;
+    flex-direction: column;
   }
 
   .terminal-wrapper :deep(.log-panel) {
+    flex: 1;
     width: 100%;
-    height: 100%;
     margin: 0;
     border-radius: 0;
     border: none;
+    min-height: 0;
   }
 }
 </style>

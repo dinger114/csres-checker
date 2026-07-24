@@ -71,7 +71,6 @@ def _normalize_std_no(s: str) -> str:
 
 
 def _std_base(s: str) -> str:
-    import re
     m = re.match(r"^(.*?)[-–]\d{4}$", s.replace(" ", ""))
     return m.group(1) if m else ""
 
@@ -128,7 +127,6 @@ def query_cssn(keyword: str) -> list[dict]:
 
 
 def _normalize_keyword(kw: str) -> str:
-    import re
     s = " ".join(kw.split()).strip()
     s = s.replace("—", "-").replace("－", "-")
     s = re.sub(r"（[^）]*）", "", s)

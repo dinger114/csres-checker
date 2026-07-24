@@ -89,6 +89,46 @@ export function useCssn() {
     return /\(英文版\)|\(英文\)/.test(r.a100 || '') || /\(英文版\)|\(英文\)/.test(r.a298 || '')
   }
 
+  function mapToResults(allResults: any[], keyword: string, opts?: { computeReplacedBy?: boolean }): StandardResult[] {
+    const filtered = allResults
+      .filter((r) => !isEnglishVersion(r))
+      .filter((r) => r.a000)
+
+    const groups = groupByBase(allResults.filter((r) => !isEnglishVersion(r)))
+
+    let currentMap: Map<string, string> | null = null
+    if (opts?.computeReplacedBy) {
+      currentMap = new Map()
+      allResults.forEach((r: any) => {
+        if (r.a000 === '现行') {
+          const base = stdBase(r.a100 || '')
+          if (base) currentMap!.set(base, r.a100 || '')
+        }
+      })
+    }
+
+    return filtered.map((r: any) => {
+      const base = stdBase(r.a100 || '')
+      const versions = base ? toVersions(groups.get(base) || []) : []
+      const replacedBy = currentMap && ['被代替', '作废', '废止'].includes(r.a000)
+        ? currentMap.get(base) || '' : ''
+
+      return {
+        query: keyword,
+        standard_number: r.a100 || '',
+        title: r.a298 || '',
+        status: mapStatus(r.a000 || ''),
+        publish_date: r.a101 || '',
+        implement_date: r.a205 || '',
+        replaced_by: replacedBy,
+        publisher: '',
+        category: '',
+        ics: '',
+        versions: versions.length > 1 ? versions : undefined,
+      }
+    })
+  }
+
   async function query(keyword: string): Promise<StandardResult[]> {
     const normalized = normalizeKeyword(keyword)
 
@@ -101,40 +141,10 @@ export function useCssn() {
 
       if (allResults.length === 0) return []
 
-      // Filter out English versions and empty status
       const filtered = filterResults(allResults, normalized)
-        .filter((r) => !isEnglishVersion(r))
-        .filter((r) => r.a000)
       if (filtered.length === 0) return []
 
-      // Group by base to find versions
-      const groups = groupByBase(allResults.filter((r) => !isEnglishVersion(r)))
-      const currentMap = new Map<string, string>()
-      allResults.forEach((r: any) => {
-        if (r.a000 === '现行') {
-          const base = stdBase(r.a100 || '')
-          if (base) currentMap.set(base, r.a100 || '')
-        }
-      })
-
-      return filtered.map((r: any) => {
-        const base = stdBase(r.a100 || '')
-        const versions = base ? toVersions(groups.get(base) || []) : []
-
-        return {
-          query: keyword,
-          standard_number: r.a100 || '',
-          title: r.a298 || '',
-          status: mapStatus(r.a000 || ''),
-          publish_date: r.a101 || '',
-          implement_date: r.a205 || '',
-          replaced_by: (['被代替', '作废', '废止'].includes(r.a000) ? currentMap.get(base) || '' : ''),
-          publisher: '',
-          category: '',
-          ics: '',
-          versions: versions.length > 1 ? versions : undefined,
-        }
-      })
+      return mapToResults(filtered, keyword, { computeReplacedBy: true })
     } catch (e: any) {
       add(`cssn error: ${e.message}`, 'error')
       return []
@@ -164,7 +174,6 @@ export function useCssn() {
       add(`cssn (name): "${normalized}"`, 'info')
       const t0 = Date.now()
 
-      // Fetch up to 3 pages
       let allResults: any[] = []
       for (let page = 1; page <= 3; page++) {
         const { results, next } = await fetchRaw(normalized, page)
@@ -176,39 +185,13 @@ export function useCssn() {
 
       if (allResults.length === 0) return []
 
-      // Filter out English versions and empty status
-      const filtered = allResults
-        .filter((r) => !isEnglishVersion(r))
-        .filter((r) => r.a000)
+      const mapped = mapToResults(allResults, keyword)
 
-      // Group by base to find versions
-      const groups = groupByBase(filtered)
-
-      const mapped = filtered.map((r: any) => {
-        const base = stdBase(r.a100 || '')
-        const versions = base ? toVersions(groups.get(base) || []) : []
-
-        return {
-          query: keyword,
-          standard_number: r.a100 || '',
-          title: r.a298 || '',
-          status: mapStatus(r.a000 || ''),
-          publish_date: r.a101 || '',
-          implement_date: r.a205 || '',
-          replaced_by: '',
-          publisher: '',
-          category: '',
-          ics: '',
-          versions: versions.length > 1 ? versions : undefined,
-        }
-      })
-
-      // Sort: preferred standard prefixes first, then by original order
       return mapped.sort((a, b) => {
         const pa = prefixPriority(a.standard_number)
         const pb = prefixPriority(b.standard_number)
         if (pa !== pb) return pa - pb
-        return 0 // stable sort, preserve API order
+        return 0
       })
     } catch (e: any) {
       add(`cssn error: ${e.message}`, 'error')

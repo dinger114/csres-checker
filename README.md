@@ -10,7 +10,6 @@
 - 四数据源：cssn.net.cn + 标准搜 + 工标库 + csres.com，自动 fallback
 - 并行批量查询（2 个一批，500ms 间隔），实时进度条 + 日志面板
 - Dark / Light 主题切换，跟随系统偏好
-- 查询结果缓存（localStorage，4h TTL，最多 1000 条）
 - 查询历史记录，一键回填
 - 文件导入（.txt 文件上传 / 拖拽）
 - 键盘快捷键（Ctrl+Enter 运行，Esc 清空）
@@ -22,6 +21,7 @@
 - 废止标准点击查看替代标准编号
 - 外链快捷入口：道客巴巴、搜建筑
 - Firebase 全网查询计数
+- 移动端适配：Tab 栏切换 INPUT / OUTPUT / LOG 面板
 
 ## 部署方式
 
@@ -101,7 +101,7 @@ csres-checker/
 │   │   ├── htmlParser.ts       # HTML 解析器
 │   │   └── theme.ts            # 主题工具
 │   ├── composables/            # Vue 3 组合式函数
-│   │   ├── useQuery.ts         # 查询编排（三阶段 fallback）
+│   │   ├── useQuery.ts         # 查询编排（四阶段 fallback）
 │   │   ├── useProxy.ts         # 代理竞速
 │   │   ├── useCssn.ts          # cssn.net.cn 数据源
 │   │   ├── useBzsou.ts         # bzsou.cn 数据源
@@ -112,7 +112,6 @@ csres-checker/
 │   │   ├── useLog.ts           # 日志系统
 │   │   ├── useClipboard.ts     # 复制/导出 Markdown
 │   │   ├── useXlsx.ts          # 导出 Excel
-│   │   ├── useCache.ts         # 查询缓存
 │   │   ├── useHistory.ts       # 查询历史
 │   │   └── useToast.ts         # Toast 通知
 │   └── components/             # Vue 组件
@@ -125,7 +124,6 @@ csres-checker/
 │       ├── LogStats.vue        # 统计信息
 │       ├── HelpPanel.vue       # 帮助面板
 │       ├── DonatePanel.vue     # 捐赠面板
-│       ├── ProgressBar.vue     # 进度条
 │       └── Toast.vue           # Toast 组件
 ├── worker/
 │   ├── index.js                # Cloudflare Worker 代理

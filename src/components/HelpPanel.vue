@@ -112,16 +112,6 @@ GB 50311-2016</pre>
         </div>
 
         <div class="help-section">
-          <h3>缓存</h3>
-          <ul>
-            <li>查询结果自动缓存 4 小时（最多 1000 条）</li>
-            <li>重复查询相同标准会直接返回缓存结果（显示 <code>cache hit</code>）</li>
-            <li>点击底部 <code>CACHE:n</code> 按钮可禁用/启用缓存</li>
-            <li>点击 <code>CLEAR</code> 按钮可清空缓存</li>
-          </ul>
-        </div>
-
-        <div class="help-section">
           <h3>查询历史</h3>
           <ul>
             <li>点击 TERMINAL 面板右上角 <code>HIST</code> 按钮展开历史记录</li>
@@ -136,6 +126,22 @@ GB 50311-2016</pre>
           <pre>https://csres.yeye.moe/?q=GB+50222,JGJ+130</pre>
           <p>添加 <code>&auto=1</code> 参数可自动执行查询：</p>
           <pre>https://csres.yeye.moe/?q=GB+50222&auto=1</pre>
+        </div>
+
+        <div class="help-section">
+          <h3>移动端</h3>
+          <p>手机端采用 Tab 栏切换面板，每次只显示一个：</p>
+          <table>
+            <thead>
+              <tr><th>Tab</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>$ INPUT</code></td><td>输入面板，输入标准编号或关键词</td></tr>
+              <tr><td><code>> OUTPUT</code></td><td>结果表格，显示查询结果（执行查询后自动切换）</td></tr>
+              <tr><td><code># LOG</code></td><td>终端日志，查看查询过程（点击 <code>← 返回</code> 退出）</td></tr>
+            </tbody>
+          </table>
+          <p>OUTPUT 和 LOG tab 上会显示结果数量 / 日志条数的徽章。</p>
         </div>
       </div>
     </div>
