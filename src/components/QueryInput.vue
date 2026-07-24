@@ -180,6 +180,10 @@ function handleShare() {
   if (lines.length === 0) return
   const params = new URLSearchParams()
   params.set('q', lines.join(','))
+  params.set('mode', searchMode.value)
+  if (searchMode.value === 'number' && selectedSource.value) {
+    params.set('source', selectedSource.value)
+  }
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
   navigator.clipboard.writeText(url).then(() => {
     window.history.replaceState({}, '', `?${params.toString()}`)
@@ -197,6 +201,14 @@ function loadFromUrl() {
   const q = params.get('q')
   if (q) {
     keywords.value = q.split(',').join('\n')
+    const mode = params.get('mode')
+    if (mode === 'number' || mode === 'name') {
+      searchMode.value = mode
+    }
+    const source = params.get('source')
+    if (source) {
+      selectedSource.value = source
+    }
     return params.get('auto') === '1'
   }
   return false
