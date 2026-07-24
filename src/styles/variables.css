@@ -367,21 +367,7 @@ td a:hover { text-decoration: underline; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: var(--primary-dim); }
 
 @media (max-width: 768px) {
-  .app { flex-direction: column; }
-  .main-panel { padding: 12px; gap: 12px; overflow-y: auto; height: auto; width: 100%; }
-  .log-panel {
-    width: calc(100% - 24px);
-    margin: 0 12px;
-    height: 220px;
-    border: 1px solid var(--border);
-    flex-shrink: 0;
-    background: var(--panel);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .log-header { border-radius: 7px 7px 0 0; }
-  .log-stats { border-radius: 0 0 7px 7px; flex-wrap: wrap; }
-  .table-wrap { max-height: 50vh; overflow: auto; }
+  .table-wrap { max-height: none; overflow: auto; }
   table { min-width: 700px; font-size: 10px; }
   th, td { padding: 8px; }
   .terminal-box { border-radius: 8px; }
@@ -398,8 +384,6 @@ td a:hover { text-decoration: underline; }
 /* Tablet / small screens */
 @media (max-width: 640px) {
   body { font-size: 12px; }
-  .main-panel { padding: 8px; gap: 8px; }
-  .log-panel { height: 160px; margin: 0 8px; width: calc(100% - 16px); }
   th { font-size: 8px; padding: 8px 6px; letter-spacing: 0.8px; }
   td { padding: 8px 6px; font-size: 10px; }
   textarea { height: 70px; font-size: 12px; padding: 10px; }
@@ -421,11 +405,9 @@ td a:hover { text-decoration: underline; }
   .theme-toggle { min-width: 44px; height: 44px; padding: 4px 8px; }
   .theme-toggle span { font-size: 9px; }
   .help-btn { min-width: 44px; height: 44px; padding: 4px 8px; font-size: 10px; }
-  .log-panel { height: 140px; margin: 0 8px; width: calc(100% - 16px); }
   h1 { font-size: 14px; }
   .global-count { font-size: 10px; }
   .terminal-body { padding: 8px; }
   .terminal-header { padding: 5px 8px; flex-wrap: wrap; row-gap: 4px; }
-  .table-wrap { max-height: 40vh; }
   .btn-row button { min-width: 44px; min-height: 44px; padding: 8px; }
 }

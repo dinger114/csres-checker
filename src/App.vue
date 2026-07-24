@@ -4,28 +4,51 @@
       <div class="app" :class="{ 'theme-dark': theme === 'dark', 'theme-light': theme === 'light' }">
         <div class="main-panel">
           <AppHeader :theme="theme" @toggle-theme="toggleTheme" @show-help="showHelp = true" />
-          <QueryInput
-            ref="queryInputRef"
-            :running="running"
-            :progress="progress"
-            :hasResults="results.length > 0"
-            @run="handleRun"
-            @copy-md="handleCopyMd"
-            @export-xlsx="handleExportXlsx"
-          />
-          <ResultsTable
-            ref="resultsTableRef"
-            :results="results"
-            @update:columns="handleColumnsUpdate"
-            @show-versions="handleShowVersions"
+          <!-- Mobile tab bar -->
+          <div class="mobile-tabs">
+            <button
+              v-for="tab in mobileTabs"
+              :key="tab.key"
+              class="mobile-tab"
+              :class="{ active: mobileActiveTab === tab.key }"
+              @click="mobileActiveTab = tab.key"
+            >
+              <span class="tab-icon">{{ tab.icon }}</span>
+              <span class="tab-label">{{ tab.label }}</span>
+              <span v-if="tab.key === 'output' && results.length > 0" class="tab-badge">{{ results.length }}</span>
+              <span v-if="tab.key === 'terminal' && terminalCount > 0" class="tab-badge">{{ terminalCount }}</span>
+            </button>
+          </div>
+          <!-- Desktop: show all; Mobile: show only active -->
+          <div class="panel-input" :class="{ 'mobile-hidden': mobileActiveTab !== 'input' }">
+            <QueryInput
+              ref="queryInputRef"
+              :running="running"
+              :progress="progress"
+              :hasResults="results.length > 0"
+              @run="handleRun"
+              @copy-md="handleCopyMd"
+              @export-xlsx="handleExportXlsx"
+            />
+          </div>
+          <div class="panel-output" :class="{ 'mobile-hidden': mobileActiveTab !== 'output' }">
+            <ResultsTable
+              ref="resultsTableRef"
+              :results="results"
+              @update:columns="handleColumnsUpdate"
+              @show-versions="handleShowVersions"
+            />
+          </div>
+        </div>
+        <!-- Desktop: sidebar; Mobile: full panel when terminal tab active -->
+        <div class="terminal-wrapper" :class="{ 'mobile-hidden': mobileActiveTab !== 'terminal' }">
+          <TerminalLog
+            :history="history"
+            @load="handleHistoryLoad"
+            @delete="handleHistoryDelete"
+            @clear="handleHistoryClear"
           />
         </div>
-        <TerminalLog
-          :history="history"
-          @load="handleHistoryLoad"
-          @delete="handleHistoryDelete"
-          @clear="handleHistoryClear"
-        />
         <DonatePanel />
         <Toast />
         <VersionHistory
@@ -80,6 +103,16 @@ const showVersionHistory = ref(false)
 const selectedVersions = ref<StandardVersion[]>([])
 const showHelp = ref(false)
 
+// Mobile panel switching
+const mobileActiveTab = ref('input')
+const mobileTabs = [
+  { key: 'input', label: 'INPUT', icon: '$' },
+  { key: 'output', label: 'OUTPUT', icon: '>' },
+  { key: 'terminal', label: 'LOG', icon: '#' },
+]
+const { lines: logLines } = useLog()
+const terminalCount = computed(() => logLines.value.length)
+
 const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightTheme))
 
 const themeOverrides = computed(() => ({
@@ -93,6 +126,10 @@ const themeOverrides = computed(() => ({
 function handleRun(keywords: string[], source: string = '', mode: string = 'number') {
   logAdd(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   addHistory(keywords)
+  // On mobile, switch to output tab when query starts
+  if (window.innerWidth <= 768) {
+    mobileActiveTab.value = 'output'
+  }
   if (mode === 'name') {
     searchByName(keywords, source)
   } else {
@@ -125,6 +162,10 @@ function handleExportXlsx() {
 
 function handleHistoryLoad(entry: string) {
   queryInputRef.value?.setText(entry)
+  // On mobile, switch to input tab when loading history
+  if (window.innerWidth <= 768) {
+    mobileActiveTab.value = 'input'
+  }
 }
 
 function handleHistoryDelete(index: number) {
@@ -166,5 +207,117 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.terminal-wrapper {
+  flex-shrink: 0;
+}
+
+/* Mobile tab bar */
+.mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .main-panel {
+    padding: 0;
+    overflow-y: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .mobile-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .mobile-tab {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 8px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-dim);
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    min-height: 44px;
+  }
+
+  .mobile-tab:hover {
+    color: var(--primary);
+    background: var(--hover-bg);
+  }
+
+  .mobile-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    background: var(--hover-bg);
+  }
+
+  .tab-icon {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .tab-badge {
+    font-size: 9px;
+    background: var(--primary);
+    color: var(--bg);
+    padding: 1px 5px;
+    border-radius: 8px;
+    min-width: 16px;
+    text-align: center;
+    line-height: 14px;
+  }
+
+  .panel-input,
+  .panel-output {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  .terminal-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    background: var(--bg);
+  }
+
+  .terminal-wrapper :deep(.log-panel) {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+  }
 }
 </style>
