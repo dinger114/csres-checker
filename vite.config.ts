@@ -9,9 +9,9 @@ export default defineConfig({
     assetsDir: 'assets',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'firebase': ['firebase/app', 'firebase/database'],
-          'xlsx': ['xlsx'],
+        manualChunks(id) {
+          if (id.includes('firebase')) return 'firebase'
+          if (id.includes('xlsx')) return 'xlsx'
         },
       },
     },
