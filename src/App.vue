@@ -17,7 +17,7 @@
             <span v-if="tab.key === 'terminal' && terminalCount > 0" class="tab-badge">{{ terminalCount }}</span>
           </button>
         </div>
-        <div class="main-panel">
+        <main class="main-panel">
           <AppHeader :theme="theme" @toggle-theme="toggleTheme" @show-help="showHelp = true" />
           <!-- Desktop: show all; Mobile: show only active -->
           <div class="panel-input" :class="{ 'mobile-hidden': mobileActiveTab !== 'input' }">
@@ -39,7 +39,7 @@
               @show-versions="handleShowVersions"
             />
           </div>
-        </div>
+        </main>
         <!-- Desktop: sidebar; Mobile: full panel when terminal tab active -->
         <div class="terminal-wrapper" :class="{ 'mobile-hidden': mobileActiveTab !== 'terminal' }">
           <div class="mobile-back-btn">
