@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^12.16.0",
+    "firebase": "^12.17.0",
     "naive-ui": "^2.34.4",
     "vue": "^3.5.40",
     "xlsx": "^0.18.5"
