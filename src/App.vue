@@ -52,7 +52,7 @@
             @clear="handleHistoryClear"
           />
         </div>
-        <DonatePanel />
+        <DonatePanel :show-on-input="mobileActiveTab === 'input'" />
         <Toast />
         <VersionHistory
           :visible="showVersionHistory"

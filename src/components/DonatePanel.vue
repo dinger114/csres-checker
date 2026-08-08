@@ -1,5 +1,9 @@
 <template>
-  <div class="donate-tab" :class="{ expanded }" @click="expanded = !expanded">
+  <div
+    class="donate-tab"
+    :class="{ expanded, 'mobile-hidden-donate': !showOnInput }"
+    @click="expanded = !expanded"
+  >
     <div class="donate-tab-label">
       <span class="chevron">{{ expanded ? '◀' : '▶' }}</span>
       <span class="label-text">支持</span>
@@ -17,6 +21,14 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+
+const props = withDefaults(defineProps<{
+  visible?: boolean
+  showOnInput?: boolean
+}>(), {
+  visible: true,
+  showOnInput: true,
+})
 
 const expanded = ref(false)
 </script>
@@ -96,7 +108,52 @@ const expanded = ref(false)
 
 @media (max-width: 768px) {
   .donate-tab {
+    right: 16px;
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+
+  /* 移动端仅在 INPUT tab 显示捐赠入口 */
+  .donate-tab.mobile-hidden-donate {
     display: none;
+  }
+
+  .donate-tab-label {
+    flex-direction: row;
+    gap: 6px;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+  }
+
+  .chevron {
+    font-size: 10px;
+  }
+
+  .label-text {
+    writing-mode: horizontal-tb;
+    font-size: 13px;
+  }
+
+  .donate-tab-panel {
+    position: fixed;
+    top: auto;
+    right: 16px;
+    bottom: 68px;
+    left: auto;
+    transform: translateY(10px);
+    white-space: normal;
+  }
+
+  .donate-tab.expanded .donate-tab-panel {
+    transform: translateY(0);
+  }
+
+  .donate-qr {
+    width: 160px;
+    height: 160px;
   }
 }
 </style>
