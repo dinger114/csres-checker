@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^12.16.0",
+    "firebase": "^12.17.0",
     "naive-ui": "^2.34.4",
     "vue": "^3.5.40",
     "xlsx": "^0.18.5"
@@ -19,7 +19,7 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
     "typescript": "^7.0.2",
-    "vite": "^8.1.5",
-    "vue-tsc": "^3.3.8"
+    "vite": "^8.2.0",
+    "vue-tsc": "^3.3.9"
   }
 }
