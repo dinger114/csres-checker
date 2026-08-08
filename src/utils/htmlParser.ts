@@ -1,5 +1,41 @@
 import type { StandardResult } from '../types'
 
+const CQDB_BASE = 'http://183.66.41.2:3757/x/'
+
+export function parseCqDbHtml(html: string, keyword: string): StandardResult[] {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const results: StandardResult[] = []
+
+  doc.querySelectorAll('table.layui-table tbody tr').forEach((tr) => {
+    const tds = tr.querySelectorAll('td')
+    if (tds.length < 11) return
+
+    const standard_number = tds[0]?.textContent?.trim() || ''
+    if (!standard_number) return
+
+    const pdfAnchor = tds[10]?.querySelector('a')
+    const pdfHref = pdfAnchor?.getAttribute('href') || ''
+    const pdf_url = pdfHref ? CQDB_BASE + pdfHref.replace(/^\/+/, '') : ''
+
+    results.push({
+      query: keyword,
+      standard_number,
+      title: tds[1]?.textContent?.trim() || '',
+      status: tds[4]?.textContent?.trim() || '',
+      publish_date: tds[2]?.textContent?.trim() || '',
+      implement_date: tds[3]?.textContent?.trim() || '',
+      replaced_by: tds[6]?.textContent?.trim() || '',
+      publisher: tds[7]?.textContent?.trim() || '',
+      category: '',
+      ics: '',
+      pdf_url,
+    })
+  })
+
+  return results
+}
+
 export function parseGongbiaokuHtml(html: string, keyword: string): StandardResult[] {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')

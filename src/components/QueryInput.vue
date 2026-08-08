@@ -107,6 +107,7 @@ const sources = [
   { key: 'bzsou', label: '标准搜' },
   { key: 'gongbiaoku', label: '工标库' },
   { key: 'csres', label: 'CSRes' },
+  { key: 'cqdb', label: '重庆地标' },
 ]
 
 const keywords = ref('')
@@ -233,24 +234,26 @@ defineExpose({ setText })
 
 .mode-tabs {
   display: flex;
-  gap: 4px;
-  margin: 4px 0 6px;
+  gap: 6px;
+  margin: 10px 0 12px;
 }
 
 .mode-tab {
   display: flex;
   align-items: center;
   margin: 0;
-  padding: 3px 10px;
-  font-size: 10px;
+  padding: 5px 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 1px;
   transition: all 0.15s;
   border: 1px solid var(--border-subtle);
-  border-radius: 4px;
+  border-radius: 6px;
   user-select: none;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .mode-tab:hover {
@@ -270,7 +273,7 @@ defineExpose({ setText })
   align-items: center;
   gap: 16px;
   margin-top: 0;
-  padding: 6px 0;
+  padding: 8px 0 4px;
   flex-wrap: wrap;
 }
 

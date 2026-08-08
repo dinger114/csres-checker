@@ -6,6 +6,7 @@ import { useCssn } from './useCssn'
 import { useGongbiaoku } from './useGongbiaoku'
 import { useCsres } from './useCsres'
 import { useBzsou } from './useBzsou'
+import { useCqdb } from './useCqdb'
 import { useLog } from './useLog'
 import { useFirebase } from './useFirebase'
 
@@ -20,6 +21,7 @@ export function useQuery() {
   const gongbiaoku = useGongbiaoku()
   const csres = useCsres()
   const bzsou = useBzsou()
+  const cqdb = useCqdb()
   const { add, updateStats } = useLog()
   const { incQueryCount } = useFirebase()
 
@@ -108,6 +110,7 @@ export function useQuery() {
           bzsou,
           gongbiaoku,
           csres,
+          cqdb,
         }
 
         const selectedSrc = sourceMap[source]

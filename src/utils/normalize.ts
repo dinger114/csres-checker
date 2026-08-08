@@ -1,7 +1,7 @@
 export function normalizeKeyword(kw: string): string {
   return kw
     .trim()
-    .replace(/[—–]/g, '-')
+    .replace(/[—–⁃]/g, '-')
     .replace(/[（(][^）)]*[）)]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/GBT/gi, 'GB/T')

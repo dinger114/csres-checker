@@ -56,6 +56,10 @@
                 <template v-else-if="col.key === 'soujz'">
                   <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
                 </template>
+                <template v-else-if="col.key === 'pdf'">
+                  <a v-if="r.pdf_url" :href="r.pdf_url" target="_blank" rel="noopener">下载</a>
+                  <span v-else class="pdf-empty">—</span>
+                </template>
                 <template v-else-if="col.key === 'standard_number'">
                   <span class="clickable" @click="handleStdClick($event, r)">
                     {{ getValue(r, col.key) }}
@@ -107,6 +111,7 @@ const defaultColumns: ColumnDef[] = [
   { key: 'implement_date', label: 'IMPLEMENTED', draggable: true, exportable: true },
   { key: 'doc88', label: '道客巴巴', draggable: true, exportable: false },
   { key: 'soujz', label: '搜建筑', draggable: true, exportable: false },
+  { key: 'pdf', label: '地标预览', draggable: true, exportable: false },
 ]
 
 const columns = ref<ColumnDef[]>([...defaultColumns])
@@ -242,7 +247,7 @@ function getValue(r: StandardResult, key: string): string {
 }
 
 function getCellClass(col: ColumnDef): string {
-  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz'].includes(col.key)) return 'text-center'
+  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz', 'pdf'].includes(col.key)) return 'text-center'
   if (col.key === 'num') return 'num'
   return 'clickable'
 }
@@ -283,13 +288,15 @@ defineExpose({ columns })
 
 .filter-btn {
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: 10px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: all 0.15s;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .filter-btn:hover {
@@ -373,4 +380,9 @@ th.cb input, td.cb input {
 
 tr.selected td { background: var(--selected-bg); }
 tr.selected td:first-child { border-left: 2px solid var(--primary); }
+
+.pdf-empty {
+  color: var(--text-dim);
+  opacity: 0.4;
+}
 </style>

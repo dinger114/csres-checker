@@ -9,6 +9,7 @@ export interface StandardResult {
   publisher: string
   category: string
   ics: string
+  pdf_url?: string
   versions?: StandardVersion[]
 }
 
