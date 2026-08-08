@@ -61,20 +61,20 @@ function copyReplace() {
 
 .badge-active {
   background: var(--badge-active-bg);
-  color: #27c93f;
+  color: var(--badge-active-text);
   border: 1px solid var(--badge-active-border);
 }
 
 .badge-deprecated {
   background: var(--badge-deprecated-bg);
-  color: #ff5f56;
+  color: var(--badge-deprecated-text);
   border: 1px solid var(--badge-deprecated-border);
   cursor: pointer;
 }
 
 .badge-upcoming {
   background: var(--badge-upcoming-bg);
-  color: #ffbd2e;
+  color: var(--badge-upcoming-text);
   border: 1px solid var(--badge-upcoming-border);
 }
 

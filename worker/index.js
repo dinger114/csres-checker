@@ -5,6 +5,9 @@ const ALLOWED_HOSTS = [
   'www.cssn.net.cn',
   'csres.com',
   'www.csres.com',
+  'bzsou.cn',
+  'www.bzsou.cn',
+  '183.66.41.2',
 ];
 
 // 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求

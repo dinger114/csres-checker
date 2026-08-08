@@ -23,10 +23,10 @@ const toast = useToast()
   padding: 10px 20px;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
   color: var(--text);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow);
   z-index: 1000;
   letter-spacing: 0.3px;
 }

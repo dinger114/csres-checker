@@ -41,11 +41,12 @@ const expanded = ref(false)
   border: 1px solid var(--border);
   border-right: none;
   border-radius: 8px 0 0 8px;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .donate-tab-label:hover {
-  background: var(--row-hover);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .chevron {
@@ -91,5 +92,11 @@ const expanded = ref(false)
   margin-top: 8px;
   font-size: 13px;
   color: var(--text-dim);
+}
+
+@media (max-width: 768px) {
+  .donate-tab {
+    display: none;
+  }
 }
 </style>

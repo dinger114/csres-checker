@@ -120,9 +120,10 @@ const naiveTheme = computed(() => (theme.value === 'dark' ? darkTheme : lightThe
 
 const themeOverrides = computed(() => ({
   common: {
-    primaryColor: theme.value === 'dark' ? '#00ff41' : '#0d47a1',
-    primaryColorHover: theme.value === 'dark' ? '#00cc33' : '#1565c0',
-    primaryColorPressed: theme.value === 'dark' ? '#009922' : '#0a3d8f',
+    primaryColor: theme.value === 'dark' ? '#00e676' : '#0d47a1',
+    primaryColorHover: theme.value === 'dark' ? '#00b35c' : '#1565c0',
+    primaryColorPressed: theme.value === 'dark' ? '#00994e' : '#0a3d8f',
+    borderRadius: '6px',
   },
 }))
 
@@ -214,6 +215,10 @@ onMounted(() => {
 
 .terminal-wrapper {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 72px 20px 20px 0;
 }
 
 /* Mobile tab bar */
@@ -343,6 +348,7 @@ onMounted(() => {
     background: var(--bg);
     display: flex;
     flex-direction: column;
+    padding: 0;
   }
 
   .terminal-wrapper :deep(.log-panel) {

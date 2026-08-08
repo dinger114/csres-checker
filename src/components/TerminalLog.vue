@@ -97,14 +97,16 @@ watch(
 
 .tab-btn {
   margin-left: auto;
-  background: var(--header-bg);
+  background: transparent;
   border: 1px solid var(--border-subtle);
   color: var(--text-dim);
-  font-size: 9px;
-  padding: 2px 8px;
+  font-size: 10px;
+  padding: 3px 10px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: all 0.15s;
+  font-family: var(--font-mono);
+  font-weight: 600;
 }
 
 .tab-btn:hover {

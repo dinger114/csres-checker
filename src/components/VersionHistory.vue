@@ -83,6 +83,7 @@ function copyCell(e: MouseEvent, text: string) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .terminal-body {
@@ -122,6 +123,7 @@ td {
   border-bottom: 1px solid var(--td-border);
   white-space: nowrap;
   font-size: 11px;
+  color: var(--text-dim);
 }
 
 tr:hover td {
@@ -129,7 +131,7 @@ tr:hover td {
 }
 
 tr.current td {
-  background: rgba(39, 201, 63, 0.05);
+  background: var(--badge-active-bg);
 }
 
 .clickable {
@@ -142,16 +144,20 @@ tr.current td {
 
 .close-btn {
   background: none;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: var(--text-dim);
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 2px 8px;
   margin-left: 8px;
+  line-height: 1;
+  transition: all 0.15s;
 }
 
 .close-btn:hover {
   color: var(--danger);
+  border-color: var(--badge-deprecated-border);
 }
 
 @media (max-width: 768px) {

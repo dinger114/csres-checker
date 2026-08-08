@@ -159,6 +159,13 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
+.terminal-header .title {
+  font-size: 14px;
+  color: var(--text);
+  letter-spacing: 4px;
+  font-weight: 700;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -180,6 +187,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .help-body {
@@ -205,6 +213,8 @@ h3 {
   margin-bottom: 8px;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--border-subtle);
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }
 
 p {
@@ -224,20 +234,24 @@ ul, ol {
 
 code {
   background: var(--header-bg);
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 5px;
+  border-radius: 4px;
   font-size: 11px;
   color: var(--primary);
+  font-family: var(--font-mono);
+  border: 1px solid var(--border-subtle);
 }
 
 pre {
   background: var(--bg);
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
   font-size: 11px;
   overflow-x: auto;
   margin-bottom: 8px;
   border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  color: var(--text);
 }
 
 table {
@@ -249,17 +263,20 @@ table {
 
 th {
   background: var(--header-bg);
-  color: var(--text-dim);
+  color: var(--text);
   font-weight: 600;
   text-align: left;
-  padding: 6px 10px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--border);
   font-size: 11px;
 }
 
 td {
-  padding: 6px 10px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--border-subtle);
+  white-space: normal;
+  word-break: break-word;
+  color: var(--text-dim);
 }
 
 tr:hover td {
@@ -268,16 +285,20 @@ tr:hover td {
 
 .close-btn {
   background: none;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: var(--text-dim);
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 2px 8px;
   margin-left: 8px;
+  line-height: 1;
+  transition: all 0.15s;
 }
 
 .close-btn:hover {
   color: var(--danger);
+  border-color: var(--badge-deprecated-border);
 }
 
 @media (max-width: 768px) {
