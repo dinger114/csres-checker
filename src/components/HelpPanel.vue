@@ -42,6 +42,7 @@ GB 50311-2016</pre>
               <tr><td>标准搜</td><td>bzsou.cn（包含全文和分类信息）</td></tr>
               <tr><td>工标库</td><td>gongbiaoku.com（备用）</td></tr>
               <tr><td>CSRes</td><td>csres.com（兜底）</td></tr>
+              <tr><td>重庆地标</td><td>cq.dingyi.de（重庆地方标准，可选数据源，含 PDF 预览）</td></tr>
             </tbody>
           </table>
           <p><strong>默认查询流程（编号查询）：</strong></p>
@@ -51,6 +52,7 @@ GB 50311-2016</pre>
             <li>Tier 3：工标库 (gongbiaoku.com) — 继续未命中的 fallback</li>
             <li>Tier 4：CSRes (csres.com) — 最终兜底</li>
           </ol>
+          <p>重庆地标（cqdb）不在默认查询链中，需要在数据源选择中手动指定；适合查询 DBJ50 系列重庆地方标准。</p>
           <p>名称检索仅使用 CSSN 数据源，拉取前 3 页结果，自动过滤英文版标准。</p>
         </div>
 
@@ -93,6 +95,7 @@ GB 50311-2016</pre>
             <li><strong>点击复制：</strong>点击单元格文本可复制到剪贴板</li>
             <li><strong>版本历史：</strong>标准号旁显示 <code>vN</code> 徽章时，点击可查看所有版本</li>
             <li><strong>外链：</strong>道客巴巴、搜建筑 快捷链接</li>
+            <li><strong>地标预览：</strong>重庆地标数据源的结果带 PDF 下载链接，点击可查看标准原文</li>
           </ul>
         </div>
 
@@ -122,10 +125,10 @@ GB 50311-2016</pre>
 
         <div class="help-section">
           <h3>分享链接</h3>
-          <p>点击 <code>[ SHARE ]</code> 按钮生成带查询参数的 URL：</p>
-          <pre>https://csres.yeye.moe/?q=GB+50222,JGJ+130</pre>
-          <p>添加 <code>&auto=1</code> 参数可自动执行查询：</p>
-          <pre>https://csres.yeye.moe/?q=GB+50222&auto=1</pre>
+          <p>点击 <code>[ SHARE ]</code> 按钮生成带查询参数的 URL（使用当前部署域名）：</p>
+          <pre>{{ shareBase }}?q=GB+50222,JGJ+130</pre>
+          <p>添加 <code>&amp;auto=1</code> 参数可自动执行查询：</p>
+          <pre>{{ shareBase }}?q=GB+50222&amp;auto=1</pre>
         </div>
 
         <div class="help-section">
@@ -149,6 +152,8 @@ GB 50311-2016</pre>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 defineProps<{
   visible: boolean
 }>()
@@ -156,6 +161,9 @@ defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+// 使用当前部署域名而非硬编码,适配任意部署环境
+const shareBase = computed(() => window.location.origin + window.location.pathname)
 </script>
 
 <style scoped>
