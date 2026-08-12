@@ -1,37 +1,24 @@
-import type { StandardResult } from '../types'
+import type { BzsouItem, BzsouResponse, StandardResult } from '../types'
+import { useLogStore } from '../stores/log'
+import { errMsg } from '../utils/errors'
+import { matchStdNo } from '../utils/match'
 import { normalizeKeyword, normalizeStdNo } from '../utils/normalize'
 import { useProxy } from './useProxy'
-import { useLog } from './useLog'
 
 const BZSOU_API = 'https://www.bzsou.cn/ibmb/solrData/search.do'
 
 export function useBzsou() {
   const { race, fetchDirect } = useProxy()
-  const { add } = useLog()
+  const { add } = useLogStore()
 
   function mapStatus(status: string): string {
-    if (status === '部分废止') return '现行'
+    if (status === '部分废止')
+      return '现行'
     return status
   }
 
   function stripHtml(html: string): string {
     return html.replace(/<[^>]*>/g, '').replace(/&mdash;/g, '—').replace(/&nbsp;/g, ' ')
-  }
-
-  function matchStdNo(queryNorm: string, stdNorm: string): boolean {
-    // Exact match
-    if (queryNorm === stdNorm) return true
-    // Query contained in standard number
-    if (stdNorm.includes(queryNorm)) return true
-    // Standard number contained in query
-    if (queryNorm.includes(stdNorm)) return true
-    // Match by prefix + number (e.g., GB50222 matches GB 50222-2017)
-    const qPrefix = (queryNorm.match(/^[a-z\/]+/i) || [''])[0]
-    const sPrefix = (stdNorm.match(/^[a-z\/]+/i) || [''])[0]
-    const qNum = queryNorm.replace(/^[a-z\/]+/i, '')
-    const sNum = stdNorm.replace(/^[a-z\/]+/i, '')
-    if (qNum && sNum && qNum === sNum && qPrefix.slice(0, 2) === sPrefix.slice(0, 2)) return true
-    return false
   }
 
   async function query(keyword: string): Promise<StandardResult[]> {
@@ -73,10 +60,12 @@ export function useBzsou() {
         resp = await fetchDirect(url)
         if (resp && resp.startsWith('{')) {
           add(`bzsou: direct fetch OK`, 'info')
-        } else {
+        }
+        else {
           resp = null
         }
-      } catch {
+      }
+      catch {
         resp = null
       }
 
@@ -91,23 +80,24 @@ export function useBzsou() {
         return []
       }
 
-      const data = JSON.parse(resp)
+      const data = JSON.parse(resp) as BzsouResponse
       const totalCount = data.totalCount || 0
       add(`bzsou response: ${totalCount} results, ${Date.now() - t0}ms`, 'info')
 
       const results = data.result || []
-      if (!Array.isArray(results) || results.length === 0) return []
+      if (!Array.isArray(results) || results.length === 0)
+        return []
 
       // Filter by standard number match
       const queryNorm = normalizeStdNo(normalized)
-      const filtered = results.filter((r: any) => {
+      const filtered = results.filter((r: BzsouItem) => {
         const stdNorm = normalizeStdNo(r.STAN_NUM || '')
         return matchStdNo(queryNorm, stdNorm)
       })
 
       add(`bzsou: ${filtered.length}/${totalCount} matched`, 'info')
 
-      return filtered.map((r: any) => ({
+      return filtered.map((r: BzsouItem) => ({
         query: keyword,
         standard_number: stripHtml(r.STAN_NUM || ''),
         title: stripHtml(r.STAN_CNNAME || ''),
@@ -119,8 +109,9 @@ export function useBzsou() {
         category: r.CCS_NAME || '',
         ics: r.ICS_NAME || '',
       }))
-    } catch (e: any) {
-      add(`bzsou error: ${e.message}`, 'error')
+    }
+    catch (e) {
+      add(`bzsou error: ${errMsg(e)}`, 'error')
       return []
     }
   }

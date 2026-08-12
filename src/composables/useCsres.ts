@@ -1,6 +1,6 @@
 import type { StandardResult } from '../types'
-import { normalizeKeyword } from '../utils/normalize'
 import { parseCsresHtml } from '../utils/htmlParser'
+import { normalizeKeyword } from '../utils/normalize'
 import { useProxy } from './useProxy'
 
 const CSRES_URL = 'http://www.csres.com/s.jsp'
@@ -13,7 +13,8 @@ export function useCsres() {
     const url = `${CSRES_URL}?keyword=${encodeURIComponent(normalized)}`
 
     const html = await race(url)
-    if (!html) return []
+    if (!html)
+      return []
 
     return parseCsresHtml(html, keyword)
   }

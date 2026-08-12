@@ -1,32 +1,82 @@
+<script setup lang="ts">
+import type { StandardVersion } from '../types'
+import { ref } from 'vue'
+import { useFocusTrap } from '../composables/useFocusTrap'
+import StatusBadge from './StatusBadge.vue'
+
+const props = defineProps<{
+  visible: boolean
+  versions: StandardVersion[]
+}>()
+
+const emit = defineEmits<{
+  close: []
+}>()
+
+const copiedCell = ref<string | null>(null)
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+function copyCell(text: string, cellId: string) {
+  navigator.clipboard.writeText(text).then(() => {
+    copiedCell.value = cellId
+    if (copiedTimer)
+      clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copiedCell.value = null
+    }, 500)
+  })
+}
+
+const { container } = useFocusTrap(() => props.visible)
+</script>
+
 <template>
   <Teleport to="body">
     <div v-if="visible" class="modal-overlay" @click.self="emit('close')">
-      <div class="modal-box terminal-box">
+      <div ref="container" class="modal-box terminal-box" role="dialog" aria-modal="true" aria-label="版本历史" tabindex="-1">
         <div class="terminal-header">
-          <span class="dot dot-r"></span>
-          <span class="dot dot-y"></span>
-          <span class="dot dot-g"></span>
+          <span class="dot dot-r" />
+          <span class="dot dot-y" />
+          <span class="dot dot-g" />
           <span class="title">VERSION HISTORY</span>
-          <button class="close-btn" @click="emit('close')">×</button>
+          <button class="close-btn" aria-label="关闭版本历史" @click="emit('close')">
+            ×
+          </button>
         </div>
         <div class="terminal-body">
-          <div v-if="versions.length === 0" class="empty">无版本历史</div>
+          <div v-if="versions.length === 0" class="empty">
+            无版本历史
+          </div>
           <table v-else>
             <thead>
               <tr>
-                <th>标准号</th>
-                <th>名称</th>
-                <th>状态</th>
-                <th>发布日期</th>
-                <th>实施日期</th>
+                <th scope="col">
+                  标准号
+                </th>
+                <th scope="col">
+                  名称
+                </th>
+                <th scope="col">
+                  状态
+                </th>
+                <th scope="col">
+                  发布日期
+                </th>
+                <th scope="col">
+                  实施日期
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(v, i) in versions" :key="i" :class="{ current: v.status === '现行' }">
-                <td class="clickable" @click="copyCell($event, v.standard_number)">{{ v.standard_number }}</td>
-                <td class="clickable" @click="copyCell($event, v.title)">{{ v.title }}</td>
+                <td class="clickable" :class="{ copied: copiedCell === `${i}:std` }" @click="copyCell(v.standard_number, `${i}:std`)">
+                  {{ v.standard_number }}
+                </td>
+                <td class="clickable" :class="{ copied: copiedCell === `${i}:title` }" @click="copyCell(v.title, `${i}:title`)">
+                  {{ v.title }}
+                </td>
                 <td>
-                  <StatusBadge :status="v.status" replacedBy="" />
+                  <StatusBadge :status="v.status" replaced-by="" />
                 </td>
                 <td>{{ v.publish_date || '-' }}</td>
                 <td>{{ v.implement_date || '-' }}</td>
@@ -38,28 +88,6 @@
     </div>
   </Teleport>
 </template>
-
-<script setup lang="ts">
-import StatusBadge from './StatusBadge.vue'
-import type { StandardVersion } from '../types'
-
-defineProps<{
-  visible: boolean
-  versions: StandardVersion[]
-}>()
-
-const emit = defineEmits<{
-  close: []
-}>()
-
-function copyCell(e: MouseEvent, text: string) {
-  navigator.clipboard.writeText(text).then(() => {
-    const el = e.target as HTMLElement
-    el.style.color = 'var(--primary)'
-    setTimeout(() => (el.style.color = ''), 500)
-  })
-}
-</script>
 
 <style scoped>
 .modal-overlay {
@@ -139,6 +167,10 @@ tr.current td {
 }
 
 .clickable:hover {
+  color: var(--primary);
+}
+
+td.copied {
   color: var(--primary);
 }
 

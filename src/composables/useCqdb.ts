@@ -1,14 +1,15 @@
 import type { StandardResult } from '../types'
-import { normalizeKeyword, stdBase } from '../utils/normalize'
+import { useLogStore } from '../stores/log'
+import { errMsg } from '../utils/errors'
 import { parseCqDbHtml } from '../utils/htmlParser'
+import { normalizeKeyword, stdBase } from '../utils/normalize'
 import { useProxy } from './useProxy'
-import { useLog } from './useLog'
 
 const CQDB_URL = 'https://cq.dingyi.de/x/down.php'
 
 export function useCqdb() {
   const { race } = useProxy()
-  const { add } = useLog()
+  const { add } = useLogStore()
 
   async function query(keyword: string): Promise<StandardResult[]> {
     // 该站编号年份用 U+2043 分隔(DBJ50/T-562⁃2026),且年份可匹配到新版本,
@@ -37,8 +38,9 @@ export function useCqdb() {
         results.forEach((r, i) => add(`  [${i + 1}] ${r.standard_number} | ${r.title} | ${r.status}`, 'info'))
       }
       return results
-    } catch (e: any) {
-      add(`cqdb error: ${e.message}`, 'error')
+    }
+    catch (e) {
+      add(`cqdb error: ${errMsg(e)}`, 'error')
       return []
     }
   }

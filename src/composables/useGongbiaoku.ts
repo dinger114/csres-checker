@@ -1,13 +1,14 @@
 import type { StandardResult } from '../types'
+import { useLogStore } from '../stores/log'
 import { BASE_URL } from '../utils/constants'
-import { formatKeyword, normalizeKeyword } from '../utils/normalize'
+import { errMsg } from '../utils/errors'
 import { parseGongbiaokuHtml } from '../utils/htmlParser'
+import { formatKeyword, normalizeKeyword } from '../utils/normalize'
 import { useProxy } from './useProxy'
-import { useLog } from './useLog'
 
 export function useGongbiaoku() {
   const { race } = useProxy()
-  const { add } = useLog()
+  const { add } = useLogStore()
 
   async function query(keyword: string): Promise<StandardResult[]> {
     const normalized = normalizeKeyword(keyword)
@@ -54,8 +55,9 @@ export function useGongbiaoku() {
         results.forEach((r, i) => add(`  [${i + 1}] ${r.standard_number} | ${r.title} | ${r.status}`, 'info'))
       }
       return results
-    } catch (e: any) {
-      add(`gongbiaoku error: ${e.message}`, 'error')
+    }
+    catch (e) {
+      add(`gongbiaoku error: ${errMsg(e)}`, 'error')
       return []
     }
   }

@@ -1,7 +1,3 @@
-export const COLUMNS = ['QUERY', 'STD NO', 'TITLE', 'STATUS', 'PUBLISHED', 'IMPLEMENTED', 'DOC88', 'SOUJZ'] as const
-
-export const RESULT_KEYS = ['query', 'standard_number', 'title', 'status', 'publish_date', 'implement_date'] as const
-
 export const BASE_URL = 'https://www.gongbiaoku.com/search/advance/result'
 
 export const PROXY_LIST = [

@@ -1,25 +1,44 @@
 {
   "name": "csres-checker",
+  "type": "module",
   "version": "2.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit",
-    "preview": "vite preview"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "preview": "vite preview",
+    "prepare": "husky"
   },
   "dependencies": {
+    "@vueuse/core": "^14.4.0",
     "firebase": "^12.17.0",
-    "naive-ui": "^2.34.4",
+    "pinia": "^4.0.3",
     "vue": "^3.5.40",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@antfu/eslint-config": "^9.3.0",
+    "@playwright/test": "^1.62.1",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.9.1",
-    "typescript": "^7.0.2",
+    "eslint": "^10.8.1",
+    "happy-dom": "^20.11.2",
+    "husky": "^9.1.7",
+    "jiti": "^2.7.0",
+    "lint-staged": "^17.3.0",
+    "typescript": "~5.9.3",
     "vite": "^8.2.0",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.9"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue,js,jsx,mjs,cjs,json,md,css,html}": "eslint --fix"
   }
 }

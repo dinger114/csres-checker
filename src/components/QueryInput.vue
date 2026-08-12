@@ -1,94 +1,6 @@
-<template>
-  <div class="terminal-box">
-    <div class="terminal-header">
-      <span class="dot dot-r"></span>
-      <span class="dot dot-y"></span>
-      <span class="dot dot-g"></span>
-      <span class="title">INPUT</span>
-    </div>
-    <div class="terminal-body">
-      <label>// {{ searchMode === 'number' ? '标准编号（每行一个）' : '标准名称关键词' }}<span v-if="searchMode === 'number'" class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span><span v-else class="hint">Ctrl+Enter 运行 · Esc 清空</span></label>
-      <textarea
-        v-if="searchMode === 'number'"
-        ref="textareaRef"
-        v-model="keywords"
-        inputmode="latin"
-        spellcheck="false"
-        placeholder="GB 50222-2017&#10;50010&#10;GB 50311-2016"
-        :disabled="running"
-        @keydown="handleKeydown"
-        @drop.prevent="handleDrop"
-        @dragover.prevent
-      ></textarea>
-      <input
-        v-else
-        ref="nameInputRef"
-        v-model="keywords"
-        type="text"
-        placeholder="搜索标准名称关键词，例如：消防"
-        :disabled="running"
-        @keydown="handleKeydown"
-      />
-      <div class="mode-tabs">
-        <label class="mode-tab" :class="{ active: searchMode === 'number' }">
-          <input type="radio" value="number" v-model="searchMode" :disabled="running" @change="handleModeChange" />
-          <span># 编号查询</span>
-        </label>
-        <label class="mode-tab" :class="{ active: searchMode === 'name' }">
-          <input type="radio" value="name" v-model="searchMode" :disabled="running" @change="handleModeChange" />
-          <span>$ 名称检索</span>
-        </label>
-      </div>
-      <div v-if="searchMode === 'number'" class="source-row">
-        <span class="source-label">数据源:</span>
-        <label class="source-check">
-          <input type="radio" value="" v-model="selectedSource" :disabled="running" />
-          <span>默认</span>
-        </label>
-        <label v-for="src in sources" :key="src.key" class="source-check">
-          <input type="radio" :value="src.key" v-model="selectedSource" :disabled="running" />
-          <span>{{ src.label }}</span>
-        </label>
-      </div>
-      <div class="btn-row">
-        <button class="btn-run" :disabled="running" @click="handleRun">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <span class="btn-text">RUN</span>
-        </button>
-        <button v-if="searchMode === 'number'" :disabled="running" @click="triggerUpload" title="导入 TXT 文件">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-          <span class="btn-text">IMPORT</span>
-        </button>
-        <input v-if="searchMode === 'number'" ref="fileInputRef" type="file" accept=".txt" @change="handleFileUpload" hidden />
-        <button :disabled="running || !hasResults" @click="emit('copy-md')" title="复制 Markdown">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          <span class="btn-text">MD</span>
-        </button>
-        <button :disabled="running || !hasResults" @click="emit('export-xlsx')" title="导出 Excel">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <span class="btn-text">XLSX</span>
-        </button>
-        <button :disabled="running || !keywords.trim()" @click="handleShare" title="分享链接">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          <span class="btn-text">SHARE</span>
-        </button>
-      </div>
-      <div v-if="progress.pct > 0" class="progress-wrap">
-        <div class="progress-info">
-          <span>[{{ progress.current }}/{{ progress.total }}]</span>
-          <span>{{ progress.pct }}%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: progress.pct + '%' }"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
 import type { ProgressState } from '../types'
+import { onMounted, ref } from 'vue'
 
 defineProps<{
   running: boolean
@@ -97,7 +9,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  run: [keywords: string[], source: string, mode: string]
+  'run': [keywords: string[], source: string, mode: string]
   'copy-md': []
   'export-xlsx': []
 }>()
@@ -119,7 +31,8 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 
 function handleRun() {
   const lines = parseKeywords(keywords.value)
-  if (lines.length === 0) return
+  if (lines.length === 0)
+    return
   emit('run', lines, selectedSource.value, searchMode.value)
 }
 
@@ -146,20 +59,22 @@ function handleKeydown(e: KeyboardEvent) {
 }
 
 function parseKeywords(text: string): string[] {
-  return text.split('\n').map((l) => l.trim()).filter(Boolean)
+  return text.split('\n').map(l => l.trim()).filter(Boolean)
 }
 
 function handleFileUpload(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
-  if (!file) return
+  if (!file)
+    return
   readFile(file)
   input.value = ''
 }
 
 function handleDrop(e: DragEvent) {
   const file = e.dataTransfer?.files?.[0]
-  if (!file || !file.name.endsWith('.txt')) return
+  if (!file || !file.name.endsWith('.txt'))
+    return
   readFile(file)
 }
 
@@ -170,7 +85,7 @@ function readFile(file: File) {
     const lines = parseKeywords(text)
     if (lines.length > 0) {
       const existing = keywords.value.trim()
-      keywords.value = existing ? existing + '\n' + lines.join('\n') : lines.join('\n')
+      keywords.value = existing ? `${existing}\n${lines.join('\n')}` : lines.join('\n')
     }
   }
   reader.readAsText(file)
@@ -178,7 +93,8 @@ function readFile(file: File) {
 
 function handleShare() {
   const lines = parseKeywords(keywords.value)
-  if (lines.length === 0) return
+  if (lines.length === 0)
+    return
   const params = new URLSearchParams()
   params.set('q', lines.join(','))
   params.set('mode', searchMode.value)
@@ -224,6 +140,94 @@ onMounted(() => {
 
 defineExpose({ setText })
 </script>
+
+<template>
+  <div class="terminal-box">
+    <div class="terminal-header">
+      <span class="dot dot-r" />
+      <span class="dot dot-y" />
+      <span class="dot dot-g" />
+      <span class="title">INPUT</span>
+    </div>
+    <div class="terminal-body">
+      <label>// {{ searchMode === 'number' ? '标准编号（每行一个）' : '标准名称关键词' }}<span v-if="searchMode === 'number'" class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span><span v-else class="hint">Ctrl+Enter 运行 · Esc 清空</span></label>
+      <textarea
+        v-if="searchMode === 'number'"
+        ref="textareaRef"
+        v-model="keywords"
+        inputmode="text"
+        spellcheck="false"
+        placeholder="GB 50222-2017&#10;50010&#10;GB 50311-2016"
+        :disabled="running"
+        @keydown="handleKeydown"
+        @drop.prevent="handleDrop"
+        @dragover.prevent
+      />
+      <input
+        v-else
+        ref="nameInputRef"
+        v-model="keywords"
+        type="text"
+        placeholder="搜索标准名称关键词，例如：消防"
+        :disabled="running"
+        @keydown="handleKeydown"
+      >
+      <div class="mode-tabs">
+        <label class="mode-tab" :class="{ active: searchMode === 'number' }">
+          <input v-model="searchMode" type="radio" value="number" :disabled="running" @change="handleModeChange">
+          <span># 编号查询</span>
+        </label>
+        <label class="mode-tab" :class="{ active: searchMode === 'name' }">
+          <input v-model="searchMode" type="radio" value="name" :disabled="running" @change="handleModeChange">
+          <span>$ 名称检索</span>
+        </label>
+      </div>
+      <div v-if="searchMode === 'number'" class="source-row">
+        <span class="source-label">数据源:</span>
+        <label class="source-check">
+          <input v-model="selectedSource" type="radio" value="" :disabled="running">
+          <span>默认</span>
+        </label>
+        <label v-for="src in sources" :key="src.key" class="source-check">
+          <input v-model="selectedSource" type="radio" :value="src.key" :disabled="running">
+          <span>{{ src.label }}</span>
+        </label>
+      </div>
+      <div class="btn-row">
+        <button class="btn-run" :disabled="running" @click="handleRun">
+          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+          <span class="btn-text">RUN</span>
+        </button>
+        <button v-if="searchMode === 'number'" :disabled="running" title="导入 TXT 文件" @click="triggerUpload">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
+          <span class="btn-text">IMPORT</span>
+        </button>
+        <input v-if="searchMode === 'number'" ref="fileInputRef" type="file" accept=".txt" hidden @change="handleFileUpload">
+        <button :disabled="running || !hasResults" title="复制 Markdown" @click="emit('copy-md')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+          <span class="btn-text">MD</span>
+        </button>
+        <button :disabled="running || !hasResults" title="导出 Excel" @click="emit('export-xlsx')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+          <span class="btn-text">XLSX</span>
+        </button>
+        <button :disabled="running || !keywords.trim()" title="分享链接" @click="handleShare">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
+          <span class="btn-text">SHARE</span>
+        </button>
+      </div>
+      <div v-if="progress.pct > 0" class="progress-wrap">
+        <div class="progress-info">
+          <span>[{{ progress.current }}/{{ progress.total }}]</span>
+          <span>{{ progress.pct }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: `${progress.pct}%` }" />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .hint {

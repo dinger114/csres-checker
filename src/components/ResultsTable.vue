@@ -1,98 +1,16 @@
-<template>
-  <div class="results-card terminal-box">
-    <div class="terminal-header">
-      <span class="dot dot-r"></span>
-      <span class="dot dot-y"></span>
-      <span class="dot dot-g"></span>
-      <span class="title">OUTPUT</span>
-      <span v-if="selectedCount > 0" class="selected-hint">{{ selectedCount }} selected</span>
-      <button v-if="selectedCount > 0" class="copy-sel-btn" @click="copySelected">COPY SEL</button>
-      <div v-if="results.length > 0" class="filter-group">
-        <button
-          v-for="f in filters"
-          :key="f.value"
-          class="filter-btn"
-          :class="{ active: statusFilter === f.value }"
-          @click="statusFilter = f.value"
-        >{{ f.label }}</button>
-      </div>
-    </div>
-    <div class="terminal-body" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;">
-      <div v-if="results.length === 0" class="empty-state"></div>
-      <div v-else class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th class="cb">
-                <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectAll" />
-              </th>
-              <th class="num">#</th>
-              <th
-                v-for="col in columns"
-                :key="col.key"
-                :class="{ draggable: col.draggable, sortable: sortableKeys.includes(col.key), sorted: sortKey === col.key }"
-                :draggable="col.draggable"
-                @dragstart="onDragStart($event, col.key)"
-                @dragover.prevent="onDragOver($event, col.key)"
-                @dragend="onDragEnd"
-                @drop="onDrop($event, col.key)"
-                @click="sortableKeys.includes(col.key) && handleSort(col.key)"
-              >{{ col.label }}<span v-if="sortableKeys.includes(col.key)" class="sort-icon">{{ getSortIcon(col.key) }}</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(r, idx) in filteredResults" :key="idx" :class="{ selected: isSelected(r._idx!) }">
-              <td class="cb">
-                <input type="checkbox" :checked="isSelected(r._idx)" @change="toggleSelect(r._idx!)" />
-              </td>
-              <td class="num">{{ idx + 1 }}</td>
-              <td v-for="col in columns" :key="col.key" :class="getCellClass(col)">
-                <template v-if="col.key === 'status'">
-                  <StatusBadge :status="r.status" :replacedBy="r.replaced_by" />
-                </template>
-                <template v-else-if="col.key === 'doc88'">
-                  <a :href="doc88Url(r)" target="_blank" rel="noopener">道客巴巴</a>
-                </template>
-                <template v-else-if="col.key === 'soujz'">
-                  <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
-                </template>
-                <template v-else-if="col.key === 'pdf'">
-                  <a v-if="r.pdf_url" :href="r.pdf_url" target="_blank" rel="noopener">下载</a>
-                  <span v-else class="pdf-empty">—</span>
-                </template>
-                <template v-else-if="col.key === 'standard_number'">
-                  <span class="clickable" @click="handleStdClick($event, r)">
-                    {{ getValue(r, col.key) }}
-                    <span v-if="r.versions && r.versions.length > 1" class="version-badge" title="点击查看版本历史">v{{ r.versions.length }}</span>
-                  </span>
-                </template>
-                <template v-else-if="col.key === 'title'">
-                  <span class="clickable" @click="copyCell($event, `《${getValue(r, col.key)}》`)">《{{ getValue(r, col.key) }}》</span>
-                </template>
-                <template v-else>
-                  <span class="clickable" @click="copyCell($event, getValue(r, col.key))">{{ getValue(r, col.key) }}</span>
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import type { StandardResult, StandardVersion } from '../types'
+import { computed, ref, watch } from 'vue'
 import StatusBadge from './StatusBadge.vue'
-import type { StandardResult } from '../types'
 
 const props = defineProps<{
   results: StandardResult[]
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:columns': [columns: ColumnDef[]]
-  'show-versions': [versions: import('../types').StandardVersion[]]
+  'show-versions': [versions: StandardVersion[]]
 }>()
 
 export interface ColumnDef {
@@ -119,6 +37,8 @@ const dragKey = ref<string | null>(null)
 const sortKey = ref<string | null>(null)
 const sortOrder = ref<'asc' | 'desc'>('asc')
 const selectedIndices = ref(new Set<number>())
+const copiedCell = ref<string | null>(null)
+let copiedTimer: ReturnType<typeof setTimeout> | null = null
 
 const sortableKeys = ['publish_date', 'implement_date']
 
@@ -134,15 +54,18 @@ const statusFilter = ref('all')
 const filteredResults = computed(() => {
   let list = props.results.map((r, i) => ({ ...r, _idx: i }))
   if (statusFilter.value !== 'all') {
-    list = list.filter((r) => r.status === statusFilter.value)
+    list = list.filter(r => r.status === statusFilter.value)
   }
   if (sortKey.value) {
     list = [...list].sort((a, b) => {
-      const av = (a as any)[sortKey.value!] || ''
-      const bv = (b as any)[sortKey.value!] || ''
-      if (!av && !bv) return 0
-      if (!av) return 1
-      if (!bv) return -1
+      const av = getValue(a, sortKey.value!)
+      const bv = getValue(b, sortKey.value!)
+      if (!av && !bv)
+        return 0
+      if (!av)
+        return 1
+      if (!bv)
+        return -1
       const cmp = av.localeCompare(bv)
       return sortOrder.value === 'desc' ? -cmp : cmp
     })
@@ -165,15 +88,17 @@ function onDragStart(e: DragEvent, key: string) {
   e.dataTransfer!.effectAllowed = 'move'
 }
 
-function onDragOver(e: DragEvent, key: string) {
+function onDragOver(e: DragEvent, _key: string) {
   e.dataTransfer!.dropEffect = 'move'
 }
 
 function onDrop(e: DragEvent, targetKey: string) {
-  if (!dragKey.value || dragKey.value === targetKey) return
-  const fromIdx = columns.value.findIndex((c) => c.key === dragKey.value)
-  const toIdx = columns.value.findIndex((c) => c.key === targetKey)
-  if (fromIdx === -1 || toIdx === -1) return
+  if (!dragKey.value || dragKey.value === targetKey)
+    return
+  const fromIdx = columns.value.findIndex(c => c.key === dragKey.value)
+  const toIdx = columns.value.findIndex(c => c.key === targetKey)
+  if (fromIdx === -1 || toIdx === -1)
+    return
   const item = columns.value.splice(fromIdx, 1)[0]
   columns.value.splice(toIdx, 0, item)
 }
@@ -185,25 +110,28 @@ function onDragEnd() {
 function handleSort(colKey: string) {
   if (sortKey.value === colKey) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
-  } else {
+  }
+  else {
     sortKey.value = colKey
     sortOrder.value = 'asc'
   }
 }
 
 function getSortIcon(colKey: string): string {
-  if (sortKey.value !== colKey) return ''
+  if (sortKey.value !== colKey)
+    return ''
   return sortOrder.value === 'asc' ? '▲' : '▼'
 }
 
 const selectedCount = computed(() => {
-  return filteredResults.value.filter((r) => selectedIndices.value.has(r._idx!)).length
+  return filteredResults.value.filter(r => selectedIndices.value.has(r._idx!)).length
 })
 
 const allVisibleSelected = computed(() => {
   const visible = filteredResults.value
-  if (visible.length === 0) return false
-  return visible.every((r) => selectedIndices.value.has(r._idx!))
+  if (visible.length === 0)
+    return false
+  return visible.every(r => selectedIndices.value.has(r._idx!))
 })
 
 function isSelected(idx: number): boolean {
@@ -214,7 +142,8 @@ function toggleSelect(idx: number) {
   const next = new Set(selectedIndices.value)
   if (next.has(idx)) {
     next.delete(idx)
-  } else {
+  }
+  else {
     next.add(idx)
   }
   selectedIndices.value = next
@@ -222,12 +151,13 @@ function toggleSelect(idx: number) {
 
 function toggleSelectAll() {
   const visible = filteredResults.value
-  const allSelected = visible.every((r) => selectedIndices.value.has(r._idx!))
+  const allSelected = visible.every(r => selectedIndices.value.has(r._idx!))
   const next = new Set(selectedIndices.value)
   for (const r of visible) {
     if (allSelected) {
       next.delete(r._idx!)
-    } else {
+    }
+    else {
       next.add(r._idx!)
     }
   }
@@ -237,18 +167,22 @@ function toggleSelectAll() {
 async function copySelected() {
   const nums = props.results
     .filter((_, i) => selectedIndices.value.has(i))
-    .map((r) => r.standard_number)
-  if (nums.length === 0) return
+    .map(r => r.standard_number)
+  if (nums.length === 0)
+    return
   await navigator.clipboard.writeText(nums.join('\n'))
 }
 
 function getValue(r: StandardResult, key: string): string {
-  return (r as any)[key] ?? ''
+  const value = r[key as keyof StandardResult]
+  return typeof value === 'string' ? value : ''
 }
 
 function getCellClass(col: ColumnDef): string {
-  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz', 'pdf'].includes(col.key)) return 'text-center'
-  if (col.key === 'num') return 'num'
+  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz', 'pdf'].includes(col.key))
+    return 'text-center'
+  if (col.key === 'num')
+    return 'num'
   return 'clickable'
 }
 
@@ -260,24 +194,144 @@ function sjzUrl(r: StandardResult): string {
   return `https://www.soujianzhu.cn/Search/Sou.aspx?skey=${encodeURIComponent(r.title || '')}`
 }
 
-function copyCell(e: MouseEvent, text: string) {
+function copyCell(text: string, cellId: string) {
   navigator.clipboard.writeText(text).then(() => {
-    const el = e.target as HTMLElement
-    el.style.color = 'var(--primary)'
-    setTimeout(() => (el.style.color = ''), 500)
+    copiedCell.value = cellId
+    if (copiedTimer)
+      clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copiedCell.value = null
+    }, 500)
   })
 }
 
-function handleStdClick(e: MouseEvent, r: StandardResult) {
+function handleStdClick(r: StandardResult & { _idx: number }) {
   if (r.versions && r.versions.length > 1) {
     emit('show-versions', r.versions)
-  } else {
-    copyCell(e, r.standard_number)
+  }
+  else {
+    copyCell(r.standard_number, `${r._idx}:std`)
   }
 }
 
 defineExpose({ columns })
 </script>
+
+<template>
+  <div class="results-card terminal-box">
+    <div class="terminal-header">
+      <span class="dot dot-r" />
+      <span class="dot dot-y" />
+      <span class="dot dot-g" />
+      <span class="title">OUTPUT</span>
+      <span v-if="selectedCount > 0" class="selected-hint">{{ selectedCount }} selected</span>
+      <button v-if="selectedCount > 0" class="copy-sel-btn" @click="copySelected">
+        COPY SEL
+      </button>
+      <div v-if="results.length > 0" class="filter-group">
+        <button
+          v-for="f in filters"
+          :key="f.value"
+          class="filter-btn"
+          :class="{ active: statusFilter === f.value }"
+          @click="statusFilter = f.value"
+        >
+          {{ f.label }}
+        </button>
+      </div>
+    </div>
+    <div class="terminal-body" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+      <div v-if="results.length === 0 && loading" class="skeleton-wrap" aria-hidden="true">
+        <div v-for="i in 6" :key="i" class="skeleton-row">
+          <span class="skeleton-cell" />
+          <span class="skeleton-cell" />
+          <span class="skeleton-cell wide" />
+          <span class="skeleton-cell" />
+        </div>
+      </div>
+      <div v-else-if="results.length === 0" class="empty-state" />
+      <div v-else class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="cb" scope="col">
+                <input
+                  type="checkbox"
+                  :checked="allVisibleSelected"
+                  aria-label="全选当前结果"
+                  @change="toggleSelectAll"
+                >
+              </th>
+              <th class="num" scope="col">
+                #
+              </th>
+              <th
+                v-for="col in columns"
+                :key="col.key"
+                scope="col"
+                :class="{ draggable: col.draggable, sortable: sortableKeys.includes(col.key), sorted: sortKey === col.key }"
+                :draggable="col.draggable"
+                @dragstart="onDragStart($event, col.key)"
+                @dragover.prevent="onDragOver($event, col.key)"
+                @dragend="onDragEnd"
+                @drop="onDrop($event, col.key)"
+                @click="sortableKeys.includes(col.key) && handleSort(col.key)"
+              >
+                {{ col.label }}<span v-if="sortableKeys.includes(col.key)" class="sort-icon">{{ getSortIcon(col.key) }}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(r, idx) in filteredResults" :key="idx" :class="{ selected: isSelected(r._idx!) }">
+              <td class="cb">
+                <input
+                  type="checkbox"
+                  :checked="isSelected(r._idx)"
+                  :aria-label="`选择第 ${idx + 1} 行`"
+                  @change="toggleSelect(r._idx!)"
+                >
+              </td>
+              <td class="num">
+                {{ idx + 1 }}
+              </td>
+              <td
+                v-for="col in columns"
+                :key="col.key"
+                :class="[getCellClass(col), { copied: copiedCell === `${r._idx}:${col.key}` }]"
+              >
+                <template v-if="col.key === 'status'">
+                  <StatusBadge :status="r.status" :replaced-by="r.replaced_by" />
+                </template>
+                <template v-else-if="col.key === 'doc88'">
+                  <a :href="doc88Url(r)" target="_blank" rel="noopener">道客巴巴</a>
+                </template>
+                <template v-else-if="col.key === 'soujz'">
+                  <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
+                </template>
+                <template v-else-if="col.key === 'pdf'">
+                  <a v-if="r.pdf_url" :href="r.pdf_url" target="_blank" rel="noopener">下载</a>
+                  <span v-else class="pdf-empty">—</span>
+                </template>
+                <template v-else-if="col.key === 'standard_number'">
+                  <span class="clickable" @click="handleStdClick(r)">
+                    {{ getValue(r, col.key) }}
+                    <span v-if="r.versions && r.versions.length > 1" class="version-badge" title="点击查看版本历史">v{{ r.versions.length }}</span>
+                  </span>
+                </template>
+                <template v-else-if="col.key === 'title'">
+                  <span class="clickable" @click="copyCell(`《${getValue(r, col.key)}》`, `${r._idx}:${col.key}`)">《{{ getValue(r, col.key) }}》</span>
+                </template>
+                <template v-else>
+                  <span class="clickable" @click="copyCell(getValue(r, col.key), `${r._idx}:${col.key}`)">{{ getValue(r, col.key) }}</span>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .filter-group {
@@ -380,6 +434,46 @@ th.cb input, td.cb input {
 
 tr.selected td { background: var(--selected-bg); }
 tr.selected td:first-child { border-left: 2px solid var(--primary); }
+
+td.copied { color: var(--primary) !important; }
+
+/* 大结果集：跳过屏外行渲染，保持真实 table 语义 */
+.table-wrap tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
+}
+
+.skeleton-wrap {
+  flex: 1;
+  overflow: hidden;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 12px;
+}
+
+.skeleton-cell {
+  height: 14px;
+  flex: 1;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--border-subtle) 25%, var(--hover-bg) 50%, var(--border-subtle) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s infinite;
+}
+
+.skeleton-cell.wide {
+  flex: 2;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 .pdf-empty {
   color: var(--text-dim);

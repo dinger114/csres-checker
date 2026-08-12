@@ -1,49 +1,62 @@
 import { ref } from 'vue'
-import { initializeApp, type FirebaseApp } from 'firebase/app'
-import { getDatabase, ref as dbRef, runTransaction, get } from 'firebase/database'
+import { useLogStore } from '../stores/log'
 import { FIREBASE_CONFIG } from '../utils/constants'
+import { errMsg } from '../utils/errors'
 
 const globalCount = ref(0)
-let app: FirebaseApp | null = null
-let db: ReturnType<typeof getDatabase> | null = null
+let appPromise: Promise<import('firebase/database').Database> | null = null
 
-function getApp() {
-  if (!app) {
-    app = initializeApp(FIREBASE_CONFIG)
-    db = getDatabase(app)
+// firebase (~155 kB) is loaded lazily: only when the count is first needed
+function getApp(): Promise<import('firebase/database').Database> {
+  if (!appPromise) {
+    appPromise = (async () => {
+      const { initializeApp } = await import('firebase/app')
+      const { getDatabase } = await import('firebase/database')
+      return getDatabase(initializeApp(FIREBASE_CONFIG))
+    })()
   }
-  return db!
+  return appPromise
 }
 
 export function useFirebase() {
-  function init() {
+  const { add } = useLogStore()
+
+  async function init() {
     try {
-      getApp()
-    } catch {
-      // ignore init errors
+      await getApp()
+    }
+    catch (e) {
+      add(`firebase init error: ${errMsg(e)}`, 'error')
     }
   }
 
   async function refreshCount() {
     try {
-      const database = getApp()
-      const snapshot = await get(dbRef(database, 'queryCount'))
+      const { get } = await import('firebase/database')
+      const snapshot = await get(await dbRef('queryCount'))
       globalCount.value = snapshot.val() || 0
-    } catch {
-      // ignore
+    }
+    catch (e) {
+      add(`firebase refreshCount error: ${errMsg(e)}`, 'error')
     }
   }
 
   async function incQueryCount() {
     try {
-      const database = getApp()
-      const countRef = dbRef(database, 'queryCount')
+      const { runTransaction } = await import('firebase/database')
+      const countRef = await dbRef('queryCount')
       await runTransaction(countRef, (current: number) => (current || 0) + 1)
       globalCount.value = (globalCount.value || 0) + 1
-    } catch {
-      // ignore
+    }
+    catch (e) {
+      add(`firebase incQueryCount error: ${errMsg(e)}`, 'error')
     }
   }
 
   return { init, refreshCount, incQueryCount, globalCount }
+}
+
+async function dbRef(path: string) {
+  const { ref } = await import('firebase/database')
+  return ref(await getApp(), path)
 }

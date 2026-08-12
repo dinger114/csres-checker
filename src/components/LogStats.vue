@@ -1,17 +1,18 @@
+<script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { useLogStore } from '../stores/log'
+
+const { stats } = storeToRefs(useLogStore())
+</script>
+
 <template>
   <div class="log-stats">
-    <span><i class="dot dot-g"></i>OK:{{ stats.ok }}</span>
-    <span><i class="dot dot-r"></i>EMPTY:{{ stats.empty }}</span>
+    <span><i class="dot dot-g" />OK:{{ stats.ok }}</span>
+    <span><i class="dot dot-r" />EMPTY:{{ stats.empty }}</span>
     <span>TIME:{{ stats.time }}s</span>
     <span>Q:{{ stats.queries }}</span>
   </div>
 </template>
-
-<script setup lang="ts">
-import { useLog } from '../composables/useLog'
-
-const { stats } = useLog()
-</script>
 
 <style scoped>
 .log-stats {

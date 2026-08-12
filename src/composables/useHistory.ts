@@ -10,7 +10,8 @@ export function useHistory() {
     try {
       const saved = localStorage.getItem(HISTORY_KEY)
       return saved ? JSON.parse(saved) : []
-    } catch {
+    }
+    catch {
       return []
     }
   }

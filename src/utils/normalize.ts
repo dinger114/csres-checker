@@ -5,11 +5,11 @@ export function normalizeKeyword(kw: string): string {
     .replace(/[（(][^）)]*[）)]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/GBT/gi, 'GB/T')
-    .replace(/GB\//g, 'GB ')
+    .replace(/GB\/(?!T)/g, 'GB ')
 }
 
 export function formatKeyword(kw: string): string {
-  return kw.replace(/([a-zA-Z])(\d)/g, '$1 $2')
+  return kw.replace(/([a-z])(\d)/gi, '$1 $2')
 }
 
 export function normalizeStdNo(s: string): string {

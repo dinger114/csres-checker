@@ -1,12 +1,32 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useFocusTrap } from '../composables/useFocusTrap'
+
+const props = defineProps<{
+  visible: boolean
+}>()
+
+const emit = defineEmits<{
+  close: []
+}>()
+
+// 使用当前部署域名而非硬编码,适配任意部署环境
+const shareBase = computed(() => window.location.origin + window.location.pathname)
+
+const { container } = useFocusTrap(() => props.visible)
+</script>
+
 <template>
   <div v-if="visible" class="modal-overlay" @click.self="emit('close')">
-    <div class="modal-box terminal-box">
+    <div ref="container" class="modal-box terminal-box" role="dialog" aria-modal="true" aria-label="使用帮助" tabindex="-1">
       <div class="terminal-header">
-        <span class="dot dot-r"></span>
-        <span class="dot dot-y"></span>
-        <span class="dot dot-g"></span>
+        <span class="dot dot-r" />
+        <span class="dot dot-y" />
+        <span class="dot dot-g" />
         <span class="title">HELP</span>
-        <button class="close-btn" @click="emit('close')">×</button>
+        <button class="close-btn" aria-label="关闭帮助" @click="emit('close')">
+          ×
+        </button>
       </div>
       <div class="terminal-body help-body">
         <div class="help-section">
@@ -150,21 +170,6 @@ GB 50311-2016</pre>
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { computed } from 'vue'
-
-defineProps<{
-  visible: boolean
-}>()
-
-const emit = defineEmits<{
-  close: []
-}>()
-
-// 使用当前部署域名而非硬编码,适配任意部署环境
-const shareBase = computed(() => window.location.origin + window.location.pathname)
-</script>
 
 <style scoped>
 .terminal-header .title {

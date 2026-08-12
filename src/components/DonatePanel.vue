@@ -1,3 +1,17 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+withDefaults(defineProps<{
+  visible?: boolean
+  showOnInput?: boolean
+}>(), {
+  visible: true,
+  showOnInput: true,
+})
+
+const expanded = ref(false)
+</script>
+
 <template>
   <div
     class="donate-tab"
@@ -13,25 +27,13 @@
         src="https://cdn.nodeimage.com/i/I7UXCYjlFlljFqwba3piPYxsi8qEFNhE.png"
         alt="感谢支持"
         class="donate-qr"
-      />
-      <p class="donate-text">感谢支持 ❤</p>
+      >
+      <p class="donate-text">
+        感谢支持 ❤
+      </p>
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue'
-
-const props = withDefaults(defineProps<{
-  visible?: boolean
-  showOnInput?: boolean
-}>(), {
-  visible: true,
-  showOnInput: true,
-})
-
-const expanded = ref(false)
-</script>
 
 <style scoped>
 .donate-tab {

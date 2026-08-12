@@ -1,16 +1,16 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 10
     groups:
       vue:
-        patterns: ["vue", "vue-tsc", "@vitejs/plugin-vue", "@vue/tsconfig"]
+        patterns: [vue, vue-tsc, '@vitejs/plugin-vue', '@vue/tsconfig']
       vite:
-        patterns: ["vite"]
+        patterns: [vite]
       firebase:
-        patterns: ["firebase"]
+        patterns: [firebase]
       ui:
-        patterns: ["naive-ui"]
+        patterns: [naive-ui]

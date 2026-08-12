@@ -9,10 +9,12 @@ export function parseCqDbHtml(html: string, keyword: string): StandardResult[] {
 
   doc.querySelectorAll('table.layui-table tbody tr').forEach((tr) => {
     const tds = tr.querySelectorAll('td')
-    if (tds.length < 11) return
+    if (tds.length < 11)
+      return
 
     const standard_number = tds[0]?.textContent?.trim() || ''
-    if (!standard_number) return
+    if (!standard_number)
+      return
 
     const pdfAnchor = tds[10]?.querySelector('a')
     const pdfHref = pdfAnchor?.getAttribute('href') || ''
@@ -43,7 +45,8 @@ export function parseGongbiaokuHtml(html: string, keyword: string): StandardResu
 
   doc.querySelectorAll('ul.box-list > li').forEach((li) => {
     const ni = li.querySelector('ul.name-intr')
-    if (!ni) return
+    if (!ni)
+      return
 
     const info: Record<string, string> = {}
     ni.querySelectorAll('li').forEach((item) => {
@@ -61,14 +64,16 @@ export function parseGongbiaokuHtml(html: string, keyword: string): StandardResu
     if (!pd && dd) {
       dd.querySelectorAll('span').forEach((s) => {
         const t = s.textContent
-        if (t.includes('发布日期')) pd = t.replace('发布日期：', '').trim()
-        else if (t.includes('实施日期')) id = t.replace('实施日期：', '').trim()
+        if (t.includes('发布日期'))
+          pd = t.replace('发布日期：', '').trim()
+        else if (t.includes('实施日期'))
+          id = t.replace('实施日期：', '').trim()
       })
     }
 
     let replaced_by = ''
     const fullText = li.textContent
-    const replaceMatch = fullText.match(/被以下标准替代[：:]\s*([A-Za-z\/]+\s*\d+[\-\s]?\d*)/)
+    const replaceMatch = fullText.match(/被以下标准替代[：:]\s*([A-Z/]+\s*\d+[\-\s]?\d*)/i)
     if (replaceMatch) {
       replaced_by = replaceMatch[1].trim()
     }
@@ -101,7 +106,8 @@ export function parseCsresHtml(html: string, keyword: string): StandardResult[] 
 
   rows.forEach((tr) => {
     const tds = tr.querySelectorAll('td')
-    if (tds.length < 5) return
+    if (tds.length < 5)
+      return
 
     const titleAttr = tr.getAttribute('title') || ''
     const info: Record<string, string> = {}
@@ -132,16 +138,19 @@ export function parseCsresHtml(html: string, keyword: string): StandardResult[] 
     const groups = new Map<string, typeof results>()
     results.forEach((r) => {
       const base = r.standard_number.replace(/[-–]\d{4}.*$/, '').replace(/\s/g, '')
-      if (!groups.has(base)) groups.set(base, [])
+      if (!groups.has(base))
+        groups.set(base, [])
       groups.get(base)!.push(r)
     })
 
     // For each group with multiple versions, mark older ones as 被代替
     for (const [, group] of groups) {
-      if (group.length <= 1) continue
+      if (group.length <= 1)
+        continue
       // Filter out English versions (ending with E) for determining the latest
-      const chineseVersions = group.filter((r) => !r.standard_number.endsWith('E'))
-      if (chineseVersions.length <= 1) continue
+      const chineseVersions = group.filter(r => !r.standard_number.endsWith('E'))
+      if (chineseVersions.length <= 1)
+        continue
       // Sort by standard number descending (newer first)
       chineseVersions.sort((a, b) => b.standard_number.localeCompare(a.standard_number))
       const latest = chineseVersions[0]

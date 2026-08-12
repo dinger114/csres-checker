@@ -1,18 +1,18 @@
+<script setup lang="ts">
+import { useToastStore } from '../stores/toast'
+
+const toast = useToastStore()
+</script>
+
 <template>
   <Teleport to="body">
     <Transition name="toast">
-      <div v-if="toast.visible()" class="toast">
-        {{ toast.message() }}
+      <div v-if="toast.visible" class="toast">
+        {{ toast.message }}
       </div>
     </Transition>
   </Teleport>
 </template>
-
-<script setup lang="ts">
-import { useToast } from '../composables/useToast'
-
-const toast = useToast()
-</script>
 
 <style scoped>
 .toast {

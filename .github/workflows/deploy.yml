@@ -23,14 +23,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: npm
 
-      - name: Install and Build
+      - name: Install and Quality Gates
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           npm ci
-          npm run build
+          npm run lint
+          npm run typecheck
+          npm run test
+
+      - name: Build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        run: npm run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -38,7 +45,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist'
+          path: dist
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -56,14 +63,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: npm
 
-      - name: Install and Build
+      - name: Install and Quality Gates
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           npm ci
-          npm run build
+          npm run lint
+          npm run typecheck
+          npm run test
+
+      - name: Build
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        run: npm run build
 
       - name: Deploy to Cloudflare Pages
         env:

@@ -8,52 +8,54 @@ const ALLOWED_HOSTS = [
   'bzsou.cn',
   'www.bzsou.cn',
   '183.66.41.2',
-];
+]
 
 // 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求
-const RATE_LIMIT = 30;
-const WINDOW_MS = 60_000;
-const rateLimitMap = new Map();
+const RATE_LIMIT = 30
+const WINDOW_MS = 60_000
+const rateLimitMap = new Map()
 
 function checkRateLimit(ip) {
-  const now = Date.now();
-  let timestamps = rateLimitMap.get(ip);
+  const now = Date.now()
+  let timestamps = rateLimitMap.get(ip)
   if (!timestamps) {
-    timestamps = [];
-    rateLimitMap.set(ip, timestamps);
+    timestamps = []
+    rateLimitMap.set(ip, timestamps)
   }
   // 剪掉窗口外的旧记录
   while (timestamps.length > 0 && timestamps[0] <= now - WINDOW_MS) {
-    timestamps.shift();
+    timestamps.shift()
   }
   if (timestamps.length >= RATE_LIMIT) {
-    const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1000);
-    return { allowed: false, retryAfter };
+    const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1000)
+    return { allowed: false, retryAfter }
   }
-  timestamps.push(now);
-  return { allowed: true };
+  timestamps.push(now)
+  return { allowed: true }
 }
 
 // 定期清理过期 IP（防止内存泄漏）
-let lastCleanup = Date.now();
+let lastCleanup = Date.now()
 function cleanup() {
-  if (Date.now() - lastCleanup < 300_000) return;
-  lastCleanup = Date.now();
-  const cutoff = Date.now() - WINDOW_MS;
+  if (Date.now() - lastCleanup < 300_000)
+    return
+  lastCleanup = Date.now()
+  const cutoff = Date.now() - WINDOW_MS
   for (const [ip, timestamps] of rateLimitMap) {
     while (timestamps.length > 0 && timestamps[0] <= cutoff) {
-      timestamps.shift();
+      timestamps.shift()
     }
-    if (timestamps.length === 0) rateLimitMap.delete(ip);
+    if (timestamps.length === 0)
+      rateLimitMap.delete(ip)
   }
 }
 
 export default {
   async fetch(request) {
-    cleanup();
+    cleanup()
 
-    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-    const { allowed, retryAfter } = checkRateLimit(ip);
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown'
+    const { allowed, retryAfter } = checkRateLimit(ip)
     if (!allowed) {
       return new Response('Rate limit exceeded', {
         status: 429,
@@ -61,29 +63,30 @@ export default {
           'Retry-After': String(retryAfter),
           'Content-Type': 'text/plain',
         },
-      });
+      })
     }
 
-    const url = new URL(request.url);
-    const target = url.searchParams.get('url');
+    const url = new URL(request.url)
+    const target = url.searchParams.get('url')
 
     if (!target) {
-      return new Response('Missing ?url= parameter', { status: 400 });
+      return new Response('Missing ?url= parameter', { status: 400 })
     }
 
-    let targetUrl;
+    let targetUrl
     try {
-      targetUrl = new URL(target);
-    } catch {
-      return new Response('Invalid URL', { status: 400 });
+      targetUrl = new URL(target)
+    }
+    catch {
+      return new Response('Invalid URL', { status: 400 })
     }
 
     if (targetUrl.protocol !== 'https:' && targetUrl.protocol !== 'http:') {
-      return new Response('Protocol not allowed', { status: 403 });
+      return new Response('Protocol not allowed', { status: 403 })
     }
 
     if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
-      return new Response('Host not allowed', { status: 403 });
+      return new Response('Host not allowed', { status: 403 })
     }
 
     try {
@@ -93,16 +96,17 @@ export default {
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
         },
-      });
+      })
 
-      const contentType = resp.headers.get('content-type') || '';
-      const buffer = await resp.arrayBuffer();
+      const contentType = resp.headers.get('content-type') || ''
+      const buffer = await resp.arrayBuffer()
 
-      let body;
+      let body
       if (contentType.includes('gbk') || contentType.includes('gb2312') || targetUrl.hostname.includes('csres.com')) {
-        body = new TextDecoder('gbk').decode(buffer);
-      } else {
-        body = new TextDecoder('utf-8').decode(buffer);
+        body = new TextDecoder('gbk').decode(buffer)
+      }
+      else {
+        body = new TextDecoder('utf-8').decode(buffer)
       }
 
       return new Response(body, {
@@ -114,9 +118,10 @@ export default {
           'X-RateLimit-Limit': String(RATE_LIMIT),
           'X-RateLimit-Remaining': String(RATE_LIMIT - (rateLimitMap.get(ip)?.length || 0)),
         },
-      });
-    } catch (e) {
-      return new Response(`Proxy error: ${e.message}`, { status: 502 });
+      })
+    }
+    catch (e) {
+      return new Response(`Proxy error: ${e.message}`, { status: 502 })
     }
   },
-};
+}

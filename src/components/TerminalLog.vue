@@ -1,22 +1,64 @@
+<script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { nextTick, ref, watch } from 'vue'
+import { useLogStore } from '../stores/log'
+import LogStats from './LogStats.vue'
+
+defineProps<{
+  history: string[]
+}>()
+
+const emit = defineEmits<{
+  load: [entry: string]
+  delete: [number]
+  clear: []
+}>()
+
+const logStore = useLogStore()
+const { lines } = storeToRefs(logStore)
+const logBodyRef = ref<HTMLElement | null>(null)
+const showHistory = ref(false)
+
+function handlePanelClick() {
+  if (showHistory.value) {
+    showHistory.value = false
+  }
+}
+
+watch(
+  () => lines.value.length,
+  async () => {
+    await nextTick()
+    if (logBodyRef.value) {
+      logBodyRef.value.scrollTop = logBodyRef.value.scrollHeight
+    }
+  },
+)
+</script>
+
 <template>
   <aside class="log-panel" @click="handlePanelClick">
     <div class="log-header">
-      <span class="dot dot-r"></span>
-      <span class="dot dot-y"></span>
-      <span class="dot dot-g"></span>
+      <span class="dot dot-r" />
+      <span class="dot dot-y" />
+      <span class="dot dot-g" />
       <span class="title">TERMINAL</span>
       <button
         v-if="history.length > 0"
         class="tab-btn"
         :class="{ active: showHistory }"
         @click.stop="showHistory = !showHistory"
-      >HIST</button>
+      >
+        HIST
+      </button>
     </div>
 
     <div v-if="showHistory && history.length > 0" class="history-section">
       <div class="history-header">
         <span class="history-label">最近查询</span>
-        <button class="clear-btn" @click.stop="emit('clear')">清空</button>
+        <button class="clear-btn" @click.stop="emit('clear')">
+          清空
+        </button>
       </div>
       <div class="history-list">
         <div
@@ -26,12 +68,14 @@
           @click.stop="emit('load', item)"
         >
           <span class="history-text">{{ item.split('\n')[0] }}{{ item.split('\n').length > 1 ? '...' : '' }}</span>
-          <button class="delete-btn" @click.stop="emit('delete', i)">×</button>
+          <button class="delete-btn" @click.stop="emit('delete', i)">
+            ×
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="log-body" ref="logBodyRef">
+    <div ref="logBodyRef" class="log-body">
       <div
         v-for="(line, i) in lines"
         :key="i"
@@ -44,43 +88,6 @@
     <LogStats />
   </aside>
 </template>
-
-<script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
-import LogStats from './LogStats.vue'
-import { useLog } from '../composables/useLog'
-
-defineProps<{
-  history: string[]
-}>()
-
-const emit = defineEmits<{
-  load: [entry: string]
-  delete: [number]
-  clear: []
-}>()
-
-const { lines } = useLog()
-const logBodyRef = ref<HTMLElement | null>(null)
-const showHistory = ref(false)
-
-function handlePanelClick() {
-  if (showHistory.value) {
-    showHistory.value = false
-  }
-}
-
-watch(
-  lines,
-  async () => {
-    await nextTick()
-    if (logBodyRef.value) {
-      logBodyRef.value.scrollTop = logBodyRef.value.scrollHeight
-    }
-  },
-  { deep: true }
-)
-</script>
 
 <style scoped>
 .log-panel {

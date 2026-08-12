@@ -19,3 +19,8 @@ results.json
 
 # IDE/Tools
 .workbuddy/
+
+# Test artifacts
+test-results/
+playwright-report/
+coverage/

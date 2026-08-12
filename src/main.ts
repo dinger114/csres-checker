@@ -1,6 +1,8 @@
+import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import App from './App.vue'
 import './styles/variables.css'
+import './styles/app.css'
 
 // 动态化 SEO 链接:canonical/og:url 跟随当前部署域名,不写死
 const canonicalUrl = window.location.origin + window.location.pathname
@@ -12,4 +14,5 @@ document
   ?.setAttribute('content', canonicalUrl)
 
 const app = createApp(App)
+app.use(createPinia())
 app.mount('#app')

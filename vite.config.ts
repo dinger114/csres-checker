@@ -1,5 +1,6 @@
-import { defineConfig } from 'vite'
+/// <reference types="vitest/config" />
 import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [vue()],
@@ -7,13 +8,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('firebase')) return 'firebase'
-          if (id.includes('xlsx')) return 'xlsx'
-        },
-      },
-    },
+  },
+  test: {
+    environment: 'happy-dom',
+    include: ['src/**/*.test.ts'],
   },
 })
