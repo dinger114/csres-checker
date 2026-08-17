@@ -47,6 +47,7 @@ GB 50311-2016</pre>
             <tbody>
               <tr><td>编号查询</td><td>按标准编号精确查找，多数据源 fallback，支持批量输入</td></tr>
               <tr><td>名称检索</td><td>按标准名称关键词搜索，数据源为 cssn.net.cn，拉取前 3 页结果（约 60 条），按国标 > 行业标准 > 地方标准 > 国际标准优先级排序。输入限制为单行。</td></tr>
+              <tr><td>标准图集</td><td>按图集编号或名称搜索国标图集（ebook.chinabuilding.com.cn），返回编号/名称/状态/发布实施日期，支持批量输入和 TXT 导入。图集结果不关联地标预览列。</td></tr>
             </tbody>
           </table>
         </div>
@@ -60,6 +61,7 @@ GB 50311-2016</pre>
             <tbody>
               <tr><td>CSSN</td><td>国家标准全文公开系统（主数据源）</td></tr>
               <tr><td>标准搜</td><td>bzsou.cn（包含全文和分类信息）</td></tr>
+              <tr><td>工程标</td><td>ccsn.org.cn（工程建设标准化，JSON 接口，代办含代替标准、批准部门）</td></tr>
               <tr><td>工标库</td><td>gongbiaoku.com（备用）</td></tr>
               <tr><td>CSRes</td><td>csres.com（兜底）</td></tr>
               <tr><td>重庆地标</td><td>cq.dingyi.de（重庆地方标准，可选数据源，含 PDF 预览）</td></tr>
@@ -69,11 +71,12 @@ GB 50311-2016</pre>
           <ol>
             <li>Tier 1：CSSN — 速度最快，标准化数据</li>
             <li>Tier 2：标准搜 (bzsou.cn) — Tier 1 未命中的 fallback</li>
-            <li>Tier 3：工标库 (gongbiaoku.com) — 继续未命中的 fallback</li>
-            <li>Tier 4：CSRes (csres.com) — 最终兜底</li>
+            <li>Tier 3：工程标 (ccsn.org.cn) — 工程建设类标准，含代替关系</li>
+            <li>Tier 4：工标库 (gongbiaoku.com) — 继续未命中的 fallback</li>
+            <li>Tier 5：CSRes (csres.com) — 最终兜底</li>
           </ol>
           <p>重庆地标（cqdb）不在默认查询链中，需要在数据源选择中手动指定；适合查询 DBJ50 系列重庆地方标准。</p>
-          <p>名称检索仅使用 CSSN 数据源，拉取前 3 页结果，自动过滤英文版标准。</p>
+          <p>名称检索仅使用 CSSN 数据源，拉取前 3 页结果，自动过滤英文版标准。标准图集使用独立模式查询（ebook.chinabuilding.com.cn），不在编号查询 fallback 链中。</p>
         </div>
 
         <div class="help-section">

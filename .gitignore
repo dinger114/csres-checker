@@ -24,3 +24,4 @@ results.json
 test-results/
 playwright-report/
 coverage/
+.playwright-cli/

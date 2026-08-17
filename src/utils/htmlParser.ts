@@ -98,6 +98,57 @@ export function parseGongbiaokuHtml(html: string, keyword: string): StandardResu
   return results
 }
 
+export function parseAtlasHtml(html: string, keyword: string): StandardResult[] {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const results: StandardResult[] = []
+
+  doc.querySelectorAll('.bz_list').forEach((item) => {
+    const numberA = item.querySelector('.widthPrencent14 a')
+    const nameA = item.querySelector('.widthPrencent28 a')
+
+    // 从每个单元格文本中提取日期值(文本可能带"发布日期："等前缀)
+    const dateOf = (label: string): string => {
+      for (const el of Array.from(item.children)) {
+        const t = el.textContent || ''
+        if (t.includes(label)) {
+          const m = t.match(/\d{4}-\d{2}-\d{2}/)
+          if (m)
+            return m[0]
+        }
+      }
+      return ''
+    }
+
+    // 状态:优先取 .search-resources 内的 .active 纯文本,否则取该格文本并去掉"资源状态:"前缀
+    const activeEl = item.querySelector('.search-resources .active')
+    let status = activeEl ? activeEl.textContent?.trim() || '' : ''
+    if (!status) {
+      const src = item.querySelector('.search-resources')
+      status = (src?.textContent?.trim() || '').replace(/^资源状态[：:]\s*/, '')
+    }
+
+    const standard_number = numberA?.getAttribute('title')?.trim() || numberA?.textContent?.trim() || ''
+    if (!standard_number)
+      return
+
+    results.push({
+      query: keyword,
+      standard_number,
+      title: nameA?.getAttribute('title')?.trim() || nameA?.textContent?.trim() || '',
+      status,
+      publish_date: dateOf('发布日期'),
+      implement_date: dateOf('实施日期'),
+      replaced_by: '',
+      publisher: '',
+      category: '标准图集',
+      ics: '',
+    })
+  })
+
+  return results
+}
+
 export function parseCsresHtml(html: string, keyword: string): StandardResult[] {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')

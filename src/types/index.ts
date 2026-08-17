@@ -69,6 +69,25 @@ export interface BzsouResponse {
   result?: BzsouItem[]
 }
 
+// ccsn.org.cn 原始 API 响应
+export interface CcsnItem {
+  StandardCode?: string
+  StandardCNName?: string
+  StandardState?: string
+  ReplaceStandardCode?: string
+  PublishDate?: string
+  PerformDate?: string
+  AbolishDate?: string | null
+  ApprovalDep?: string
+  EditUnitLinkMan?: string
+  Guid?: string
+}
+
+export interface CcsnResponse {
+  Total?: number
+  List?: CcsnItem[]
+}
+
 export interface LogStats {
   ok: number
   empty: number
