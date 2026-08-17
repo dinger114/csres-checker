@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCqDbHtml, parseCsresHtml, parseGongbiaokuHtml } from '../htmlParser'
+import { parseAtlasHtml, parseCqDbHtml, parseCsresHtml, parseGongbiaokuHtml } from '../htmlParser'
 
 const cqdbHtml = `
 <table class="layui-table">
@@ -109,5 +109,34 @@ describe('parseCsresHtml', () => {
     const old = results.find(r => r.standard_number === 'GB 50010-2010')!
     expect(old.status).toBe('被代替')
     expect(old.replaced_by).toBe('GB 50010-2024')
+  })
+})
+
+const atlasHtml = `
+<div class="bz_list clearfix">
+  <div class="widthPrencent14"><a href="/zbooklib/book/detail/show?SiteID=1&bookID=54308" title="05SJ810">05SJ810</a></div>
+  <div class="widthPrencent28"><a href="/zbooklib/book/detail/show?SiteID=1&bookID=54308" title="建筑实践教学及见习建筑师图册">建筑实践教学及见习建筑师图册</a></div>
+  <div class="borderGray search-resources"><span class="active">现行</span></div>
+  <div class="borderGray hidden-xs"><span class="visible-xs">发布日期：</span>2005-09-01</div>
+  <div class="borderGray hidden-xs"><span class="visible-xs">实施日期:</span>2005-09-02</div>
+  <div class="borderGray hidden-xs"><span class="visible-xs">废止日期：</span>-</div>
+</div>`
+
+describe('parseAtlasHtml', () => {
+  it('parses an atlas row with number, name, status and dates', () => {
+    const results = parseAtlasHtml(atlasHtml, '05SJ810')
+    expect(results).toHaveLength(1)
+    const r = results[0]
+    expect(r.standard_number).toBe('05SJ810')
+    expect(r.title).toBe('建筑实践教学及见习建筑师图册')
+    expect(r.status).toBe('现行')
+    expect(r.publish_date).toBe('2005-09-01')
+    expect(r.implement_date).toBe('2005-09-02')
+    expect(r.category).toBe('标准图集')
+  })
+
+  it('returns empty when no atlas rows match', () => {
+    const results = parseAtlasHtml('<div class="other"></div>', '05SJ810')
+    expect(results).toEqual([])
   })
 })

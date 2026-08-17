@@ -43,6 +43,8 @@ function handleRun(keywords: string[], source: string = '', mode: string = 'numb
     uiStore.switchTab('output')
   if (mode === 'name')
     queryStore.searchByName(keywords, source)
+  else if (mode === 'atlas')
+    queryStore.queryAtlas(keywords)
   else
     queryStore.query(keywords, source)
 }

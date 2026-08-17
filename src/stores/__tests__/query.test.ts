@@ -5,9 +5,11 @@ import { useQueryStore } from '../query'
 
 const cssnQuery = vi.fn()
 const bzsouQuery = vi.fn()
+const ccsnQuery = vi.fn()
 const gongQuery = vi.fn()
 const csresQuery = vi.fn()
 const cqdbQuery = vi.fn()
+const atlasQuery = vi.fn()
 const queryByName = vi.fn()
 
 vi.mock('../../composables/useCssn', () => ({
@@ -15,6 +17,9 @@ vi.mock('../../composables/useCssn', () => ({
 }))
 vi.mock('../../composables/useBzsou', () => ({
   useBzsou: () => ({ query: bzsouQuery }),
+}))
+vi.mock('../../composables/useCcsn', () => ({
+  useCcsn: () => ({ query: ccsnQuery }),
 }))
 vi.mock('../../composables/useGongbiaoku', () => ({
   useGongbiaoku: () => ({ query: gongQuery }),
@@ -24,6 +29,9 @@ vi.mock('../../composables/useCsres', () => ({
 }))
 vi.mock('../../composables/useCqdb', () => ({
   useCqdb: () => ({ query: cqdbQuery }),
+}))
+vi.mock('../../composables/useAtlas', () => ({
+  useAtlas: () => ({ query: atlasQuery }),
 }))
 vi.mock('../../composables/useFirebase', () => ({
   useFirebase: () => ({ init: vi.fn(), refreshCount: vi.fn(), incQueryCount: vi.fn(), globalCount: { value: 0 } }),
@@ -50,9 +58,10 @@ describe('useQueryStore', () => {
     vi.clearAllMocks()
   })
 
-  it('runs the cssn → bzsou → gongbiaoku → csres fallback chain', async () => {
+  it('runs the cssn → bzsou → ccsn → gongbiaoku → csres fallback chain', async () => {
     cssnQuery.mockResolvedValue([])
     bzsouQuery.mockResolvedValue([])
+    ccsnQuery.mockResolvedValue([])
     gongQuery.mockResolvedValue([])
     csresQuery.mockResolvedValue([baseResult('GB 50010-2010')])
 
@@ -61,6 +70,7 @@ describe('useQueryStore', () => {
 
     expect(cssnQuery).toHaveBeenCalledWith('GB 50010-2010')
     expect(bzsouQuery).toHaveBeenCalledWith('GB 50010-2010')
+    expect(ccsnQuery).toHaveBeenCalledWith('GB 50010-2010')
     expect(gongQuery).toHaveBeenCalledWith('GB 50010-2010')
     expect(csresQuery).toHaveBeenCalledWith('GB 50010-2010')
     expect(store.results).toHaveLength(1)
@@ -133,6 +143,29 @@ describe('useQueryStore', () => {
     await store.searchByName([''])
 
     expect(queryByName).not.toHaveBeenCalled()
+    expect(store.results).toHaveLength(0)
+    expect(store.running).toBe(false)
+  })
+
+  it('queryAtlas queries the atlas source', async () => {
+    const atlasResult = { ...baseResult('05SJ810'), category: '标准图集' }
+    atlasQuery.mockResolvedValue([atlasResult])
+
+    const store = useQueryStore()
+    await store.queryAtlas(['05SJ810'])
+
+    expect(atlasQuery).toHaveBeenCalledWith('05SJ810')
+    expect(store.results).toHaveLength(1)
+    expect(store.results[0].standard_number).toBe('05SJ810')
+    expect(store.progress.pct).toBe(100)
+    expect(store.running).toBe(false)
+  })
+
+  it('queryAtlas aborts when keywords are empty', async () => {
+    const store = useQueryStore()
+    await store.queryAtlas([''])
+
+    expect(atlasQuery).not.toHaveBeenCalled()
     expect(store.results).toHaveLength(0)
     expect(store.running).toBe(false)
   })

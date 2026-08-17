@@ -1,6 +1,8 @@
 import type { ProgressState, StandardResult } from '../types'
 import { defineStore } from 'pinia'
+import { useAtlas } from '../composables/useAtlas'
 import { useBzsou } from '../composables/useBzsou'
+import { useCcsn } from '../composables/useCcsn'
 import { useClipboard } from '../composables/useClipboard'
 import { useCqdb } from '../composables/useCqdb'
 import { useCsres } from '../composables/useCsres'
@@ -138,16 +140,18 @@ export const useQueryStore = defineStore('query', {
         const queryResults = new Map<string, StandardResult[]>()
 
         if (useDefault) {
-          add('plan: cssn → bzsou (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
+          add('plan: cssn → bzsou (fail) → ccsn (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
 
           const { query: cssnQuery } = useCssn()
           const { query: bzsouQuery } = useBzsou()
+          const { query: ccsnQuery } = useCcsn()
           const { query: gongQuery } = useGongbiaoku()
           const { query: csresQuery } = useCsres()
 
           const failedAfterCssn = await this.runSource('cssn.net.cn', { query: cssnQuery }, uniqueKws, normalizedKws, kwToIndices, queryResults)
           const failedAfterBzsou = await this.runSource('bzsou.cn', { query: bzsouQuery }, failedAfterCssn, normalizedKws, kwToIndices, queryResults)
-          const failedAfterGong = await this.runSource('gongbiaoku.com', { query: gongQuery }, failedAfterBzsou, normalizedKws, kwToIndices, queryResults)
+          const failedAfterCcsn = await this.runSource('ccsn.org.cn', { query: ccsnQuery }, failedAfterBzsou, normalizedKws, kwToIndices, queryResults)
+          const failedAfterGong = await this.runSource('gongbiaoku.com', { query: gongQuery }, failedAfterCcsn, normalizedKws, kwToIndices, queryResults)
 
           if (failedAfterGong.length > 0) {
             await this.runSource('csres.com', { query: csresQuery }, failedAfterGong, normalizedKws, kwToIndices, queryResults)
@@ -156,6 +160,7 @@ export const useQueryStore = defineStore('query', {
         else {
           const { query: cssnQuery } = useCssn()
           const { query: bzsouQuery } = useBzsou()
+          const { query: ccsnQuery } = useCcsn()
           const { query: gongQuery } = useGongbiaoku()
           const { query: csresQuery } = useCsres()
           const { query: cqdbQuery } = useCqdb()
@@ -163,6 +168,7 @@ export const useQueryStore = defineStore('query', {
           const sourceMap: Record<string, SourceFn> = {
             cssn: { query: cssnQuery },
             bzsou: { query: bzsouQuery },
+            ccsn: { query: ccsnQuery },
             gongbiaoku: { query: gongQuery },
             csres: { query: csresQuery },
             cqdb: { query: cqdbQuery },
@@ -187,6 +193,76 @@ export const useQueryStore = defineStore('query', {
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
       this.progress = { current: normalizedKws.length, total: normalizedKws.length, pct: 100 }
+
+      updateStats({
+        time: Number.parseFloat(elapsed),
+        queries: normalizedKws.length,
+      })
+
+      add(SEPARATOR, 'info')
+      add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
+
+      const { incQueryCount } = useFirebase()
+      incQueryCount()
+      this.running = false
+    },
+    async queryAtlas(keywords: string[]) {
+      const { add, updateStats } = useLogStore()
+      if (this.running)
+        return
+      this.running = true
+      this.results = []
+      this.progress = { current: 0, total: keywords.length, pct: 0 }
+
+      const startTime = Date.now()
+      const normalizedKws = keywords.map(kw => normalizeKeyword(kw).replace(/\s+/g, '')).filter(Boolean)
+
+      if (normalizedKws.length === 0) {
+        add('请输入图集编号或名称', 'warn')
+        this.running = false
+        return
+      }
+
+      add(`═══ ATLAS QUERY: ${normalizedKws.length} items ═══`, 'highlight')
+      add(SEPARATOR, 'info')
+      add('plan: ebook.chinabuilding.com.cn (标准图集, 需代理)', 'info')
+      add(SEPARATOR, 'info')
+
+      const uniqueKws = [...new Set(normalizedKws)]
+      const kwToIndices = new Map<string, number[]>()
+      normalizedKws.forEach((kw, idx) => {
+        if (!kwToIndices.has(kw))
+          kwToIndices.set(kw, [])
+        kwToIndices.get(kw)!.push(idx)
+      })
+
+      const { query } = useAtlas()
+      const queryResults = new Map<string, StandardResult[]>()
+
+      for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
+        const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
+        const t0 = Date.now()
+        const batchResults = await Promise.allSettled(batch.map(kw => query(kw)))
+        this.recordLatency((Date.now() - t0) / batch.length)
+        batchResults.forEach((r, idx) => {
+          const kw = batch[idx]
+          if (r.status === 'fulfilled' && r.value.length > 0) {
+            if (!queryResults.has(kw)) {
+              const indices = kwToIndices.get(kw) || []
+              for (const idx of indices) {
+                this.results.push(...r.value.map(res => ({ ...res, query: normalizedKws[idx] })))
+              }
+            }
+            queryResults.set(kw, r.value)
+          }
+        })
+        this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
+        if (i + this.adaptiveBatchSize() < uniqueKws.length)
+          await delay(this.adaptiveDelay())
+      }
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+      this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
 
       updateStats({
         time: Number.parseFloat(elapsed),

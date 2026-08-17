@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ProgressState } from '../types'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 defineProps<{
   running: boolean
@@ -17,6 +17,7 @@ const emit = defineEmits<{
 const sources = [
   { key: 'cssn', label: 'CSSN' },
   { key: 'bzsou', label: '标准搜' },
+  { key: 'ccsn', label: '工程标' },
   { key: 'gongbiaoku', label: '工标库' },
   { key: 'csres', label: 'CSRes' },
   { key: 'cqdb', label: '重庆地标' },
@@ -28,6 +29,12 @@ const searchMode = ref('number')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const nameInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const textareaPlaceholder = computed(() =>
+  searchMode.value === 'atlas'
+    ? '05SJ810\n24D303-4\n消防'
+    : 'GB 50222-2017\n50010\nGB 50311-2016',
+)
 
 function handleRun() {
   const lines = parseKeywords(keywords.value)
@@ -119,7 +126,7 @@ function loadFromUrl() {
   if (q) {
     keywords.value = q.split(',').join('\n')
     const mode = params.get('mode')
-    if (mode === 'number' || mode === 'name') {
+    if (mode === 'number' || mode === 'name' || mode === 'atlas') {
       searchMode.value = mode
     }
     const source = params.get('source')
@@ -150,14 +157,14 @@ defineExpose({ setText })
       <span class="title">INPUT</span>
     </div>
     <div class="terminal-body">
-      <label>// {{ searchMode === 'number' ? '标准编号（每行一个）' : '标准名称关键词' }}<span v-if="searchMode === 'number'" class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span><span v-else class="hint">Ctrl+Enter 运行 · Esc 清空</span></label>
+      <label>// {{ searchMode === 'number' ? '标准编号（每行一个）' : searchMode === 'atlas' ? '图集编号或名称（每行一个）' : '标准名称关键词' }}<span v-if="searchMode === 'number'" class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span><span v-else class="hint">Ctrl+Enter 运行 · Esc 清空</span></label>
       <textarea
-        v-if="searchMode === 'number'"
+        v-if="searchMode === 'number' || searchMode === 'atlas'"
         ref="textareaRef"
         v-model="keywords"
         inputmode="text"
         spellcheck="false"
-        placeholder="GB 50222-2017&#10;50010&#10;GB 50311-2016"
+        :placeholder="textareaPlaceholder"
         :disabled="running"
         @keydown="handleKeydown"
         @drop.prevent="handleDrop"
@@ -181,6 +188,10 @@ defineExpose({ setText })
           <input v-model="searchMode" type="radio" value="name" :disabled="running" @change="handleModeChange">
           <span>$ 名称检索</span>
         </label>
+        <label class="mode-tab" :class="{ active: searchMode === 'atlas' }">
+          <input v-model="searchMode" type="radio" value="atlas" :disabled="running" @change="handleModeChange">
+          <span>▦ 标准图集</span>
+        </label>
       </div>
       <div v-if="searchMode === 'number'" class="source-row">
         <span class="source-label">数据源:</span>
@@ -198,11 +209,11 @@ defineExpose({ setText })
           <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
           <span class="btn-text">RUN</span>
         </button>
-        <button v-if="searchMode === 'number'" :disabled="running" title="导入 TXT 文件" @click="triggerUpload">
+        <button v-if="searchMode === 'number' || searchMode === 'atlas'" :disabled="running" title="导入 TXT 文件" @click="triggerUpload">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
           <span class="btn-text">IMPORT</span>
         </button>
-        <input v-if="searchMode === 'number'" ref="fileInputRef" type="file" accept=".txt" hidden @change="handleFileUpload">
+        <input v-if="searchMode === 'number' || searchMode === 'atlas'" ref="fileInputRef" type="file" accept=".txt" hidden @change="handleFileUpload">
         <button :disabled="running || !hasResults" title="复制 Markdown" @click="emit('copy-md')">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
           <span class="btn-text">MD</span>
@@ -275,26 +286,41 @@ defineExpose({ setText })
 .source-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-top: 0;
   padding: 8px 0 4px;
   flex-wrap: wrap;
 }
 
 .source-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  line-height: 13px;
+  white-space: nowrap;
+  transform: translateY(-3px);
 }
 
 .source-check {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: 12px;
+  height: 13px;
   color: var(--text-dim);
   cursor: pointer;
   white-space: nowrap;
+}
+
+.source-check input[type="radio"] {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+  cursor: pointer;
 }
 
 .source-check input[type="checkbox"] {

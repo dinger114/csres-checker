@@ -7,6 +7,10 @@ const ALLOWED_HOSTS = [
   'www.csres.com',
   'bzsou.cn',
   'www.bzsou.cn',
+  'ccsn.org.cn',
+  'www.ccsn.org.cn',
+  'ebook.chinabuilding.com.cn',
+  'www.ebook.chinabuilding.com.cn',
   '183.66.41.2',
 ]
 
