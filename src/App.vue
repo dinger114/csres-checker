@@ -10,7 +10,7 @@ import ResultsTable from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
 import Toast from './components/Toast.vue'
 import VersionHistory from './components/VersionHistory.vue'
-import { useFirebase } from './composables/useFirebase'
+import { useCounter } from './composables/useCounter'
 import { useHistoryStore } from './stores/history'
 import { useLogStore } from './stores/log'
 import { useQueryStore } from './stores/query'
@@ -29,23 +29,23 @@ const { theme } = storeToRefs(themeStore)
 const { history } = storeToRefs(historyStore)
 const { lines: logLines } = storeToRefs(logStore)
 
-const firebase = useFirebase()
-let firebaseInitialized = false
+const counter = useCounter()
+let counterInitialized = false
 
 const queryInputRef = ref<InstanceType<typeof QueryInput> | null>(null)
 const terminalCount = computed(() => logLines.value.length)
 const isMobile = useMediaQuery('(max-width: 768px)')
 
-function initFirebaseIfNeeded() {
-  if (!firebaseInitialized) {
-    firebaseInitialized = true
-    firebase.init()
-    firebase.refreshCount()
+function initCounterIfNeeded() {
+  if (!counterInitialized) {
+    counterInitialized = true
+    counter.refreshCount()
   }
 }
 
 function handleRun(keywords: string[], source: string = '', mode: string = 'number') {
-  initFirebaseIfNeeded()
+  initCounterIfNeeded()
+  counter.incQueryCount()
   logStore.add(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   historyStore.add(keywords)
   // On mobile, switch to output tab when query starts

@@ -7,7 +7,6 @@ import { useClipboard } from '../composables/useClipboard'
 import { useCqdb } from '../composables/useCqdb'
 import { useCsres } from '../composables/useCsres'
 import { useCssn } from '../composables/useCssn'
-import { useFirebase } from '../composables/useFirebase'
 import { useGongbiaoku } from '../composables/useGongbiaoku'
 import { useXlsx } from '../composables/useXlsx'
 import { BATCH_DELAY, BATCH_SIZE } from '../utils/constants'
@@ -202,8 +201,6 @@ export const useQueryStore = defineStore('query', {
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
 
-      const { incQueryCount } = useFirebase()
-      incQueryCount()
       this.running = false
     },
     async queryAtlas(keywords: string[]) {
@@ -272,8 +269,6 @@ export const useQueryStore = defineStore('query', {
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
 
-      const { incQueryCount } = useFirebase()
-      incQueryCount()
       this.running = false
     },
     async searchByName(keywords: string[], _source: string = '') {
@@ -343,8 +338,6 @@ export const useQueryStore = defineStore('query', {
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
 
-      const { incQueryCount } = useFirebase()
-      incQueryCount()
       this.running = false
     },
     async copyMarkdown() {

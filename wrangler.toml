@@ -1,0 +1,16 @@
+name = "csres-proxy"
+main = "worker/index.js"
+compatibility_date = "2024-01-01"
+
+# KV 命名空间绑定
+# 部署前需要执行: wrangler kv namespace create COUNTER_KV
+# 然后将生成的 id 填入下方
+[[kv_namespaces]]
+binding = "COUNTER_KV"
+id = "3bf3479a47f44e2691859d589c0dbfaa"
+
+[env.production]
+# 生产环境可以使用不同的 KV namespace
+# [[kv_namespaces]]
+# binding = "COUNTER_KV"
+# id = "YOUR_PRODUCTION_KV_NAMESPACE_ID"

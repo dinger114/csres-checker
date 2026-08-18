@@ -54,9 +54,62 @@ function cleanup() {
   }
 }
 
+// CORS 头
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     cleanup()
+
+    const url = new URL(request.url)
+
+    // 处理 CORS 预检请求
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders })
+    }
+
+    // ===== 计数 API =====
+
+    // GET /api/count - 读取计数
+    if (url.pathname === '/api/count') {
+      try {
+        const count = await env.COUNTER_KV.get('queryCount', 'number') || 0
+        return new Response(JSON.stringify({ count }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+      catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+    }
+
+    // POST /api/count/inc - 递增计数
+    if (url.pathname === '/api/count/inc' && request.method === 'POST') {
+      try {
+        // 使用 KV 的原子操作读取并递增
+        const current = await env.COUNTER_KV.get('queryCount', 'number') || 0
+        const newCount = current + 1
+        await env.COUNTER_KV.put('queryCount', String(newCount))
+        return new Response(JSON.stringify({ count: newCount }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+      catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+    }
+
+    // ===== 代理 API =====
 
     const ip = request.headers.get('cf-connecting-ip') || 'unknown'
     const { allowed, retryAfter } = checkRateLimit(ip)
@@ -66,11 +119,11 @@ export default {
         headers: {
           'Retry-After': String(retryAfter),
           'Content-Type': 'text/plain',
+          ...corsHeaders,
         },
       })
     }
 
-    const url = new URL(request.url)
     const target = url.searchParams.get('url')
 
     if (!target) {
@@ -117,10 +170,9 @@ export default {
         status: resp.status,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET',
           'X-RateLimit-Limit': String(RATE_LIMIT),
           'X-RateLimit-Remaining': String(RATE_LIMIT - (rateLimitMap.get(ip)?.length || 0)),
+          ...corsHeaders,
         },
       })
     }

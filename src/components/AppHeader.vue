@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ThemeMode } from '../types'
 import { useI18n } from 'vue-i18n'
-import { useFirebase } from '../composables/useFirebase'
+import { useCounter } from '../composables/useCounter'
 
 defineProps<{
   theme: ThemeMode
@@ -13,7 +13,7 @@ defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { globalCount } = useFirebase()
+const { globalCount } = useCounter()
 </script>
 
 <template>

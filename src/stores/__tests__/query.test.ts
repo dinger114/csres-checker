@@ -33,9 +33,6 @@ vi.mock('../../composables/useCqdb', () => ({
 vi.mock('../../composables/useAtlas', () => ({
   useAtlas: () => ({ query: atlasQuery }),
 }))
-vi.mock('../../composables/useFirebase', () => ({
-  useFirebase: () => ({ init: vi.fn(), refreshCount: vi.fn(), incQueryCount: vi.fn(), globalCount: { value: 0 } }),
-}))
 
 function baseResult(stdNo: string) {
   return {
