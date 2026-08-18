@@ -4,6 +4,7 @@ import { useAtlas } from '../composables/useAtlas'
 import { useBzsou } from '../composables/useBzsou'
 import { useCcsn } from '../composables/useCcsn'
 import { useClipboard } from '../composables/useClipboard'
+import { useCounter } from '../composables/useCounter'
 import { useCqdb } from '../composables/useCqdb'
 import { useCsres } from '../composables/useCsres'
 import { useCssn } from '../composables/useCssn'
@@ -135,9 +136,11 @@ export const useQueryStore = defineStore('query', {
         kwToIndices.get(kw)!.push(idx)
       })
 
-      if (uniqueKws.length > 0) {
-        const queryResults = new Map<string, StandardResult[]>()
+      // 记录每个关键词是否命中（任一源返回 ≥1 条即记一次）。
+      // 完成后用 queryResults.size 作为「成功查询关键词数」上报计数。
+      const queryResults = new Map<string, StandardResult[]>()
 
+      if (uniqueKws.length > 0) {
         if (useDefault) {
           add('plan: cssn → bzsou (fail) → ccsn (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
 
@@ -192,6 +195,11 @@ export const useQueryStore = defineStore('query', {
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
       this.progress = { current: normalizedKws.length, total: normalizedKws.length, pct: 100 }
+
+      // 按命中关键词数上报全网成功查询计数（fire-and-forget，不阻塞 UI）
+      const successCount = queryResults.size
+      if (successCount > 0)
+        useCounter().incQueryCount(successCount)
 
       updateStats({
         time: Number.parseFloat(elapsed),
@@ -261,6 +269,10 @@ export const useQueryStore = defineStore('query', {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
       this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
 
+      const successCount = queryResults.size
+      if (successCount > 0)
+        useCounter().incQueryCount(successCount)
+
       updateStats({
         time: Number.parseFloat(elapsed),
         queries: normalizedKws.length,
@@ -329,6 +341,10 @@ export const useQueryStore = defineStore('query', {
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
       this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
+
+      const successCount = queryResults.size
+      if (successCount > 0)
+        useCounter().incQueryCount(successCount)
 
       updateStats({
         time: Number.parseFloat(elapsed),

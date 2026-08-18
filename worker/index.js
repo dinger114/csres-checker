@@ -11,7 +11,7 @@ const ALLOWED_HOSTS = [
   'www.ccsn.org.cn',
   'ebook.chinabuilding.com.cn',
   'www.ebook.chinabuilding.com.cn',
-  '183.66.41.2',
+  'cq.dingyi.de',
 ]
 
 // 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求
@@ -91,15 +91,25 @@ export default {
       }
     }
 
-    // POST /api/count/inc - 递增计数
+    // POST /api/count/inc - 递增计数（支持批量：body { n: number }，默认 1）
     if (url.pathname === '/api/count/inc' && request.method === 'POST') {
       try {
-        // 使用 KV 的原子操作读取并递增
+        // 解析批量增量 n，限制在 [1, 1000] 防止滥用
+        let n = 1
+        try {
+          const body = await request.json()
+          if (typeof body?.n === 'number' && Number.isFinite(body.n))
+            n = Math.min(1000, Math.max(1, Math.floor(body.n)))
+        }
+        catch { /* 无 body 或非 JSON，按 n=1 处理 */ }
+
+        // 注意：KV 不支持原子自增，get→put 在并发下可能少计。
+        // 本工具流量有限，接受此误差（已与产品方确认）。
         const value = await env.COUNTER_KV.get('queryCount')
         const current = value ? parseInt(value, 10) : 0
-        const newCount = current + 1
+        const newCount = current + n
         await env.COUNTER_KV.put('queryCount', String(newCount))
-        return new Response(JSON.stringify({ count: newCount }), {
+        return new Response(JSON.stringify({ count: newCount, inc: n }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         })
       }

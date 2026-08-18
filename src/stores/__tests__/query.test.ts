@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 
 import { useQueryStore } from '../query'
 
@@ -11,6 +12,8 @@ const csresQuery = vi.fn()
 const cqdbQuery = vi.fn()
 const atlasQuery = vi.fn()
 const queryByName = vi.fn()
+const incQueryCount = vi.fn().mockResolvedValue(undefined)
+const refreshCount = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../../composables/useCssn', () => ({
   useCssn: () => ({ query: cssnQuery, queryByName }),
@@ -33,6 +36,9 @@ vi.mock('../../composables/useCqdb', () => ({
 vi.mock('../../composables/useAtlas', () => ({
   useAtlas: () => ({ query: atlasQuery }),
 }))
+vi.mock('../../composables/useCounter', () => ({
+  useCounter: () => ({ incQueryCount, refreshCount, globalCount: ref(0) }),
+}))
 
 function baseResult(stdNo: string) {
   return {
@@ -53,6 +59,30 @@ describe('useQueryStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+  })
+
+  it('reports successful keyword count to counter (per-keyword)', async () => {
+    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    bzsouQuery.mockResolvedValue([baseResult('GB 50011-2010')])
+
+    const store = useQueryStore()
+    await store.query(['GB 50010-2010', 'GB 50011-2010'])
+
+    // 2 个关键词各自命中 → incQueryCount(2)
+    expect(incQueryCount).toHaveBeenCalledWith(2)
+  })
+
+  it('does not report when no keyword returns results', async () => {
+    cssnQuery.mockResolvedValue([])
+    bzsouQuery.mockResolvedValue([])
+    ccsnQuery.mockResolvedValue([])
+    gongQuery.mockResolvedValue([])
+    csresQuery.mockResolvedValue([])
+
+    const store = useQueryStore()
+    await store.query(['GB 50010-2010'])
+
+    expect(incQueryCount).not.toHaveBeenCalled()
   })
 
   it('runs the cssn → bzsou → ccsn → gongbiaoku → csres fallback chain', async () => {

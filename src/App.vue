@@ -45,7 +45,8 @@ function initCounterIfNeeded() {
 
 function handleRun(keywords: string[], source: string = '', mode: string = 'number') {
   initCounterIfNeeded()
-  counter.incQueryCount()
+  // 计数不再在此处 +1：改为在 queryStore 各入口完成后，
+  // 按实际命中的关键词数上报（useCounter().incQueryCount(successCount)）。
   logStore.add(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   historyStore.add(keywords)
   // On mobile, switch to output tab when query starts
