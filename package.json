@@ -18,7 +18,7 @@
     "@vueuse/core": "^14.4.0",
     "firebase": "^12.17.0",
     "pinia": "^4.0.3",
-    "vue": "^3.5.40",
+    "vue": "^3.5.41",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
