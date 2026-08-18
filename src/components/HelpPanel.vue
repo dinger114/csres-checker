@@ -212,6 +212,18 @@ GB 50311-2016</pre>
             <li v-else>
               <strong>版本历史：</strong>标准号旁显示 <code>vN</code> 徽章时，点击可查看所有版本
             </li>
+            <li v-if="locale === 'en'">
+              <strong>External links:</strong> Quick links to 筑森档案 (jzxx.vip, file download search), 道客巴巴 (doc88.com), 搜建筑 (soujianzhu.cn) for each standard
+            </li>
+            <li v-else>
+              <strong>外链下载：</strong>每行提供筑森档案（jzxx.vip，图集/规范文件搜索）、道客巴巴（doc88.com）、搜建筑（soujianzhu.cn）快捷链接，可快速查找标准原文
+            </li>
+            <li v-if="locale === 'en'">
+              <strong>PDF preview:</strong> Chongqing local standard results include PDF download links
+            </li>
+            <li v-else>
+              <strong>地标预览：</strong>重庆地标数据源的结果带 PDF 下载链接，点击可查看标准原文
+            </li>
           </ul>
         </div>
 

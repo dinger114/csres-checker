@@ -63,6 +63,6 @@ describe('resultsTable', () => {
     const wrapper = mountTable()
     const emitted = wrapper.emitted('update:columns')
     expect(emitted).toBeTruthy()
-    expect(emitted![0][0]).toHaveLength(9)
+    expect(emitted![0][0]).toHaveLength(10)
   })
 })

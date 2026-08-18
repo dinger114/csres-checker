@@ -3,10 +3,8 @@ import { useLogStore } from '../stores/log'
 
 const globalCount = ref(0)
 
-// 使用现有的代理域名，添加计数 API 端点
-const WORKER_URL = import.meta.env.PROD
-  ? 'https://api.dingyi.de'
-  : 'http://localhost:8787'
+// 始终使用 workers.dev URL（本地代理没有计数端点）
+const WORKER_URL = 'https://csres-proxy.mdzz233.workers.dev'
 
 export function useCounter() {
   const { add } = useLogStore()

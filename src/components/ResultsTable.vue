@@ -30,6 +30,7 @@ const defaultColumns: ColumnDef[] = [
   { key: 'status', label: 'STATUS', draggable: true, exportable: true },
   { key: 'publish_date', label: 'PUBLISHED', draggable: true, exportable: true },
   { key: 'implement_date', label: 'IMPLEMENTED', draggable: true, exportable: true },
+  { key: 'jzxx', label: '筑森档案', draggable: true, exportable: false },
   { key: 'doc88', label: '道客巴巴', draggable: true, exportable: false },
   { key: 'soujz', label: '搜建筑', draggable: true, exportable: false },
   { key: 'pdf', label: '地标预览', draggable: true, exportable: false },
@@ -199,7 +200,7 @@ function getValue(r: StandardResult, key: string): string {
 }
 
 function getCellClass(col: ColumnDef): string {
-  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz', 'pdf'].includes(col.key))
+  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz', 'jzxx', 'pdf'].includes(col.key))
     return 'text-center'
   if (col.key === 'num')
     return 'num'

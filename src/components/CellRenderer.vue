@@ -27,6 +27,10 @@ function sjzUrl(r: StandardResult): string {
   return `https://www.soujianzhu.cn/Search/Sou.aspx?skey=${encodeURIComponent(r.title || '')}`
 }
 
+function jzxxUrl(r: StandardResult): string {
+  return `https://jzxx.vip/search/pan_view_search.html?name=${encodeURIComponent(r.standard_number || r.title || '')}&type=1`
+}
+
 function handleStdClick(r: StandardResult & { _idx: number }) {
   if (r.versions && r.versions.length > 1) {
     emit('show-versions', r.versions)
@@ -46,6 +50,9 @@ function handleStdClick(r: StandardResult & { _idx: number }) {
   </template>
   <template v-else-if="col.key === 'soujz'">
     <a :href="sjzUrl(row)" target="_blank" rel="noopener">搜建筑</a>
+  </template>
+  <template v-else-if="col.key === 'jzxx'">
+    <a :href="jzxxUrl(row)" target="_blank" rel="noopener">筑森档案</a>
   </template>
   <template v-else-if="col.key === 'pdf'">
     <a v-if="row.pdf_url" :href="row.pdf_url" target="_blank" rel="noopener">下载</a>

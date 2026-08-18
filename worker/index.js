@@ -77,7 +77,8 @@ export default {
     // GET /api/count - 读取计数
     if (url.pathname === '/api/count') {
       try {
-        const count = await env.COUNTER_KV.get('queryCount', 'number') || 0
+        const value = await env.COUNTER_KV.get('queryCount')
+        const count = value ? parseInt(value, 10) : 0
         return new Response(JSON.stringify({ count }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         })
@@ -94,7 +95,8 @@ export default {
     if (url.pathname === '/api/count/inc' && request.method === 'POST') {
       try {
         // 使用 KV 的原子操作读取并递增
-        const current = await env.COUNTER_KV.get('queryCount', 'number') || 0
+        const value = await env.COUNTER_KV.get('queryCount')
+        const current = value ? parseInt(value, 10) : 0
         const newCount = current + 1
         await env.COUNTER_KV.put('queryCount', String(newCount))
         return new Response(JSON.stringify({ count: newCount }), {
