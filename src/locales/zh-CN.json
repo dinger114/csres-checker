@@ -1,0 +1,72 @@
+{
+  "header": {
+    "title": "C S R E S",
+    "subtitle": "标准状态查询",
+    "help": "帮助"
+  },
+  "input": {
+    "title": "INPUT",
+    "label_number": "标准编号（每行一个）",
+    "label_name": "标准名称关键词",
+    "label_atlas": "图集编号或名称（每行一个）",
+    "hint_number": "Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt",
+    "hint_other": "Ctrl+Enter 运行 · Esc 清空",
+    "placeholder_number": "GB 50222-2017\n50010\nGB 50311-2016",
+    "placeholder_atlas": "05SJ810\n24D303-4\n消防",
+    "placeholder_name": "搜索标准名称关键词，例如：消防",
+    "mode_number": "# 编号查询",
+    "mode_name": "$ 名称检索",
+    "mode_atlas": "▦ 标准图集",
+    "source_label": "数据源:",
+    "source_default": "默认",
+    "btn_run": "RUN",
+    "btn_import": "IMPORT",
+    "btn_md": "MD",
+    "btn_xlsx": "XLSX",
+    "btn_share": "SHARE"
+  },
+  "output": {
+    "title": "OUTPUT",
+    "filter_all": "ALL",
+    "filter_active": "现行",
+    "filter_deprecated": "废止",
+    "filter_upcoming": "即将实施",
+    "col_query": "QUERY",
+    "col_std_no": "STD NO",
+    "col_title": "TITLE",
+    "col_status": "STATUS",
+    "col_published": "PUBLISHED",
+    "col_implemented": "IMPLEMENTED",
+    "col_doc88": "道客巴巴",
+    "col_soujz": "搜建筑",
+    "col_pdf": "地标预览",
+    "empty": "无结果",
+    "selected": "selected",
+    "copy_sel": "COPY SEL"
+  },
+  "terminal": {
+    "title": "TERMINAL",
+    "history": "HIST",
+    "history_label": "最近查询",
+    "clear": "清空"
+  },
+  "status": {
+    "active": "现行",
+    "deprecated": "废止",
+    "upcoming": "即将实施",
+    "replaced_by": "已被 {standard} 替代"
+  },
+  "version_history": {
+    "title": "VERSION HISTORY",
+    "close": "关闭版本历史",
+    "empty": "无版本历史",
+    "col_std": "标准号",
+    "col_name": "名称",
+    "col_status": "状态",
+    "col_published": "发布日期",
+    "col_implemented": "实施日期"
+  },
+  "toast": {
+    "copied": "已复制: {text}"
+  }
+}

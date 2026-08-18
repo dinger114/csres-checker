@@ -4,7 +4,7 @@ import { COLUMN_MAP } from '../utils/exportConfig'
 
 export function useXlsx() {
   async function exportXlsx(results: StandardResult[], columns?: ColumnDef[]) {
-    // xlsx (~282 kB) is loaded only when the user actually exports
+    // xlsx (~424 kB) is loaded only when the user actually exports
     const XLSX = await import('xlsx')
     const exportCols = (columns || []).filter(c => c.exportable)
 

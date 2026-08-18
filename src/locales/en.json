@@ -1,0 +1,72 @@
+{
+  "header": {
+    "title": "C S R E S",
+    "subtitle": "Standard Status Checker",
+    "help": "Help"
+  },
+  "input": {
+    "title": "INPUT",
+    "label_number": "Standard Number (one per line)",
+    "label_name": "Standard Name Keyword",
+    "label_atlas": "Atlas Number or Name (one per line)",
+    "hint_number": "Ctrl+Enter to run · Esc to clear · Drag .txt to import",
+    "hint_other": "Ctrl+Enter to run · Esc to clear",
+    "placeholder_number": "GB 50222-2017\n50010\nGB 50311-2016",
+    "placeholder_atlas": "05SJ810\n24D303-4\nfire",
+    "placeholder_name": "Search standard name keyword, e.g.: fire",
+    "mode_number": "# Number Query",
+    "mode_name": "$ Name Search",
+    "mode_atlas": "▦ Standard Atlas",
+    "source_label": "Source:",
+    "source_default": "Default",
+    "btn_run": "RUN",
+    "btn_import": "IMPORT",
+    "btn_md": "MD",
+    "btn_xlsx": "XLSX",
+    "btn_share": "SHARE"
+  },
+  "output": {
+    "title": "OUTPUT",
+    "filter_all": "ALL",
+    "filter_active": "Active",
+    "filter_deprecated": "Deprecated",
+    "filter_upcoming": "Upcoming",
+    "col_query": "QUERY",
+    "col_std_no": "STD NO",
+    "col_title": "TITLE",
+    "col_status": "STATUS",
+    "col_published": "PUBLISHED",
+    "col_implemented": "IMPLEMENTED",
+    "col_doc88": "Doc88",
+    "col_soujz": "Soujz",
+    "col_pdf": "PDF Preview",
+    "empty": "No results",
+    "selected": "selected",
+    "copy_sel": "COPY SEL"
+  },
+  "terminal": {
+    "title": "TERMINAL",
+    "history": "HIST",
+    "history_label": "Recent Queries",
+    "clear": "Clear"
+  },
+  "status": {
+    "active": "Active",
+    "deprecated": "Deprecated",
+    "upcoming": "Upcoming",
+    "replaced_by": "Replaced by {standard}"
+  },
+  "version_history": {
+    "title": "VERSION HISTORY",
+    "close": "Close version history",
+    "empty": "No version history",
+    "col_std": "Standard No.",
+    "col_name": "Name",
+    "col_status": "Status",
+    "col_published": "Published",
+    "col_implemented": "Implemented"
+  },
+  "toast": {
+    "copied": "Copied: {text}"
+  }
+}

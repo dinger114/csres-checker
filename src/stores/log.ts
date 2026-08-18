@@ -1,6 +1,8 @@
 import type { LogEntry, LogStats, LogType } from '../types'
 import { defineStore } from 'pinia'
 
+const MAX_LOG_LINES = 200
+
 export const useLogStore = defineStore('log', {
   state: () => ({
     lines: [] as LogEntry[],
@@ -16,6 +18,10 @@ export const useLogStore = defineStore('log', {
         this.stats.ok++
       if (type === 'warn')
         this.stats.empty++
+      // Trim to max lines to prevent memory buildup during batch queries
+      if (this.lines.length > MAX_LOG_LINES) {
+        this.lines = this.lines.slice(-MAX_LOG_LINES)
+      }
     },
     updateStats(patch: Partial<LogStats>) {
       Object.assign(this.stats, patch)

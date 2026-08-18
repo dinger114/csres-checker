@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useLogStore } from '../stores/log'
 import LogStats from './LogStats.vue'
 
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   clear: []
 }>()
 
+const { t } = useI18n()
 const logStore = useLogStore()
 const { lines } = storeToRefs(logStore)
 const logBodyRef = ref<HTMLElement | null>(null)
@@ -42,22 +44,22 @@ watch(
       <span class="dot dot-r" />
       <span class="dot dot-y" />
       <span class="dot dot-g" />
-      <span class="title">TERMINAL</span>
+      <span class="title">{{ t('terminal.title') }}</span>
       <button
         v-if="history.length > 0"
         class="tab-btn"
         :class="{ active: showHistory }"
         @click.stop="showHistory = !showHistory"
       >
-        HIST
+        {{ t('terminal.history') }}
       </button>
     </div>
 
     <div v-if="showHistory && history.length > 0" class="history-section">
       <div class="history-header">
-        <span class="history-label">最近查询</span>
+        <span class="history-label">{{ t('terminal.history_label') }}</span>
         <button class="clear-btn" @click.stop="emit('clear')">
-          清空
+          {{ t('terminal.clear') }}
         </button>
       </div>
       <div class="history-list">

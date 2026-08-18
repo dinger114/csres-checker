@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { ProgressState } from '../types'
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import ActionBar from './ActionBar.vue'
+import SourceSelector from './SourceSelector.vue'
 
 defineProps<{
   running: boolean
@@ -13,6 +16,8 @@ const emit = defineEmits<{
   'copy-md': []
   'export-xlsx': []
 }>()
+
+const { t } = useI18n()
 
 const sources = [
   { key: 'cssn', label: 'CSSN' },
@@ -36,6 +41,9 @@ const textareaPlaceholder = computed(() =>
     : 'GB 50222-2017\n50010\nGB 50311-2016',
 )
 
+const showImport = computed(() => searchMode.value === 'number' || searchMode.value === 'atlas')
+const hasKeywords = computed(() => keywords.value.trim().length > 0)
+
 function handleRun() {
   const lines = parseKeywords(keywords.value)
   if (lines.length === 0)
@@ -44,7 +52,6 @@ function handleRun() {
 }
 
 function handleModeChange() {
-  // Clear keywords when switching modes
   keywords.value = ''
 }
 
@@ -154,10 +161,10 @@ defineExpose({ setText })
       <span class="dot dot-r" />
       <span class="dot dot-y" />
       <span class="dot dot-g" />
-      <span class="title">INPUT</span>
+      <span class="title">{{ t('input.title') }}</span>
     </div>
     <div class="terminal-body">
-      <label>// {{ searchMode === 'number' ? '标准编号（每行一个）' : searchMode === 'atlas' ? '图集编号或名称（每行一个）' : '标准名称关键词' }}<span v-if="searchMode === 'number'" class="hint">Ctrl+Enter 运行 · Esc 清空 · 支持拖入 .txt</span><span v-else class="hint">Ctrl+Enter 运行 · Esc 清空</span></label>
+      <label>// {{ searchMode === 'number' ? t('input.label_number') : searchMode === 'atlas' ? t('input.label_atlas') : t('input.label_name') }}<span v-if="searchMode === 'number'" class="hint">{{ t('input.hint_number') }}</span><span v-else class="hint">{{ t('input.hint_other') }}</span></label>
       <textarea
         v-if="searchMode === 'number' || searchMode === 'atlas'"
         ref="textareaRef"
@@ -175,58 +182,42 @@ defineExpose({ setText })
         ref="nameInputRef"
         v-model="keywords"
         type="text"
-        placeholder="搜索标准名称关键词，例如：消防"
+        :placeholder="t('input.placeholder_name')"
         :disabled="running"
         @keydown="handleKeydown"
       >
       <div class="mode-tabs">
         <label class="mode-tab" :class="{ active: searchMode === 'number' }">
           <input v-model="searchMode" type="radio" value="number" :disabled="running" @change="handleModeChange">
-          <span># 编号查询</span>
+          <span>{{ t('input.mode_number') }}</span>
         </label>
         <label class="mode-tab" :class="{ active: searchMode === 'name' }">
           <input v-model="searchMode" type="radio" value="name" :disabled="running" @change="handleModeChange">
-          <span>$ 名称检索</span>
+          <span>{{ t('input.mode_name') }}</span>
         </label>
         <label class="mode-tab" :class="{ active: searchMode === 'atlas' }">
           <input v-model="searchMode" type="radio" value="atlas" :disabled="running" @change="handleModeChange">
-          <span>▦ 标准图集</span>
+          <span>{{ t('input.mode_atlas') }}</span>
         </label>
       </div>
-      <div v-if="searchMode === 'number'" class="source-row">
-        <span class="source-label">数据源:</span>
-        <label class="source-check">
-          <input v-model="selectedSource" type="radio" value="" :disabled="running">
-          <span>默认</span>
-        </label>
-        <label v-for="src in sources" :key="src.key" class="source-check">
-          <input v-model="selectedSource" type="radio" :value="src.key" :disabled="running">
-          <span>{{ src.label }}</span>
-        </label>
-      </div>
-      <div class="btn-row">
-        <button class="btn-run" :disabled="running" @click="handleRun">
-          <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-          <span class="btn-text">RUN</span>
-        </button>
-        <button v-if="searchMode === 'number' || searchMode === 'atlas'" :disabled="running" title="导入 TXT 文件" @click="triggerUpload">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
-          <span class="btn-text">IMPORT</span>
-        </button>
-        <input v-if="searchMode === 'number' || searchMode === 'atlas'" ref="fileInputRef" type="file" accept=".txt" hidden @change="handleFileUpload">
-        <button :disabled="running || !hasResults" title="复制 Markdown" @click="emit('copy-md')">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
-          <span class="btn-text">MD</span>
-        </button>
-        <button :disabled="running || !hasResults" title="导出 Excel" @click="emit('export-xlsx')">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
-          <span class="btn-text">XLSX</span>
-        </button>
-        <button :disabled="running || !keywords.trim()" title="分享链接" @click="handleShare">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>
-          <span class="btn-text">SHARE</span>
-        </button>
-      </div>
+      <SourceSelector
+        v-if="searchMode === 'number'"
+        v-model="selectedSource"
+        :sources="sources"
+        :disabled="running"
+      />
+      <ActionBar
+        :running="running"
+        :has-results="hasResults"
+        :has-keywords="hasKeywords"
+        :show-import="showImport"
+        @run="handleRun"
+        @import="triggerUpload"
+        @copy-md="emit('copy-md')"
+        @export-xlsx="emit('export-xlsx')"
+        @share="handleShare"
+      />
+      <input v-if="showImport" ref="fileInputRef" type="file" accept=".txt" hidden @change="handleFileUpload">
       <div v-if="progress.pct > 0" class="progress-wrap">
         <div class="progress-info">
           <span>[{{ progress.current }}/{{ progress.total }}]</span>
@@ -283,110 +274,9 @@ defineExpose({ setText })
 
 .mode-tab input { display: none; }
 
-.source-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 0;
-  padding: 8px 0 4px;
-  flex-wrap: wrap;
-}
-
-.source-label {
-  font-size: 12px;
-  color: var(--text-dim);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  line-height: 13px;
-  white-space: nowrap;
-  transform: translateY(-3px);
-}
-
-.source-check {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  height: 13px;
-  color: var(--text-dim);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.source-check input[type="radio"] {
-  width: 13px;
-  height: 13px;
-  margin: 0;
-  flex-shrink: 0;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-
-.source-check input[type="checkbox"] {
-  width: 12px;
-  height: 12px;
-  accent-color: var(--primary);
-  cursor: pointer;
-}
-
-.source-check:hover {
-  color: var(--primary);
-}
-
-.source-hint {
-  font-size: 10px;
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.btn-run {
-  background: var(--primary) !important;
-  color: var(--bg) !important;
-  border-color: var(--primary) !important;
-}
-
-.btn-run:hover {
-  opacity: 0.9;
-}
-
-/* Mobile: show only icons, hide text */
 @media (max-width: 640px) {
-  .btn-text {
-    display: none;
-  }
-
-  .btn-row button {
-    padding: 8px;
-    min-width: 44px;
-    justify-content: center;
-  }
-
   .hint {
     display: none;
   }
-
-  .source-row {
-    gap: 8px;
-  }
-
-  .source-label {
-    display: none;
-  }
-
-  .source-hint {
-    display: none;
-  }
-}
-
-@media (max-width: 375px) {
-  .btn-row { gap: 4px; }
-  .btn-row button { min-width: 40px; padding: 6px; }
 }
 </style>

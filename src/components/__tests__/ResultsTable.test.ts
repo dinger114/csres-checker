@@ -26,7 +26,7 @@ describe('resultsTable', () => {
   it('filters rows by status', async () => {
     const wrapper = mountTable()
     const filterButtons = wrapper.findAll('.filter-btn')
-    const deprecatedBtn = filterButtons.find(b => b.text() === '废止')!
+    const deprecatedBtn = filterButtons.find(b => b.text() === 'Deprecated')!
     await deprecatedBtn.trigger('click')
     const rows = wrapper.findAll('tbody tr')
     expect(rows).toHaveLength(1)

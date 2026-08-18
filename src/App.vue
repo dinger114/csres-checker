@@ -30,12 +30,22 @@ const { history } = storeToRefs(historyStore)
 const { lines: logLines } = storeToRefs(logStore)
 
 const firebase = useFirebase()
+let firebaseInitialized = false
 
 const queryInputRef = ref<InstanceType<typeof QueryInput> | null>(null)
 const terminalCount = computed(() => logLines.value.length)
 const isMobile = useMediaQuery('(max-width: 768px)')
 
+function initFirebaseIfNeeded() {
+  if (!firebaseInitialized) {
+    firebaseInitialized = true
+    firebase.init()
+    firebase.refreshCount()
+  }
+}
+
 function handleRun(keywords: string[], source: string = '', mode: string = 'number') {
+  initFirebaseIfNeeded()
   logStore.add(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
   historyStore.add(keywords)
   // On mobile, switch to output tab when query starts
@@ -58,8 +68,6 @@ function handleHistoryLoad(entry: string) {
 
 onMounted(() => {
   themeStore.initTheme()
-  firebase.init()
-  firebase.refreshCount()
 })
 </script>
 

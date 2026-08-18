@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { StandardResult, StandardVersion } from '../types'
 import { computed, ref, watch } from 'vue'
-import StatusBadge from './StatusBadge.vue'
+import { useI18n } from 'vue-i18n'
+import CellRenderer from './CellRenderer.vue'
 
 const props = defineProps<{
   results: StandardResult[]
@@ -12,6 +13,8 @@ const emit = defineEmits<{
   'update:columns': [columns: ColumnDef[]]
   'show-versions': [versions: StandardVersion[]]
 }>()
+
+const { t } = useI18n()
 
 export interface ColumnDef {
   key: string
@@ -34,6 +37,7 @@ const defaultColumns: ColumnDef[] = [
 
 const columns = ref<ColumnDef[]>([...defaultColumns])
 const dragKey = ref<string | null>(null)
+const focusedColKey = ref<string | null>(null)
 const sortKey = ref<string | null>(null)
 const sortOrder = ref<'asc' | 'desc'>('asc')
 const selectedIndices = ref(new Set<number>())
@@ -42,12 +46,12 @@ let copiedTimer: ReturnType<typeof setTimeout> | null = null
 
 const sortableKeys = ['publish_date', 'implement_date']
 
-const filters = [
-  { label: 'ALL', value: 'all' },
-  { label: '现行', value: '现行' },
-  { label: '废止', value: '废止' },
-  { label: '即将实施', value: '即将实施' },
-]
+const filters = computed(() => [
+  { label: t('output.filter_all'), value: 'all' },
+  { label: t('output.filter_active'), value: '现行' },
+  { label: t('output.filter_deprecated'), value: '废止' },
+  { label: t('output.filter_upcoming'), value: '即将实施' },
+])
 
 const statusFilter = ref('all')
 
@@ -105,6 +109,22 @@ function onDrop(e: DragEvent, targetKey: string) {
 
 function onDragEnd() {
   dragKey.value = null
+}
+
+function onColKeydown(e: KeyboardEvent, colKey: string) {
+  if (!e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight'))
+    return
+  e.preventDefault()
+  const col = columns.value.find(c => c.key === colKey)
+  if (!col || !col.draggable)
+    return
+  const idx = columns.value.indexOf(col)
+  const newIdx = e.key === 'ArrowLeft' ? idx - 1 : idx + 1
+  if (newIdx < 0 || newIdx >= columns.value.length)
+    return
+  const item = columns.value.splice(idx, 1)[0]
+  columns.value.splice(newIdx, 0, item)
+  focusedColKey.value = colKey
 }
 
 function handleSort(colKey: string) {
@@ -186,14 +206,6 @@ function getCellClass(col: ColumnDef): string {
   return 'clickable'
 }
 
-function doc88Url(r: StandardResult): string {
-  return `https://www.doc88.com/tag/${encodeURIComponent(r.standard_number || '')}`
-}
-
-function sjzUrl(r: StandardResult): string {
-  return `https://www.soujianzhu.cn/Search/Sou.aspx?skey=${encodeURIComponent(r.title || '')}`
-}
-
 function copyCell(text: string, cellId: string) {
   navigator.clipboard.writeText(text).then(() => {
     copiedCell.value = cellId
@@ -205,15 +217,6 @@ function copyCell(text: string, cellId: string) {
   })
 }
 
-function handleStdClick(r: StandardResult & { _idx: number }) {
-  if (r.versions && r.versions.length > 1) {
-    emit('show-versions', r.versions)
-  }
-  else {
-    copyCell(r.standard_number, `${r._idx}:std`)
-  }
-}
-
 defineExpose({ columns })
 </script>
 
@@ -223,10 +226,10 @@ defineExpose({ columns })
       <span class="dot dot-r" />
       <span class="dot dot-y" />
       <span class="dot dot-g" />
-      <span class="title">OUTPUT</span>
-      <span v-if="selectedCount > 0" class="selected-hint">{{ selectedCount }} selected</span>
+      <span class="title">{{ t('output.title') }}</span>
+      <span v-if="selectedCount > 0" class="selected-hint">{{ selectedCount }} {{ t('output.selected') }}</span>
       <button v-if="selectedCount > 0" class="copy-sel-btn" @click="copySelected">
-        COPY SEL
+        {{ t('output.copy_sel') }}
       </button>
       <div v-if="results.length > 0" class="filter-group">
         <button
@@ -269,12 +272,16 @@ defineExpose({ columns })
                 v-for="col in columns"
                 :key="col.key"
                 scope="col"
+                role="columnheader"
+                :tabindex="col.draggable ? 0 : -1"
+                :aria-label="`${col.label}, press Shift+Arrow to reorder`"
                 :class="{ draggable: col.draggable, sortable: sortableKeys.includes(col.key), sorted: sortKey === col.key }"
                 :draggable="col.draggable"
                 @dragstart="onDragStart($event, col.key)"
                 @dragover.prevent="onDragOver($event, col.key)"
                 @dragend="onDragEnd"
                 @drop="onDrop($event, col.key)"
+                @keydown="onColKeydown($event, col.key)"
                 @click="sortableKeys.includes(col.key) && handleSort(col.key)"
               >
                 {{ col.label }}<span v-if="sortableKeys.includes(col.key)" class="sort-icon">{{ getSortIcon(col.key) }}</span>
@@ -299,31 +306,13 @@ defineExpose({ columns })
                 :key="col.key"
                 :class="[getCellClass(col), { copied: copiedCell === `${r._idx}:${col.key}` }]"
               >
-                <template v-if="col.key === 'status'">
-                  <StatusBadge :status="r.status" :replaced-by="r.replaced_by" />
-                </template>
-                <template v-else-if="col.key === 'doc88'">
-                  <a :href="doc88Url(r)" target="_blank" rel="noopener">道客巴巴</a>
-                </template>
-                <template v-else-if="col.key === 'soujz'">
-                  <a :href="sjzUrl(r)" target="_blank" rel="noopener">搜建筑</a>
-                </template>
-                <template v-else-if="col.key === 'pdf'">
-                  <a v-if="r.pdf_url" :href="r.pdf_url" target="_blank" rel="noopener">下载</a>
-                  <span v-else class="pdf-empty">—</span>
-                </template>
-                <template v-else-if="col.key === 'standard_number'">
-                  <span class="clickable" @click="handleStdClick(r)">
-                    {{ getValue(r, col.key) }}
-                    <span v-if="r.versions && r.versions.length > 1" class="version-badge" title="点击查看版本历史">v{{ r.versions.length }}</span>
-                  </span>
-                </template>
-                <template v-else-if="col.key === 'title'">
-                  <span class="clickable" @click="copyCell(`《${getValue(r, col.key)}》`, `${r._idx}:${col.key}`)">《{{ getValue(r, col.key) }}》</span>
-                </template>
-                <template v-else>
-                  <span class="clickable" @click="copyCell(getValue(r, col.key), `${r._idx}:${col.key}`)">{{ getValue(r, col.key) }}</span>
-                </template>
+                <CellRenderer
+                  :col="col"
+                  :row="r"
+                  :copied-cell="copiedCell"
+                  @copy="copyCell"
+                  @show-versions="emit('show-versions', $event)"
+                />
               </td>
             </tr>
           </tbody>
@@ -373,20 +362,13 @@ th.draggable:active {
   cursor: grabbing;
 }
 
-th.dragging-over {
-  border-left: 2px solid var(--primary);
+th.draggable:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
 }
 
-.version-badge {
-  display: inline-block;
-  font-size: 9px;
-  background: var(--primary);
-  color: var(--bg);
-  padding: 1px 4px;
-  border-radius: 3px;
-  margin-left: 4px;
-  vertical-align: middle;
-  cursor: pointer;
+th.drag-over {
+  border-left: 2px solid var(--primary);
 }
 
 th.sortable {
@@ -473,10 +455,5 @@ td.copied { color: var(--primary) !important; }
 @keyframes skeleton-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
-}
-
-.pdf-empty {
-  color: var(--text-dim);
-  opacity: 0.4;
 }
 </style>

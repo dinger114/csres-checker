@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { StandardVersion } from '../types'
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useFocusTrap } from '../composables/useFocusTrap'
 import StatusBadge from './StatusBadge.vue'
 
@@ -13,6 +14,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
 const copiedCell = ref<string | null>(null)
 let copiedTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -33,37 +35,37 @@ const { container } = useFocusTrap(() => props.visible)
 <template>
   <Teleport to="body">
     <div v-if="visible" class="modal-overlay" @click.self="emit('close')">
-      <div ref="container" class="modal-box terminal-box" role="dialog" aria-modal="true" aria-label="版本历史" tabindex="-1">
+      <div ref="container" class="modal-box terminal-box" role="dialog" aria-modal="true" :aria-label="t('version_history.title')" tabindex="-1">
         <div class="terminal-header">
           <span class="dot dot-r" />
           <span class="dot dot-y" />
           <span class="dot dot-g" />
-          <span class="title">VERSION HISTORY</span>
-          <button class="close-btn" aria-label="关闭版本历史" @click="emit('close')">
+          <span class="title">{{ t('version_history.title') }}</span>
+          <button class="close-btn" :aria-label="t('version_history.close')" @click="emit('close')">
             ×
           </button>
         </div>
         <div class="terminal-body">
           <div v-if="versions.length === 0" class="empty">
-            无版本历史
+            {{ t('version_history.empty') }}
           </div>
           <table v-else>
             <thead>
               <tr>
                 <th scope="col">
-                  标准号
+                  {{ t('version_history.col_std') }}
                 </th>
                 <th scope="col">
-                  名称
+                  {{ t('version_history.col_name') }}
                 </th>
                 <th scope="col">
-                  状态
+                  {{ t('version_history.col_status') }}
                 </th>
                 <th scope="col">
-                  发布日期
+                  {{ t('version_history.col_published') }}
                 </th>
                 <th scope="col">
-                  实施日期
+                  {{ t('version_history.col_implemented') }}
                 </th>
               </tr>
             </thead>

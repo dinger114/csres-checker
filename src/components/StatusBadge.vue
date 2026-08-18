@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useToastStore } from '../stores/toast'
 
 const props = defineProps<{
@@ -7,6 +8,7 @@ const props = defineProps<{
   replacedBy: string
 }>()
 
+const { t } = useI18n()
 const toast = useToastStore()
 const showPopover = ref(false)
 
@@ -30,7 +32,7 @@ function togglePopover() {
 
 function copyReplace() {
   navigator.clipboard.writeText(props.replacedBy).then(() => {
-    toast.show(`已复制: ${props.replacedBy}`)
+    toast.show(t('toast.copied', { text: props.replacedBy }))
   })
 }
 </script>

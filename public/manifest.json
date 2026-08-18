@@ -1,0 +1,25 @@
+{
+  "name": "csres-checker",
+  "short_name": "csres",
+  "description": "国家标准/行业标准在线查新工具，支持批量查询标准状态、替代关系、版本历史。",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0a0e0a",
+  "background_color": "#0a0e0a",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
