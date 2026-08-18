@@ -30,8 +30,8 @@ test('theme toggle switches between dark and light', async ({ page }) => {
   await page.goto('/')
   const root = page.locator('html')
   const initial = await root.getAttribute('data-theme')
-  // Theme toggle button contains DARK or LIGHT text
-  await page.getByRole('button', { name: /DARK|LIGHT/ }).click()
+  // Theme toggle button uses aria-label "Switch to ..."
+  await page.locator('.theme-toggle').click()
   const after = await root.getAttribute('data-theme')
   expect(after).not.toBe(initial)
 })
