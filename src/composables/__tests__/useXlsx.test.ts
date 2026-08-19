@@ -4,10 +4,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useXlsx } from '../useXlsx'
 
-const writeExcelFile = vi.fn()
+interface ColumnShape {
+  header: string
+  cell: (r: StandardResult) => { value: string }
+  width?: number
+}
+
+type ExportArgs = [unknown, { columns: ColumnShape[] }]
+
+const writeExcelFile = vi.fn<(...args: ExportArgs) => Promise<{ toFile: () => Promise<unknown> }>>()
 
 vi.mock('write-excel-file/browser', () => ({
-  default: (...args: unknown[]) => {
+  default: (...args: ExportArgs) => {
     writeExcelFile(...args)
     return { toFile: vi.fn().mockResolvedValue(undefined) }
   },
