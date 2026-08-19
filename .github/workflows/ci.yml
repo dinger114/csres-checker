@@ -46,7 +46,9 @@ jobs:
         run: npm ci
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: |
+          sudo apt-get update
+          timeout 600 npx playwright install --with-deps chromium
 
       - name: Build
         run: npm run build
