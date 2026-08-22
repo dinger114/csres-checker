@@ -10,6 +10,7 @@ const ccsnQuery = vi.fn()
 const gongQuery = vi.fn()
 const csresQuery = vi.fn()
 const cqdbQuery = vi.fn()
+const cqdbQueryByName = vi.fn()
 const atlasQuery = vi.fn()
 const queryByName = vi.fn()
 const incQueryCount = vi.fn().mockResolvedValue(undefined)
@@ -31,7 +32,7 @@ vi.mock('../../composables/useCsres', () => ({
   useCsres: () => ({ query: csresQuery }),
 }))
 vi.mock('../../composables/useCqdb', () => ({
-  useCqdb: () => ({ query: cqdbQuery }),
+  useCqdb: () => ({ query: cqdbQuery, queryByName: cqdbQueryByName }),
 }))
 vi.mock('../../composables/useAtlas', () => ({
   useAtlas: () => ({ query: atlasQuery }),
@@ -172,6 +173,29 @@ describe('useQueryStore', () => {
     expect(queryByName).not.toHaveBeenCalled()
     expect(store.results).toHaveLength(0)
     expect(store.running).toBe(false)
+  })
+
+  it('searchByName routes to cqdb when source is cqdb', async () => {
+    cqdbQueryByName.mockResolvedValue([baseResult('DBJ50/T-522-2025')])
+
+    const store = useQueryStore()
+    await store.searchByName(['消防'], 'cqdb')
+
+    expect(cqdbQueryByName).toHaveBeenCalledWith('消防')
+    expect(queryByName).not.toHaveBeenCalled()
+    expect(store.results).toHaveLength(1)
+    expect(store.results[0].standard_number).toBe('DBJ50/T-522-2025')
+    expect(store.running).toBe(false)
+  })
+
+  it('searchByName defaults to cssn for unknown source values', async () => {
+    queryByName.mockResolvedValue([baseResult('GB 50010-2010')])
+
+    const store = useQueryStore()
+    await store.searchByName(['消防'], 'bzsou')
+
+    expect(queryByName).toHaveBeenCalledWith('消防')
+    expect(cqdbQueryByName).not.toHaveBeenCalled()
   })
 
   it('queryAtlas queries the atlas source', async () => {

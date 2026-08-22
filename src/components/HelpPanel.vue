@@ -73,10 +73,10 @@ GB 50311-2016</pre>
                 <td>编号查询</td><td>按标准编号精确查找，多数据源 fallback，支持批量输入</td>
               </tr>
               <tr v-if="locale === 'en'">
-                <td>Name Search</td><td>Search by standard name keyword, uses CSSN data source, fetches top 3 pages (~60 results), sorted by priority</td>
+                <td>Name Search</td><td>Search by standard name keyword, data source selectable (CSSN or Chongqing local standards), sorted by priority</td>
               </tr>
               <tr v-else>
-                <td>名称检索</td><td>按标准名称关键词搜索，数据源为 cssn.net.cn，拉取前 3 页结果（约 60 条），按优先级排序</td>
+                <td>名称检索</td><td>按标准名称关键词搜索，数据源可选 CSSN（前 3 页约 60 条，按优先级排序）或重庆地标（含 PDF 预览）</td>
               </tr>
               <tr v-if="locale === 'en'">
                 <td>Standard Atlas</td><td>Search building standard atlases by number or name, supports batch input and TXT import</td>

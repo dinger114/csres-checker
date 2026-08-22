@@ -45,5 +45,38 @@ export function useCqdb() {
     }
   }
 
-  return { query }
+  async function queryByName(keyword: string): Promise<StandardResult[]> {
+    // 名称检索:title 模糊匹配,只拉第 1 页
+    const kw = normalizeKeyword(keyword)
+    const params = new URLSearchParams({
+      lei: '2',
+      code: '',
+      title: kw,
+      zt: '',
+    })
+    const url = `${CQDB_URL}?${params.toString()}`
+
+    try {
+      add(`cqdb (name): "${kw}"`, 'info')
+      const t0 = Date.now()
+      const html = await race(url)
+      if (!html) {
+        add('cqdb (name): 代理全部失败', 'error')
+        return []
+      }
+      add(`response: ${html.length} bytes, ${Date.now() - t0}ms`, 'info')
+      const results = parseCqDbHtml(html, keyword)
+      if (results.length > 0) {
+        add(`found ${results.length} results:`, 'success')
+        results.forEach((r, i) => add(`  [${i + 1}] ${r.standard_number} | ${r.title} | ${r.status}`, 'info'))
+      }
+      return results
+    }
+    catch (e) {
+      add(`cqdb (name) error: ${errMsg(e)}`, 'error')
+      return []
+    }
+  }
+
+  return { query, queryByName }
 }

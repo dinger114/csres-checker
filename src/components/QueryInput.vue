@@ -19,12 +19,16 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const sources = [
+const numberSources = [
   { key: 'cssn', label: 'CSSN' },
   { key: 'bzsou', label: '标准搜' },
   { key: 'ccsn', label: '工程标' },
   { key: 'gongbiaoku', label: '工标库' },
   { key: 'csres', label: 'CSRes' },
+  { key: 'cqdb', label: '重庆地标' },
+]
+const nameSources = [
+  { key: 'cssn', label: 'CSSN' },
   { key: 'cqdb', label: '重庆地标' },
 ]
 
@@ -34,6 +38,8 @@ const searchMode = ref('number')
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const nameInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const sources = computed(() => searchMode.value === 'name' ? nameSources : numberSources)
 
 const textareaPlaceholder = computed(() =>
   searchMode.value === 'atlas'
@@ -53,6 +59,7 @@ function handleRun() {
 
 function handleModeChange() {
   keywords.value = ''
+  selectedSource.value = ''
 }
 
 function triggerUpload() {
@@ -112,7 +119,7 @@ function handleShare() {
   const params = new URLSearchParams()
   params.set('q', lines.join(','))
   params.set('mode', searchMode.value)
-  if (searchMode.value === 'number' && selectedSource.value) {
+  if ((searchMode.value === 'number' || searchMode.value === 'name') && selectedSource.value) {
     params.set('source', selectedSource.value)
   }
   const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`
@@ -201,7 +208,7 @@ defineExpose({ setText })
         </label>
       </div>
       <SourceSelector
-        v-if="searchMode === 'number'"
+        v-if="searchMode === 'number' || searchMode === 'name'"
         v-model="selectedSource"
         :sources="sources"
         :disabled="running"

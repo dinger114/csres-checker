@@ -283,7 +283,7 @@ export const useQueryStore = defineStore('query', {
 
       this.running = false
     },
-    async searchByName(keywords: string[], _source: string = '') {
+    async searchByName(keywords: string[], source: string = '') {
       const { add, updateStats } = useLogStore()
       if (this.running)
         return
@@ -302,7 +302,10 @@ export const useQueryStore = defineStore('query', {
 
       add(`═══ NAME SEARCH: ${normalizedKws.length} items ═══`, 'highlight')
       add(SEPARATOR, 'info')
-      add('plan: cssn.net.cn only', 'info')
+      if (source === 'cqdb')
+        add('plan: cq.dingyi.de (重庆地标, 需代理)', 'info')
+      else
+        add('plan: cssn.net.cn only', 'info')
       add(SEPARATOR, 'info')
 
       // Deduplicate keywords
@@ -314,13 +317,14 @@ export const useQueryStore = defineStore('query', {
         kwToIndices.get(kw)!.push(idx)
       })
 
-      const { queryByName } = useCssn()
+      const queryByNameFn = source === 'cqdb' ? useCqdb().queryByName : useCssn().queryByName
+
       const queryResults = new Map<string, StandardResult[]>()
 
       for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
         const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
         const t0 = Date.now()
-        const batchResults = await Promise.allSettled(batch.map(kw => queryByName(kw)))
+        const batchResults = await Promise.allSettled(batch.map(kw => queryByNameFn(kw)))
         this.recordLatency((Date.now() - t0) / batch.length)
         batchResults.forEach((r, idx) => {
           const kw = batch[idx]
