@@ -145,6 +145,8 @@ export default {
         const ch = await generateChallenge(env.CAP_SECRET, {
           scope: 'csres-run',
           expiresMs: 600_000,
+          challengeCount: 20,
+          challengeDifficulty: 3,
         })
         return new Response(JSON.stringify({ challenge: ch.challenge, token: ch.token, expires: ch.expires }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
