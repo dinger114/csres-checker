@@ -1,22 +1,23 @@
 import { ref } from 'vue'
 import { FETCH_RETRIES, FETCH_TIMEOUT, PROXY_LIST } from '../utils/constants'
+import { getToken } from './useCap'
 
 export function useProxy() {
   const activeProxy = ref(0)
 
-  async function fetchWithRetry(url: string, retries = FETCH_RETRIES, timeout = FETCH_TIMEOUT): Promise<Response> {
+  async function fetchWithRetry(url: string, retries = FETCH_RETRIES, timeout = FETCH_TIMEOUT, headers?: Record<string, string>): Promise<Response> {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeout)
 
     try {
-      const res = await fetch(url, { signal: controller.signal })
+      const res = await fetch(url, { signal: controller.signal, headers })
       clearTimeout(timer)
       return res
     }
     catch (e) {
       clearTimeout(timer)
       if (retries > 0) {
-        return fetchWithRetry(url, retries - 1, timeout)
+        return fetchWithRetry(url, retries - 1, timeout, headers)
       }
       throw e
     }
@@ -24,8 +25,11 @@ export function useProxy() {
 
   async function race(url: string): Promise<string | null> {
     const proxyUrls = PROXY_LIST.map(fn => fn(url))
+    // 已过安全验证：附带 session permit 供 Worker 校验并豁免限流
+    const capToken = getToken()
+    const headers = capToken ? { 'cap-token': capToken } : undefined
     const tasks = proxyUrls.map(proxyUrl =>
-      fetchWithRetry(proxyUrl)
+      fetchWithRetry(proxyUrl, FETCH_RETRIES, FETCH_TIMEOUT, headers)
         .then(res => res.text())
         .then(text => (text.length > 100 ? text : Promise.reject(new Error('empty')))),
     )

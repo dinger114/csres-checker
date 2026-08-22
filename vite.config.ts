@@ -35,7 +35,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,ttf}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,ttf,wasm}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/www\.csres\.com\/.*/i,

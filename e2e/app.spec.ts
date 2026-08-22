@@ -1,5 +1,16 @@
 import { expect, test } from '@playwright/test'
 
+// 测试绕过：注入已过期的未来 permit，让 RUN 不再触发挑战弹窗
+async function mockCapSession(page: any) {
+  const futureExpires = Date.now() + 60 * 60 * 1000
+  await page.addInitScript((exp) => {
+    sessionStorage.setItem('cap-session', JSON.stringify({
+      token: 'test:abc',
+      expires: exp,
+    }))
+  }, futureExpires)
+}
+
 test('app loads with INPUT panel and header', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByText('C S R E S')).toBeVisible()
@@ -7,6 +18,7 @@ test('app loads with INPUT panel and header', async ({ page }) => {
 })
 
 test('runs a query and shows log output', async ({ page }) => {
+  await mockCapSession(page)
   await page.goto('/')
   const textarea = page.locator('textarea')
   await textarea.fill('GB 50010-2010')
@@ -24,6 +36,17 @@ test('help panel opens and closes', async ({ page }) => {
   // Close button uses × character
   await dialog.locator('.close-btn').click()
   await expect(dialog).toBeHidden()
+})
+
+test('challenge gate opens when RUN is clicked without a valid session', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('textarea').fill('GB 50010-2010')
+  await page.getByRole('button', { name: /RUN/i }).click()
+
+  // 挑战弹窗（aria-label=SECURITY CHECK）出现，且查询未启动
+  const challenge = page.getByRole('dialog', { name: 'SECURITY CHECK' })
+  await expect(challenge).toBeVisible()
+  await expect(page.getByText(/═══ START/)).not.toBeVisible()
 })
 
 test('theme toggle switches between dark and light', async ({ page }) => {

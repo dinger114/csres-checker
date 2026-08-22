@@ -4,6 +4,8 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# CSP 说明：worker-src 'self' blob: —— Cap PoW 通过 blob: URL 创建 Web Worker；
+# Cap WASM(PoW 哈希)已自托管至 public/cap_wasm_bg.wasm，无需 CDN。
 /*
   Cache-Control: public, max-age=3600
   X-Content-Type-Options: nosniff
@@ -11,4 +13,4 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Strict-Transport-Security: max-age=31536952; includeSubDomains
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.nodeimage.com; connect-src 'self' https://counter.dingyi.de https://api.dingyi.de https://api2.dingyi.de http://localhost:8787 https://www.cssn.net.cn https://www.bzsou.cn https://www.ccsn.org.cn http://www.csres.com https://www.gongbiaoku.com https://ebook.chinabuilding.com.cn https://cloudflareinsights.com; font-src 'self'; frame-src https://www.google.com
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.nodeimage.com; connect-src 'self' https://counter.dingyi.de https://api.dingyi.de https://api2.dingyi.de http://localhost:8787 https://www.cssn.net.cn https://www.bzsou.cn https://www.ccsn.org.cn http://www.csres.com https://www.gongbiaoku.com https://ebook.chinabuilding.com.cn https://cloudflareinsights.com; font-src 'self'; worker-src 'self' blob:; frame-src https://www.google.com

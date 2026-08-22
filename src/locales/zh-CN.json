@@ -68,5 +68,14 @@
   },
   "toast": {
     "copied": "已复制: {text}"
+  },
+  "challenge": {
+    "title": "SECURITY CHECK",
+    "solving": "正在进行安全验证…",
+    "passed": "验证通过",
+    "hint": "通过浏览器本地计算证明这不是自动化程序，约需 1 秒",
+    "failed": "安全验证失败",
+    "retry": "重试",
+    "skip": "暂不查询"
   }
 }

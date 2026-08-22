@@ -1,3 +1,5 @@
+import { generateChallenge, validateChallenge } from 'capjs-core'
+
 const ALLOWED_HOSTS = [
   'gongbiaoku.com',
   'www.gongbiaoku.com',
@@ -54,11 +56,26 @@ function cleanup() {
   }
 }
 
+// ===== Cap permit tokenKey 推导(id:sha256(ver)) =====
+function bufToHex(buf) {
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function deriveTokenKey(token) {
+  if (typeof token !== 'string')
+    return null
+  const parts = token.split(':')
+  if (parts.length !== 2 || !parts[0] || !parts[1])
+    return null
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parts[1]))
+  return `${parts[0]}:${bufToHex(digest)}`
+}
+
 // CORS 头
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, cap-token',
 }
 
 export default {
@@ -121,19 +138,111 @@ export default {
       }
     }
 
+    // ===== Cap 挑战 API（Cap Core） =====
+
+    if (url.pathname === '/cap/challenge' && request.method === 'POST') {
+      try {
+        const ch = await generateChallenge(env.CAP_SECRET, {
+          scope: 'csres-run',
+          expiresMs: 600_000,
+        })
+        return new Response(JSON.stringify({ challenge: ch.challenge, token: ch.token, expires: ch.expires }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+      catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+    }
+
+    if (url.pathname === '/cap/redeem' && request.method === 'POST') {
+      try {
+        const body = await request.json()
+        const result = await validateChallenge(env.CAP_SECRET, body, {
+          scope: 'csres-run',
+          tokenTtlMs: 900_000,
+          consumeNonce: async (sigHex, ttlMs) => {
+            if (await env.CAPTCHA_KV.get(`cap:${sigHex}`))
+              return false
+            await env.CAPTCHA_KV.put(`cap:${sigHex}`, '1', {
+              expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)),
+            })
+            return true
+          },
+        })
+        if (!result.success) {
+          return new Response(JSON.stringify({ success: false, reason: result.reason }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          })
+        }
+        // 签发 session permit：TTL 内可复用，前端查询结束后主动注销
+        const ttlMs = result.expires - Date.now()
+        await env.CAPTCHA_KV.put(`cap-permit:${result.tokenKey}`, String(result.expires), {
+          expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)),
+        })
+        return new Response(JSON.stringify({ success: true, token: result.token, expires: result.expires }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+      catch (e) {
+        return new Response(JSON.stringify({ success: false, reason: 'server_error', error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+    }
+
+    if (url.pathname === '/cap/end-session' && request.method === 'POST') {
+      try {
+        const { token } = await request.json()
+        const tokenKey = await deriveTokenKey(token)
+        if (tokenKey)
+          await env.CAPTCHA_KV.delete(`cap-permit:${tokenKey}`)
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+      catch {
+        return new Response(JSON.stringify({ ok: false }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+    }
+
     // ===== 代理 API =====
 
+    // Cap permit 校验：带 cap-token 的请求校验 session permit；
+    // permit 有效则豁免限流（一次 RUN 会并发打多个端点），无效则 403。
+    // 不带 cap-token 的请求维持原行为（IP 限流）。
     const ip = request.headers.get('cf-connecting-ip') || 'unknown'
-    const { allowed, retryAfter } = checkRateLimit(ip)
-    if (!allowed) {
-      return new Response('Rate limit exceeded', {
-        status: 429,
-        headers: {
-          'Retry-After': String(retryAfter),
-          'Content-Type': 'text/plain',
-          ...corsHeaders,
-        },
-      })
+    const capToken = request.headers.get('cap-token')
+    if (capToken) {
+      const tokenKey = await deriveTokenKey(capToken)
+      const expiresRaw = tokenKey && await env.CAPTCHA_KV.get(`cap-permit:${tokenKey}`)
+      if (!expiresRaw || Number(expiresRaw) < Date.now()) {
+        return new Response('Invalid or expired permit', {
+          status: 403,
+          headers: { 'Content-Type': 'text/plain', ...corsHeaders },
+        })
+      }
+    }
+    else {
+      const { allowed, retryAfter } = checkRateLimit(ip)
+      if (!allowed) {
+        return new Response('Rate limit exceeded', {
+          status: 429,
+          headers: {
+            'Retry-After': String(retryAfter),
+            'Content-Type': 'text/plain',
+            ...corsHeaders,
+          },
+        })
+      }
     }
 
     const target = url.searchParams.get('url')

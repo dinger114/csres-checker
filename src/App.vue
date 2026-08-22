@@ -3,6 +3,7 @@ import { useMediaQuery } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import AppHeader from './components/AppHeader.vue'
+import ChallengeScreen from './components/ChallengeScreen.vue'
 import DonatePanel from './components/DonatePanel.vue'
 import HelpPanel from './components/HelpPanel.vue'
 import QueryInput from './components/QueryInput.vue'
@@ -10,6 +11,7 @@ import ResultsTable from './components/ResultsTable.vue'
 import TerminalLog from './components/TerminalLog.vue'
 import Toast from './components/Toast.vue'
 import VersionHistory from './components/VersionHistory.vue'
+import { useCap } from './composables/useCap'
 import { useCounter } from './composables/useCounter'
 import { useHistoryStore } from './stores/history'
 import { useLogStore } from './stores/log'
@@ -24,12 +26,13 @@ const historyStore = useHistoryStore()
 const logStore = useLogStore()
 
 const { results, progress, running } = storeToRefs(queryStore)
-const { mobileActiveTab, mobileTabs, showVersionHistory, selectedVersions, showHelp } = storeToRefs(uiStore)
+const { mobileActiveTab, mobileTabs, showVersionHistory, selectedVersions, showHelp, showChallenge } = storeToRefs(uiStore)
 const { theme } = storeToRefs(themeStore)
 const { history } = storeToRefs(historyStore)
 const { lines: logLines } = storeToRefs(logStore)
 
 const counter = useCounter()
+const cap = useCap()
 let counterInitialized = false
 
 const queryInputRef = ref<InstanceType<typeof QueryInput> | null>(null)
@@ -45,19 +48,33 @@ function initCounterIfNeeded() {
 
 function handleRun(keywords: string[], source: string = '', mode: string = 'number') {
   initCounterIfNeeded()
-  // 计数不再在此处 +1：改为在 queryStore 各入口完成后，
-  // 按实际命中的关键词数上报（useCounter().incQueryCount(successCount)）。
-  logStore.add(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
-  historyStore.add(keywords)
-  // On mobile, switch to output tab when query starts
-  if (isMobile.value)
-    uiStore.switchTab('output')
-  if (mode === 'name')
-    queryStore.searchByName(keywords, source)
-  else if (mode === 'atlas')
-    queryStore.queryAtlas(keywords)
-  else
-    queryStore.query(keywords, source)
+  const dispatch = () => {
+    logStore.add(`RUN: 收到 ${keywords.length} 个关键词`, 'info')
+    historyStore.add(keywords)
+    // On mobile, switch to output tab when query starts
+    if (isMobile.value)
+      uiStore.switchTab('output')
+    if (mode === 'name')
+      queryStore.searchByName(keywords, source)
+    else if (mode === 'atlas')
+      queryStore.queryAtlas(keywords)
+    else
+      queryStore.query(keywords, source)
+  }
+
+  // 会话内已通过安全验证 → 直接执行；否则先弹挑战页，通过后自动恢复执行
+  if (cap.hasValidToken()) {
+    dispatch()
+    return
+  }
+  uiStore.openChallenge(dispatch)
+}
+
+function handleChallengeSolved() {
+  uiStore.closeChallenge()
+  const cb = uiStore.challengeCallback
+  uiStore.challengeCallback = null
+  cb?.()
 }
 
 function handleHistoryLoad(entry: string) {
@@ -69,6 +86,7 @@ function handleHistoryLoad(entry: string) {
 
 onMounted(() => {
   themeStore.initTheme()
+  cap.init()
 })
 </script>
 
@@ -134,6 +152,11 @@ onMounted(() => {
       :visible="showVersionHistory"
       :versions="selectedVersions"
       @close="uiStore.closeVersions"
+    />
+    <ChallengeScreen
+      :visible="showChallenge"
+      @solved="handleChallengeSolved"
+      @close="uiStore.closeChallenge"
     />
     <HelpPanel
       :visible="showHelp"

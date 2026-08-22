@@ -15,6 +15,12 @@ const atlasQuery = vi.fn()
 const queryByName = vi.fn()
 const incQueryCount = vi.fn().mockResolvedValue(undefined)
 const refreshCount = vi.fn().mockResolvedValue(undefined)
+const capHasValidToken = vi.fn().mockReturnValue(true)
+const capEndSession = vi.fn()
+
+vi.mock('../../composables/useCap', () => ({
+  useCap: () => ({ hasValidToken: capHasValidToken, endSession: capEndSession }),
+}))
 
 vi.mock('../../composables/useCssn', () => ({
   useCssn: () => ({ query: cssnQuery, queryByName }),
@@ -219,5 +225,33 @@ describe('useQueryStore', () => {
     expect(atlasQuery).not.toHaveBeenCalled()
     expect(store.results).toHaveLength(0)
     expect(store.running).toBe(false)
+  })
+
+  it('aborts query when no valid cap token is present', async () => {
+    capHasValidToken.mockReturnValueOnce(false)
+    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+
+    const store = useQueryStore()
+    await store.query(['GB 50010-2010'])
+
+    expect(cssnQuery).not.toHaveBeenCalled()
+    expect(store.results).toHaveLength(0)
+    expect(store.running).toBe(false)
+  })
+
+  it('ends the cap session when a run completes', async () => {
+    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+
+    const store = useQueryStore()
+    await store.query(['GB 50010-2010'])
+
+    expect(capEndSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not end a cap session when the run aborts early (empty keywords)', async () => {
+    const store = useQueryStore()
+    await store.query([''])
+
+    expect(capEndSession).not.toHaveBeenCalled()
   })
 })

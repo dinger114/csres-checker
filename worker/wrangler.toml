@@ -1,8 +1,14 @@
 name = "csres-proxy"
 main = "index.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
+# capjs-core 需要 node:crypto / node:zlib
+compatibility_flags = ["nodejs_compat"]
 
 # KV 命名空间绑定
 [[kv_namespaces]]
 binding = "COUNTER_KV"
 id = "3bf3479a47f44e2691859d589c0dbfaa"
+
+[[kv_namespaces]]
+binding = "CAPTCHA_KV"
+id = "df31dccf335f4d9d9f94f1d2cf9cdcc7"

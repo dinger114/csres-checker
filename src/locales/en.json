@@ -68,5 +68,14 @@
   },
   "toast": {
     "copied": "Copied: {text}"
+  },
+  "challenge": {
+    "title": "SECURITY CHECK",
+    "solving": "Verifying you are human…",
+    "passed": "Verification passed",
+    "hint": "Proves this is not an automated client via a short local browser computation (~1s)",
+    "failed": "Security check failed",
+    "retry": "Retry",
+    "skip": "Skip for now"
   }
 }

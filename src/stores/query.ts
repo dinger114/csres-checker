@@ -2,6 +2,7 @@ import type { ProgressState, StandardResult } from '../types'
 import { defineStore } from 'pinia'
 import { useAtlas } from '../composables/useAtlas'
 import { useBzsou } from '../composables/useBzsou'
+import { useCap } from '../composables/useCap'
 import { useCcsn } from '../composables/useCcsn'
 import { useClipboard } from '../composables/useClipboard'
 import { useCounter } from '../composables/useCounter'
@@ -106,6 +107,10 @@ export const useQueryStore = defineStore('query', {
       const { add, updateStats } = useLogStore()
       if (this.running)
         return
+      if (!useCap().hasValidToken()) {
+        add('需要先完成安全验证', 'warn')
+        return
+      }
       this.running = true
       this.results = []
       this.progress = { current: 0, total: keywords.length, pct: 0 }
@@ -209,12 +214,19 @@ export const useQueryStore = defineStore('query', {
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
 
+      // 本轮查询结束，注销本次安全验证 permit
+      useCap().endSession()
+
       this.running = false
     },
     async queryAtlas(keywords: string[]) {
       const { add, updateStats } = useLogStore()
       if (this.running)
         return
+      if (!useCap().hasValidToken()) {
+        add('需要先完成安全验证', 'warn')
+        return
+      }
       this.running = true
       this.results = []
       this.progress = { current: 0, total: keywords.length, pct: 0 }
@@ -281,12 +293,18 @@ export const useQueryStore = defineStore('query', {
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
 
+      useCap().endSession()
+
       this.running = false
     },
     async searchByName(keywords: string[], source: string = '') {
       const { add, updateStats } = useLogStore()
       if (this.running)
         return
+      if (!useCap().hasValidToken()) {
+        add('需要先完成安全验证', 'warn')
+        return
+      }
       this.running = true
       this.results = []
       this.progress = { current: 0, total: keywords.length, pct: 0 }
@@ -357,6 +375,8 @@ export const useQueryStore = defineStore('query', {
 
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
+
+      useCap().endSession()
 
       this.running = false
     },

@@ -19,6 +19,8 @@ export const useUIStore = defineStore('ui', {
     showVersionHistory: false,
     selectedVersions: [] as StandardVersion[],
     showHelp: false,
+    showChallenge: false,
+    challengeCallback: null as (() => void) | null,
     currentColumns: [] as ColumnDef[],
   }),
   actions: {
@@ -41,6 +43,13 @@ export const useUIStore = defineStore('ui', {
     },
     closeHelp() {
       this.showHelp = false
+    },
+    openChallenge(callback: (() => void) | null) {
+      this.challengeCallback = callback
+      this.showChallenge = true
+    },
+    closeChallenge() {
+      this.showChallenge = false
     },
   },
 })
