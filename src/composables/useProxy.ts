@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { FETCH_RETRIES, FETCH_TIMEOUT, PROXY_LIST } from '../utils/constants'
-import { getToken } from './useCap'
 
 export function useProxy() {
   const activeProxy = ref(0)
@@ -25,11 +24,10 @@ export function useProxy() {
 
   async function race(url: string): Promise<string | null> {
     const proxyUrls = PROXY_LIST.map(fn => fn(url))
-    // 已过安全验证：附带 session permit 供 Worker 校验并豁免限流
-    const capToken = getToken()
-    const headers = capToken ? { 'cap-token': capToken } : undefined
+    // 代理竞速:api/api2 是简化代理,不校验 cap-token,
+    // 不附带自定义头可避免 OPTIONS preflight(CORS 源头)。
     const tasks = proxyUrls.map(proxyUrl =>
-      fetchWithRetry(proxyUrl, FETCH_RETRIES, FETCH_TIMEOUT, headers)
+      fetchWithRetry(proxyUrl, FETCH_RETRIES, FETCH_TIMEOUT)
         .then(res => res.text())
         .then(text => (text.length > 100 ? text : Promise.reject(new Error('empty')))),
     )
