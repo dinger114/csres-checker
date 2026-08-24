@@ -1,0 +1,8 @@
+# 部署 api/api2 简化代理(proxy-simple.js)用。
+# 用法: 把下面 name 改成目标 worker 名, 然后
+#   wrangler deploy --config wrangler.simple.toml
+# 目标: api.dingyi.de -> damp-art-942a ; api2.dingyi.de -> yellow-bush-0938
+name = "damp-art-942a"
+main = "proxy-simple.js"
+compatibility_date = "2024-09-23"
+# 注意: 不要加 KV 绑定, 这两台是免 cap 校验的纯代理
