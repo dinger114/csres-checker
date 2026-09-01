@@ -244,7 +244,7 @@ describe('useCssn', () => {
 
     const replaced = results.find(r => r.standard_number === 'GB 50010-2002')
     expect(replaced).toBeDefined()
-    expect(replaced!.status).toBe('被代替')
+    expect(replaced!.status).toBe('废止')
     expect(replaced!.replaced_by).toBe('GB 50010-2010')
   })
 
