@@ -6,11 +6,15 @@ updates:
       interval: weekly
     open-pull-requests-limit: 10
     groups:
-      vue:
-        patterns: [vue, vue-tsc, '@vitejs/plugin-vue', '@vue/tsconfig']
-      vite:
-        patterns: [vite]
-      firebase:
-        patterns: [firebase]
-      ui:
-        patterns: [naive-ui]
+      # 运行时依赖升级合并为一个 PR
+      runtime-deps:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      # 开发依赖升级合并为一个 PR
+      dev-deps:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
