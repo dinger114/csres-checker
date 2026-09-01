@@ -83,7 +83,7 @@ export function useCssn() {
   function mapStatus(s: string): string {
     if (s === '未生效')
       return '即将实施'
-    if (s === '历史' || s === '作废')
+    if (s === '历史' || s === '作废' || s === '被代替')
       return '废止'
     return s
   }
@@ -92,10 +92,12 @@ export function useCssn() {
     return /\(英文版\)|\(英文\)/.test(r.a100 || '') || /\(英文版\)|\(英文\)/.test(r.a298 || '')
   }
 
-  function mapToResults(allResults: CssnItem[], keyword: string, opts?: { computeReplacedBy?: boolean }): StandardResult[] {
-    const filtered = allResults
-      .filter(r => !isEnglishVersion(r))
-      .filter(r => r.a000)
+  function mapToResults(allResults: CssnItem[], keyword: string, opts?: { computeReplacedBy?: boolean, emit?: CssnItem[] }): StandardResult[] {
+    // emit: 若指定则只输出这部分行（用于 query() 只输出 matchStdNo 匹配的行）
+    // groups/currentMap 始终基于全量 allResults 构建，确保版本归组和替代标准推导正确
+    const filtered = opts?.emit
+      ? opts.emit.filter(r => !isEnglishVersion(r)).filter(r => r.a000)
+      : allResults.filter(r => !isEnglishVersion(r)).filter(r => r.a000)
 
     const groups = groupByBase(allResults.filter(r => !isEnglishVersion(r)))
 
@@ -151,7 +153,8 @@ export function useCssn() {
       if (filtered.length === 0)
         return []
 
-      return mapToResults(filtered, keyword, { computeReplacedBy: true })
+      // 传全量 allResults（构建版本归组 + currentMap），用 emit 限定只输出匹配行
+      return mapToResults(allResults, keyword, { computeReplacedBy: true, emit: filtered })
     }
     catch (e) {
       add(`cssn error: ${errMsg(e)}`, 'error')
