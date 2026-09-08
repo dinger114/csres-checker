@@ -24,6 +24,32 @@ const corsHeaders = {
   'Cache-Control': 'no-store, no-cache, must-revalidate',
 }
 
+// ===== 安全代理:手动跟随重定向,目标重定向同样过白名单校验(S1) =====
+const MAX_REDIRECTS = 3
+
+function isAllowedTarget(u) {
+  return (u.protocol === 'https:' || u.protocol === 'http:') && ALLOWED_HOSTS.includes(u.hostname)
+}
+
+// 自动跟随只校验初始 URL,白名单内站点上的开放重定向可把请求带到任意外网(SSRF 中继)。
+async function fetchTarget(current, headers) {
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    const resp = await fetch(current, { headers, redirect: 'manual' })
+    if (resp.status >= 300 && resp.status < 400) {
+      const location = resp.headers.get('location')
+      if (!location)
+        return resp
+      const next = new URL(location, current)
+      if (!isAllowedTarget(next))
+        throw new Error(`redirect to disallowed host: ${next.hostname}`)
+      current = next.href
+      continue
+    }
+    return resp
+  }
+  throw new Error('too many redirects')
+}
+
 // 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求
 const RATE_LIMIT = 30
 const WINDOW_MS = 60_000
@@ -100,16 +126,12 @@ export default {
       return new Response('Invalid URL', { status: 400, headers: corsHeaders })
     }
 
-    if (targetUrl.protocol !== 'https:' && targetUrl.protocol !== 'http:') {
-      return new Response('Protocol not allowed', { status: 403, headers: corsHeaders })
-    }
-
-    if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    if (!isAllowedTarget(targetUrl)) {
       return new Response('Host not allowed', { status: 403, headers: corsHeaders })
     }
 
     try {
-      const resp = await fetch(targetUrl.href, {
+      const resp = await fetchTarget(targetUrl.href, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',

@@ -71,7 +71,9 @@ def _normalize_std_no(s: str) -> str:
 
 
 def _std_base(s: str) -> str:
-    m = re.match(r"^(.*?)[-–]\d{4}$", s.replace(" ", ""))
+    # 与 _normalize_std_no 口径一致:转小写 + 处理全角连字符,避免被代替基号查不到(C1/Q12)
+    s = s.replace(" ", "").replace("－", "-").lower()
+    m = re.match(r"^(.*?)[-–]\d{4}$", s)
     return m.group(1) if m else ""
 
 
@@ -110,7 +112,8 @@ def query_cssn(keyword: str) -> list[dict]:
     for r in filtered:
         std_no = r.get("a100", "")
         status = r.get("a000", "")
-        replaced_by = current_map[_std_base(std_no)] if status == "被代替" else ""
+        base = _std_base(std_no)
+        replaced_by = current_map.get(base, "") if status == "被代替" else ""
         results.append({
             "query": keyword,
             "standard_number": std_no,
@@ -139,9 +142,13 @@ def _normalize_keyword(kw: str) -> str:
 def query_standard(keyword: str) -> list[dict]:
     """查询单个标准编号：先 cssn.net.cn，再工标库"""
     keyword = _normalize_keyword(keyword)
-    results = query_cssn(keyword)
-    if not results:
-        results = query_gongbiaoku(keyword)
+    try:
+        results = query_cssn(keyword)
+        if not results:
+            results = query_gongbiaoku(keyword)
+    except Exception as e:  # 单条数据异常不中断批量任务(C1)
+        print(f"[错误] 查询异常: {keyword} - {e}", file=sys.stderr)
+        return []
     return results
 
 

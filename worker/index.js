@@ -16,6 +16,39 @@ const ALLOWED_HOSTS = [
   'cq.dingyi.de',
 ]
 
+// ===== 安全代理:手动跟随重定向,目标重定向同样过白名单校验(S1) =====
+const MAX_REDIRECTS = 3
+
+function isAllowedTarget(u) {
+  return (u.protocol === 'https:' || u.protocol === 'http:') && ALLOWED_HOSTS.includes(u.hostname)
+}
+
+// 手动跟随 3xx,而非信任浏览器/fetch 的自动跟随:
+// 自动跟随只校验初始 URL,白名单内站点上的开放重定向可把请求带到任意外网(SSRF 中继)。
+async function fetchTarget(current, headers) {
+  for (let i = 0; i <= MAX_REDIRECTS; i++) {
+    const resp = await fetch(current, { headers, redirect: 'manual' })
+    if (resp.status >= 300 && resp.status < 400) {
+      const location = resp.headers.get('location')
+      if (!location)
+        return resp
+      const next = new URL(location, current)
+      if (!isAllowedTarget(next))
+        throw new Error(`redirect to disallowed host: ${next.hostname}`)
+      current = next.href
+      continue
+    }
+    return resp
+  }
+  throw new Error('too many redirects')
+}
+
+// 解析 KV 计数:NaN 按 0 兜底,防止 KV 值损坏后计数器永久失效(C7)
+function parseCount(value) {
+  const parsed = value ? parseInt(value, 10) : 0
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 // 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求
 const RATE_LIMIT = 30
 const WINDOW_MS = 60_000
@@ -95,38 +128,8 @@ export default {
     if (url.pathname === '/api/count') {
       try {
         const value = await env.COUNTER_KV.get('queryCount')
-        const count = value ? parseInt(value, 10) : 0
+        const count = parseCount(value)
         return new Response(JSON.stringify({ count }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        })
-      }
-      catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        })
-      }
-    }
-
-    // POST /api/count/inc - 递增计数（支持批量：body { n: number }，默认 1）
-    if (url.pathname === '/api/count/inc' && request.method === 'POST') {
-      try {
-        // 解析批量增量 n，限制在 [1, 1000] 防止滥用
-        let n = 1
-        try {
-          const body = await request.json()
-          if (typeof body?.n === 'number' && Number.isFinite(body.n))
-            n = Math.min(1000, Math.max(1, Math.floor(body.n)))
-        }
-        catch { /* 无 body 或非 JSON，按 n=1 处理 */ }
-
-        // 注意：KV 不支持原子自增，get→put 在并发下可能少计。
-        // 本工具流量有限，接受此误差（已与产品方确认）。
-        const value = await env.COUNTER_KV.get('queryCount')
-        const current = value ? parseInt(value, 10) : 0
-        const newCount = current + n
-        await env.COUNTER_KV.put('queryCount', String(newCount))
-        return new Response(JSON.stringify({ count: newCount, inc: n }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
         })
       }
@@ -247,6 +250,37 @@ export default {
       }
     }
 
+    // ===== 计数 API（放在限流/cap 校验之后,至少受 IP 限流约束,S2） =====
+    // POST /api/count/inc - 递增计数（支持批量：body { n: number }，默认 1）
+    // 单次增量上限收紧到 50;带 cap-token 走 permit 校验,不带则走 IP 限流。
+    if (url.pathname === '/api/count/inc' && request.method === 'POST') {
+      try {
+        let n = 1
+        try {
+          const body = await request.json()
+          if (typeof body?.n === 'number' && Number.isFinite(body.n))
+            n = Math.min(50, Math.max(1, Math.floor(body.n)))
+        }
+        catch { /* 无 body 或非 JSON，按 n=1 处理 */ }
+
+        // 注意：KV 不支持原子自增，get→put 在并发下可能少计。
+        // 本工具流量有限，接受此误差（已与产品方确认）。
+        const value = await env.COUNTER_KV.get('queryCount')
+        const current = parseCount(value)
+        const newCount = current + n
+        await env.COUNTER_KV.put('queryCount', String(newCount))
+        return new Response(JSON.stringify({ count: newCount, inc: n }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+      catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+    }
+
     const target = url.searchParams.get('url')
 
     if (!target) {
@@ -261,16 +295,12 @@ export default {
       return new Response('Invalid URL', { status: 400 })
     }
 
-    if (targetUrl.protocol !== 'https:' && targetUrl.protocol !== 'http:') {
-      return new Response('Protocol not allowed', { status: 403 })
-    }
-
-    if (!ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+    if (!isAllowedTarget(targetUrl)) {
       return new Response('Host not allowed', { status: 403 })
     }
 
     try {
-      const resp = await fetch(targetUrl.href, {
+      const resp = await fetchTarget(targetUrl.href, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
