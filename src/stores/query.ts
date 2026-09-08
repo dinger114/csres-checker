@@ -98,10 +98,25 @@ export const useQueryStore = defineStore('query', {
             failed.push(kw)
           }
         })
+        // 进度更新(C5):主查询路径此前恒为 0% 再跳 100%,现与 atlas/name 路径一致
+        const done = Math.min(i + this.adaptiveBatchSize(), kws.length)
+        this.progress = {
+          current: done,
+          total: kws.length,
+          pct: Math.round(done / kws.length * 100),
+        }
         if (i + this.adaptiveBatchSize() < kws.length)
           await delay(this.adaptiveDelay())
       }
       return failed
+    },
+    // 统一清理:无论查询正常结束还是中途抛错,都恢复 running(C4)
+    // 不在此复位 progress:正常完成时调用方已置 100%,异常时保留以便 UI 感知;
+    // 下一轮查询开始时会重置 progress,避免 loading 期间进度条闪回 0
+    finishQuery(endSession = true) {
+      this.running = false
+      if (endSession)
+        useCap().endSession()
     },
     async query(keywords: string[], source: string = '') {
       const { add, updateStats } = useLogStore()
@@ -115,15 +130,16 @@ export const useQueryStore = defineStore('query', {
       this.results = []
       this.progress = { current: 0, total: keywords.length, pct: 0 }
 
-      const startTime = Date.now()
       const normalizedKws = keywords.map(normalizeKeyword).filter(Boolean)
-      const useDefault = source === ''
-
       if (normalizedKws.length === 0) {
         add('请输入标准编号', 'warn')
-        this.running = false
+        this.finishQuery(false)
         return
       }
+
+      try {
+      const startTime = Date.now()
+      const useDefault = source === ''
 
       add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')
 
@@ -213,11 +229,11 @@ export const useQueryStore = defineStore('query', {
 
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
-
-      // 本轮查询结束，注销本次安全验证 permit
-      useCap().endSession()
-
-      this.running = false
+      }
+      finally {
+        // 本轮查询结束，注销本次安全验证 permit(C4)
+        this.finishQuery()
+      }
     },
     async queryAtlas(keywords: string[]) {
       const { add, updateStats } = useLogStore()
@@ -231,14 +247,15 @@ export const useQueryStore = defineStore('query', {
       this.results = []
       this.progress = { current: 0, total: keywords.length, pct: 0 }
 
-      const startTime = Date.now()
       const normalizedKws = keywords.map(kw => normalizeKeyword(kw).replace(/\s+/g, '')).filter(Boolean)
-
       if (normalizedKws.length === 0) {
         add('请输入图集编号或名称', 'warn')
-        this.running = false
+        this.finishQuery(false)
         return
       }
+
+      try {
+      const startTime = Date.now()
 
       add(`═══ ATLAS QUERY: ${normalizedKws.length} items ═══`, 'highlight')
       add(SEPARATOR, 'info')
@@ -292,10 +309,10 @@ export const useQueryStore = defineStore('query', {
 
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
-
-      useCap().endSession()
-
-      this.running = false
+      }
+      finally {
+        this.finishQuery()
+      }
     },
     async searchByName(keywords: string[], source: string = '') {
       const { add, updateStats } = useLogStore()
@@ -309,14 +326,15 @@ export const useQueryStore = defineStore('query', {
       this.results = []
       this.progress = { current: 0, total: keywords.length, pct: 0 }
 
-      const startTime = Date.now()
       const normalizedKws = keywords.map(normalizeKeyword).filter(Boolean)
-
       if (normalizedKws.length === 0) {
         add('请输入标准名称关键词', 'warn')
-        this.running = false
+        this.finishQuery(false)
         return
       }
+
+      try {
+      const startTime = Date.now()
 
       add(`═══ NAME SEARCH: ${normalizedKws.length} items ═══`, 'highlight')
       add(SEPARATOR, 'info')
@@ -375,10 +393,10 @@ export const useQueryStore = defineStore('query', {
 
       add(SEPARATOR, 'info')
       add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
-
-      useCap().endSession()
-
-      this.running = false
+      }
+      finally {
+        this.finishQuery()
+      }
     },
     async copyMarkdown() {
       const { exportMarkdown, copy } = useClipboard()

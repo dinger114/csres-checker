@@ -19,6 +19,7 @@ describe('useProxy', () => {
     it('returns response text from the fastest successful proxy', async () => {
       const text = 'a'.repeat(200)
       globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(text),
       })
 
@@ -37,6 +38,7 @@ describe('useProxy', () => {
     it('tries all proxy endpoints concurrently', async () => {
       const text = 'a'.repeat(200)
       globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(text),
       })
 
@@ -62,9 +64,9 @@ describe('useProxy', () => {
       globalThis.fetch = vi.fn().mockImplementation(() => {
         callCount++
         if (callCount === 1) {
-          return Promise.resolve({ text: () => Promise.resolve(shortText) })
+          return Promise.resolve({ ok: true, text: () => Promise.resolve(shortText) })
         }
-        return Promise.resolve({ text: () => Promise.resolve(longText) })
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(longText) })
       })
 
       const { race } = useProxy()
@@ -107,6 +109,7 @@ describe('useProxy', () => {
     it('returns response text on success', async () => {
       const text = 'direct response'
       globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         text: () => Promise.resolve(text),
       })
 
