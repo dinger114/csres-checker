@@ -97,18 +97,32 @@ export function useBzsou() {
 
       add(`bzsou: ${filtered.length}/${totalCount} matched`, 'info')
 
-      return filtered.map((r: BzsouItem) => ({
-        query: keyword,
-        standard_number: stripHtml(r.STAN_NUM || ''),
-        title: stripHtml(r.STAN_CNNAME || ''),
-        status: mapStatus(r.STAN_STATUS || ''),
-        publish_date: r.PUB_DATE ? new Date(r.PUB_DATE).toISOString().split('T')[0] : (r.STAN_PART_YEAR ? String(r.STAN_PART_YEAR) : ''),
-        implement_date: r.IMPL_DATE ? new Date(r.IMPL_DATE).toISOString().split('T')[0] : '',
-        replaced_by: '',
-        publisher: r.RELEASE_ORG || '',
-        category: r.CCS_NAME || '',
-        ics: r.ICS_NAME || '',
-      }))
+      return filtered.map((r: BzsouItem) => {
+        // C2: 'YYYY-MM-DD HH:mm:ss' 按东八区解析,避免按本地时区转 UTC 时日期偏移一天;
+        // 无法解析时降级为空字符串而非整批抛错(外层 catch 会吞掉全部结果)
+        const fmtDate = (s?: string): string => {
+          if (!s)
+            return ''
+          const m = s.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/)
+          if (!m)
+            return ''
+          const [, y, mo, d, hh = '00', mm = '00', ss = '00'] = m
+          const dt = new Date(`${y}-${mo}-${d}T${hh}:${mm}:${ss}+08:00`)
+          return Number.isNaN(dt.getTime()) ? '' : dt.toISOString().split('T')[0]
+        }
+        return {
+          query: keyword,
+          standard_number: stripHtml(r.STAN_NUM || ''),
+          title: stripHtml(r.STAN_CNNAME || ''),
+          status: mapStatus(r.STAN_STATUS || ''),
+          publish_date: fmtDate(r.PUB_DATE) || (r.STAN_PART_YEAR ? String(r.STAN_PART_YEAR) : ''),
+          implement_date: fmtDate(r.IMPL_DATE),
+          replaced_by: '',
+          publisher: r.RELEASE_ORG || '',
+          category: r.CCS_NAME || '',
+          ics: r.ICS_NAME || '',
+        }
+      })
     }
     catch (e) {
       add(`bzsou error: ${errMsg(e)}`, 'error')

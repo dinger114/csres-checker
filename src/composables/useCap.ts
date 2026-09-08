@@ -42,35 +42,46 @@ function init() {
   }
 }
 
+let inFlight: Promise<string> | null = null
+
 async function ensureSolved(): Promise<string> {
   if (hasValidToken())
     return token.value!
+  // C13: 并发去重——多批次同时触发验证时复用同一个 PoW,避免重复弹验证
+  if (inFlight)
+    return inFlight
 
   const { add } = useLogStore()
   add('cap: 开始安全验证', 'info')
-  try {
-    // PoW 哈希用 WASM，运行时从自托管文件加载，不走 CDN
-    if (!window.CAP_CUSTOM_WASM_URL)
-      window.CAP_CUSTOM_WASM_URL = new URL('cap_wasm_bg.wasm', window.location.href).href
+  inFlight = (async () => {
+    try {
+      // PoW 哈希用 WASM，运行时从自托管文件加载，不走 CDN
+      if (!window.CAP_CUSTOM_WASM_URL)
+        window.CAP_CUSTOM_WASM_URL = new URL('cap_wasm_bg.wasm', window.location.href).href
 
-    const { default: Cap } = await import('@cap.js/widget')
-    const cap = new Cap({ apiEndpoint: `${CAPTCHA_WORKER}/cap/` })
-    const result = await cap.solve()
-    if (!result.token)
-      throw new Error('solve failed')
+      const { default: Cap } = await import('@cap.js/widget')
+      const cap = new Cap({ apiEndpoint: `${CAPTCHA_WORKER}/cap/` })
+      const result = await cap.solve()
+      if (!result.token)
+        throw new Error('solve failed')
 
-    const exp = Date.now() + SESSION_TTL_MS
-    token.value = result.token
-    expires.value = exp
-    solved.value = true
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, expires: exp }))
-    add('cap: 安全验证完成', 'success')
-    return result.token
-  }
-  catch (e) {
-    add(`cap: 安全验证失败 ${errMsg(e)}`, 'error')
-    throw e
-  }
+      const exp = Date.now() + SESSION_TTL_MS
+      token.value = result.token
+      expires.value = exp
+      solved.value = true
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, expires: exp }))
+      add('cap: 安全验证完成', 'success')
+      return result.token
+    }
+    catch (e) {
+      add(`cap: 安全验证失败 ${errMsg(e)}`, 'error')
+      throw e
+    }
+    finally {
+      inFlight = null
+    }
+  })()
+  return inFlight
 }
 
 function endSession() {

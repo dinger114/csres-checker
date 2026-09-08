@@ -44,8 +44,11 @@ export default defineConfig({
               cacheName: 'csres-api-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24, // 24 hours
+                // C14: 标准状态源,缩短缓存留存至 30 分钟,避免用户长期命中陈旧「现行/废止」判断
+                maxAgeSeconds: 60 * 30,
               },
+              // 网络优先,确保总能拿到最新状态;缓存仅作离线兜底
+              networkTimeoutSeconds: 10,
             },
           },
         ],

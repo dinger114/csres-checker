@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 // 轻量焦点陷阱：弹窗打开时聚焦容器，Tab/Shift+Tab 循环在可聚焦元素内
 export function useFocusTrap(active: () => boolean) {
@@ -25,19 +25,34 @@ export function useFocusTrap(active: () => boolean) {
     }
   }
 
+  function activate() {
+    prevFocus = document.activeElement as HTMLElement | null
+    document.addEventListener('keydown', onKeydown)
+    nextTick(() => container.value?.focus())
+  }
+
+  function deactivate() {
+    document.removeEventListener('keydown', onKeydown)
+    prevFocus?.focus()
+  }
+
+  // C16: immediate 处理初始即激活(如页面加载时弹窗已开)的情况;
+  // 初始激活时容器可能尚未挂载,onMounted 再补一次聚焦
   watch(active, (val) => {
-    if (val) {
-      prevFocus = document.activeElement as HTMLElement | null
-      document.addEventListener('keydown', onKeydown)
+    if (val)
+      activate()
+    else
+      deactivate()
+  }, { immediate: true })
+
+  onMounted(() => {
+    if (active())
       nextTick(() => container.value?.focus())
-    }
-    else {
-      document.removeEventListener('keydown', onKeydown)
-      prevFocus?.focus()
-    }
   })
 
-  onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
+  onBeforeUnmount(() => {
+    document.removeEventListener('keydown', onKeydown)
+  })
 
   return { container }
 }

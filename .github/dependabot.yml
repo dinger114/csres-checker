@@ -18,3 +18,22 @@ updates:
         update-types:
           - minor
           - patch
+
+  # M7: Worker 子目录有独立 package.json(capjs-core 等),需单独跟踪
+  - package-ecosystem: npm
+    directory: /worker
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      worker-deps:
+        update-types:
+          - minor
+          - patch
+
+  # M7: GitHub Actions 工作流自身依赖(actions/checkout 等)定期更新
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
