@@ -19,21 +19,22 @@ const { t } = useI18n()
 export interface ColumnDef {
   key: string
   label: string
+  i18nKey?: string
   draggable: boolean
   exportable: boolean
 }
 
 const defaultColumns: ColumnDef[] = [
-  { key: 'query', label: 'QUERY', draggable: true, exportable: true },
-  { key: 'standard_number', label: 'STD NO', draggable: true, exportable: true },
-  { key: 'title', label: 'TITLE', draggable: true, exportable: true },
-  { key: 'status', label: 'STATUS', draggable: true, exportable: true },
-  { key: 'publish_date', label: 'PUBLISHED', draggable: true, exportable: true },
-  { key: 'implement_date', label: 'IMPLEMENTED', draggable: true, exportable: true },
-  { key: 'jzxx', label: '筑森档案', draggable: true, exportable: false },
-  { key: 'doc88', label: '道客巴巴', draggable: true, exportable: false },
-  { key: 'soujz', label: '搜建筑', draggable: true, exportable: false },
-  { key: 'pdf', label: '地标预览', draggable: true, exportable: false },
+  { key: 'query', label: 'QUERY', i18nKey: 'output.col_query', draggable: true, exportable: true },
+  { key: 'standard_number', label: 'STD NO', i18nKey: 'output.col_std_no', draggable: true, exportable: true },
+  { key: 'title', label: 'TITLE', i18nKey: 'output.col_title', draggable: true, exportable: true },
+  { key: 'status', label: 'STATUS', i18nKey: 'output.col_status', draggable: true, exportable: true },
+  { key: 'publish_date', label: 'PUBLISHED', i18nKey: 'output.col_published', draggable: true, exportable: true },
+  { key: 'implement_date', label: 'IMPLEMENTED', i18nKey: 'output.col_implemented', draggable: true, exportable: true },
+  { key: 'jzxx', label: '筑森档案', i18nKey: 'output.col_pdf', draggable: true, exportable: false },
+  { key: 'doc88', label: '道客巴巴', i18nKey: 'output.col_doc88', draggable: true, exportable: false },
+  { key: 'soujz', label: '搜建筑', i18nKey: 'output.col_soujz', draggable: true, exportable: false },
+  { key: 'pdf', label: '地标预览', i18nKey: 'output.col_pdf', draggable: true, exportable: false },
 ]
 
 const columns = ref<ColumnDef[]>([...defaultColumns])
@@ -50,6 +51,7 @@ const sortableKeys = ['publish_date', 'implement_date']
 const filters = computed(() => [
   { label: t('output.filter_all'), value: 'all' },
   { label: t('output.filter_active'), value: '现行' },
+  { label: t('output.filter_replaced'), value: '被代替' },
   { label: t('output.filter_deprecated'), value: '废止' },
   { label: t('output.filter_upcoming'), value: '即将实施' },
 ])
@@ -253,7 +255,7 @@ defineExpose({ columns })
           <span class="skeleton-cell" />
         </div>
       </div>
-      <div v-else-if="results.length === 0" class="empty-state" />
+      <div v-else-if="results.length === 0" class="empty-state">{{ t('output.empty') }}</div>
       <div v-else class="table-wrap">
         <table>
           <thead>
@@ -275,7 +277,7 @@ defineExpose({ columns })
                 scope="col"
                 role="columnheader"
                 :tabindex="col.draggable ? 0 : -1"
-                :aria-label="`${col.label}, press Shift+Arrow to reorder`"
+                :aria-label="`${t(col.i18nKey || col.label)}, press Shift+Arrow to reorder`"
                 :class="{ draggable: col.draggable, sortable: sortableKeys.includes(col.key), sorted: sortKey === col.key }"
                 :draggable="col.draggable"
                 @dragstart="onDragStart($event, col.key)"
@@ -285,7 +287,7 @@ defineExpose({ columns })
                 @keydown="onColKeydown($event, col.key)"
                 @click="sortableKeys.includes(col.key) && handleSort(col.key)"
               >
-                {{ col.label }}<span v-if="sortableKeys.includes(col.key)" class="sort-icon">{{ getSortIcon(col.key) }}</span>
+                {{ t(col.i18nKey || col.label) }}<span v-if="sortableKeys.includes(col.key)" class="sort-icon">{{ getSortIcon(col.key) }}</span>
               </th>
             </tr>
           </thead>

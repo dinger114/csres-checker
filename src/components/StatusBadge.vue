@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToastStore } from '../stores/toast'
+import { ABOLISHED_STATUSES, STATUS } from '../utils/status'
 
 const props = defineProps<{
   status: string
@@ -13,13 +14,13 @@ const toast = useToastStore()
 const showPopover = ref(false)
 
 const isAbolished = computed(() =>
-  props.status === '被代替' || props.status === '废止' || props.status === '作废',
+  ABOLISHED_STATUSES.has(props.status),
 )
 
 const badgeClass = computed(() => {
-  if (props.status === '现行')
+  if (props.status === STATUS.ACTIVE)
     return 'badge-active'
-  if (props.status === '即将实施')
+  if (props.status === STATUS.UPCOMING)
     return 'badge-upcoming'
   if (isAbolished.value)
     return 'badge-deprecated'

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFocusTrap } from '../composables/useFocusTrap'
+import { setLocale } from '../locales'
 
 const props = defineProps<{
   visible: boolean
@@ -19,8 +20,7 @@ const shareBase = computed(() => window.location.origin + window.location.pathna
 const { container } = useFocusTrap(() => props.visible)
 
 function toggleLocale() {
-  locale.value = locale.value === 'en' ? 'zh-CN' : 'en'
-  localStorage.setItem('csres-locale', locale.value)
+  setLocale(locale.value === 'en' ? 'zh-CN' : 'en')
 }
 </script>
 

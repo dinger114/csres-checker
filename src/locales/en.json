@@ -29,6 +29,7 @@
     "title": "OUTPUT",
     "filter_all": "ALL",
     "filter_active": "Active",
+    "filter_replaced": "Replaced",
     "filter_deprecated": "Deprecated",
     "filter_upcoming": "Upcoming",
     "col_query": "QUERY",

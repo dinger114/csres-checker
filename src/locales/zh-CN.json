@@ -29,6 +29,7 @@
     "title": "OUTPUT",
     "filter_all": "ALL",
     "filter_active": "现行",
+    "filter_replaced": "被代替",
     "filter_deprecated": "废止",
     "filter_upcoming": "即将实施",
     "col_query": "QUERY",
