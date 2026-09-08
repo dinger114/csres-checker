@@ -1,93 +1,17 @@
 import { generateChallenge, validateChallenge } from 'capjs-core'
-
-const ALLOWED_HOSTS = [
-  'gongbiaoku.com',
-  'www.gongbiaoku.com',
-  'cssn.net.cn',
-  'www.cssn.net.cn',
-  'csres.com',
-  'www.csres.com',
-  'bzsou.cn',
-  'www.bzsou.cn',
-  'ccsn.org.cn',
-  'www.ccsn.org.cn',
-  'ebook.chinabuilding.com.cn',
-  'www.ebook.chinabuilding.com.cn',
-  'cq.dingyi.de',
-]
-
-// ===== 安全代理:手动跟随重定向,目标重定向同样过白名单校验(S1) =====
-const MAX_REDIRECTS = 3
-
-function isAllowedTarget(u) {
-  return (u.protocol === 'https:' || u.protocol === 'http:') && ALLOWED_HOSTS.includes(u.hostname)
-}
-
-// 手动跟随 3xx,而非信任浏览器/fetch 的自动跟随:
-// 自动跟随只校验初始 URL,白名单内站点上的开放重定向可把请求带到任意外网(SSRF 中继)。
-async function fetchTarget(current, headers) {
-  for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const resp = await fetch(current, { headers, redirect: 'manual' })
-    if (resp.status >= 300 && resp.status < 400) {
-      const location = resp.headers.get('location')
-      if (!location)
-        return resp
-      const next = new URL(location, current)
-      if (!isAllowedTarget(next))
-        throw new Error(`redirect to disallowed host: ${next.hostname}`)
-      current = next.href
-      continue
-    }
-    return resp
-  }
-  throw new Error('too many redirects')
-}
-
-// 解析 KV 计数:NaN 按 0 兜底,防止 KV 值损坏后计数器永久失效(C7)
-function parseCount(value) {
-  const parsed = value ? parseInt(value, 10) : 0
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-// 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求
-const RATE_LIMIT = 30
-const WINDOW_MS = 60_000
-const rateLimitMap = new Map()
-
-function checkRateLimit(ip) {
-  const now = Date.now()
-  let timestamps = rateLimitMap.get(ip)
-  if (!timestamps) {
-    timestamps = []
-    rateLimitMap.set(ip, timestamps)
-  }
-  // 剪掉窗口外的旧记录
-  while (timestamps.length > 0 && timestamps[0] <= now - WINDOW_MS) {
-    timestamps.shift()
-  }
-  if (timestamps.length >= RATE_LIMIT) {
-    const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1000)
-    return { allowed: false, retryAfter }
-  }
-  timestamps.push(now)
-  return { allowed: true }
-}
-
-// 定期清理过期 IP（防止内存泄漏）
-let lastCleanup = Date.now()
-function cleanup() {
-  if (Date.now() - lastCleanup < 300_000)
-    return
-  lastCleanup = Date.now()
-  const cutoff = Date.now() - WINDOW_MS
-  for (const [ip, timestamps] of rateLimitMap) {
-    while (timestamps.length > 0 && timestamps[0] <= cutoff) {
-      timestamps.shift()
-    }
-    if (timestamps.length === 0)
-      rateLimitMap.delete(ip)
-  }
-}
+import {
+  ALLOWED_HOSTS,
+  MAX_BODY_BYTES,
+  corsHeadersFor,
+  isAllowedTarget,
+  fetchTarget,
+  parseCount,
+  RATE_LIMIT,
+  rateLimitMap,
+  checkRateLimit,
+  touchRateLimit,
+  cleanup,
+} from './shared.js'
 
 // ===== Cap permit tokenKey 推导(id:sha256(ver)) =====
 function bufToHex(buf) {
@@ -104,22 +28,15 @@ async function deriveTokenKey(token) {
   return `${parts[0]}:${bufToHex(digest)}`
 }
 
-// CORS 头
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, cap-token',
-}
-
 export default {
   async fetch(request, env) {
     cleanup()
 
     const url = new URL(request.url)
 
-    // 处理 CORS 预检请求
+    // 处理 CORS 预检请求(S6:CORS 头按来源收窄)
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders })
+      return new Response(null, { headers: corsHeadersFor(request) })
     }
 
     // ===== 计数 API =====
@@ -130,13 +47,13 @@ export default {
         const value = await env.COUNTER_KV.get('queryCount')
         const count = parseCount(value)
         return new Response(JSON.stringify({ count }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
-      catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), {
+      catch {
+        return new Response(JSON.stringify({ error: 'internal_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
     }
@@ -152,13 +69,13 @@ export default {
           challengeDifficulty: 3,
         })
         return new Response(JSON.stringify({ challenge: ch.challenge, token: ch.token, expires: ch.expires }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
-      catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), {
+      catch {
+        return new Response(JSON.stringify({ error: 'internal_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
     }
@@ -181,7 +98,7 @@ export default {
         if (!result.success) {
           return new Response(JSON.stringify({ success: false, reason: result.reason }), {
             status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+            headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
           })
         }
         // 签发 session permit：TTL 内可复用，前端查询结束后主动注销
@@ -190,13 +107,13 @@ export default {
           expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)),
         })
         return new Response(JSON.stringify({ success: true, token: result.token, expires: result.expires }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
-      catch (e) {
-        return new Response(JSON.stringify({ success: false, reason: 'server_error', error: e.message }), {
+      catch {
+        return new Response(JSON.stringify({ success: false, reason: 'server_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
     }
@@ -208,13 +125,13 @@ export default {
         if (tokenKey)
           await env.CAPTCHA_KV.delete(`cap-permit:${tokenKey}`)
         return new Response(JSON.stringify({ ok: true }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
       catch {
         return new Response(JSON.stringify({ ok: false }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
     }
@@ -222,8 +139,8 @@ export default {
     // ===== 代理 API =====
 
     // Cap permit 校验：带 cap-token 的请求校验 session permit；
-    // permit 有效则豁免限流（一次 RUN 会并发打多个端点），无效则 403。
-    // 不带 cap-token 的请求维持原行为（IP 限流）。
+    // permit 有效则豁免限流(一次 RUN 会并发打多个端点),但仍记录计数以保持 X-RateLimit 准确(C22)。
+    // 不带 cap-token 的请求走 IP 限流。
     const ip = request.headers.get('cf-connecting-ip') || 'unknown'
     const capToken = request.headers.get('cap-token')
     if (capToken) {
@@ -232,9 +149,10 @@ export default {
       if (!expiresRaw || Number(expiresRaw) < Date.now()) {
         return new Response('Invalid or expired permit', {
           status: 403,
-          headers: { 'Content-Type': 'text/plain', ...corsHeaders },
+          headers: { 'Content-Type': 'text/plain', ...corsHeadersFor(request) },
         })
       }
+      touchRateLimit(ip) // C22: 豁免路径也计入限流窗口,使 X-RateLimit-Remaining 真实
     }
     else {
       const { allowed, retryAfter } = checkRateLimit(ip)
@@ -244,15 +162,13 @@ export default {
           headers: {
             'Retry-After': String(retryAfter),
             'Content-Type': 'text/plain',
-            ...corsHeaders,
+            ...corsHeadersFor(request),
           },
         })
       }
     }
 
     // ===== 计数 API（放在限流/cap 校验之后,至少受 IP 限流约束,S2） =====
-    // POST /api/count/inc - 递增计数（支持批量：body { n: number }，默认 1）
-    // 单次增量上限收紧到 50;带 cap-token 走 permit 校验,不带则走 IP 限流。
     if (url.pathname === '/api/count/inc' && request.method === 'POST') {
       try {
         let n = 1
@@ -263,20 +179,18 @@ export default {
         }
         catch { /* 无 body 或非 JSON，按 n=1 处理 */ }
 
-        // 注意：KV 不支持原子自增，get→put 在并发下可能少计。
-        // 本工具流量有限，接受此误差（已与产品方确认）。
         const value = await env.COUNTER_KV.get('queryCount')
         const current = parseCount(value)
         const newCount = current + n
         await env.COUNTER_KV.put('queryCount', String(newCount))
         return new Response(JSON.stringify({ count: newCount, inc: n }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
-      catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), {
+      catch {
+        return new Response(JSON.stringify({ error: 'internal_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
         })
       }
     }
@@ -284,7 +198,7 @@ export default {
     const target = url.searchParams.get('url')
 
     if (!target) {
-      return new Response('Missing ?url= parameter', { status: 400 })
+      return new Response('Missing ?url= parameter', { status: 400, headers: corsHeadersFor(request) })
     }
 
     let targetUrl
@@ -292,11 +206,11 @@ export default {
       targetUrl = new URL(target)
     }
     catch {
-      return new Response('Invalid URL', { status: 400 })
+      return new Response('Invalid URL', { status: 400, headers: corsHeadersFor(request) })
     }
 
     if (!isAllowedTarget(targetUrl)) {
-      return new Response('Host not allowed', { status: 403 })
+      return new Response('Host not allowed', { status: 403, headers: corsHeadersFor(request) })
     }
 
     try {
@@ -308,9 +222,19 @@ export default {
         },
       })
 
-      const contentType = resp.headers.get('content-type') || ''
-      const buffer = await resp.arrayBuffer()
+      // S8: 检查 Content-Length,超上限直接拒绝,避免打爆 Worker 内存 / 放大计费
+      const contentLength = Number(resp.headers.get('content-length') || 0)
+      if (contentLength > MAX_BODY_BYTES) {
+        return new Response('Response too large', {
+          status: 502,
+          headers: { 'Content-Type': 'text/plain', ...corsHeadersFor(request) },
+        })
+      }
 
+      // 流式读取并限制字节上限(S8)
+      const buffer = await readLimited(resp.body, MAX_BODY_BYTES)
+
+      const contentType = resp.headers.get('content-type') || ''
       let body
       if (contentType.includes('gbk') || contentType.includes('gb2312') || targetUrl.hostname.includes('csres.com')) {
         body = new TextDecoder('gbk').decode(buffer)
@@ -325,12 +249,41 @@ export default {
           'Content-Type': 'text/html; charset=utf-8',
           'X-RateLimit-Limit': String(RATE_LIMIT),
           'X-RateLimit-Remaining': String(RATE_LIMIT - (rateLimitMap.get(ip)?.length || 0)),
-          ...corsHeaders,
+          ...corsHeadersFor(request),
         },
       })
     }
     catch (e) {
-      return new Response(`Proxy error: ${e.message}`, { status: 502 })
+      // S14: 不回显内部报错细节
+      return new Response('Proxy error', { status: 502, headers: corsHeadersFor(request) })
     }
   },
+}
+
+// 从 ReadableStream 读取,最多 maxBytes 字节(S8)
+async function readLimited(stream, maxBytes) {
+  if (!stream)
+    return new Uint8Array(0)
+  const reader = stream.getReader()
+  const chunks = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+    if (total + value.byteLength > maxBytes) {
+      // 超出上限:取消读取并返回已读部分(上游已判定超限的兜底)
+      await reader.cancel().catch(() => {})
+      break
+    }
+    chunks.push(value)
+    total += value.byteLength
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
 }

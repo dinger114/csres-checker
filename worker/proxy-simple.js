@@ -1,102 +1,24 @@
-const ALLOWED_HOSTS = [
-  'gongbiaoku.com',
-  'www.gongbiaoku.com',
-  'cssn.net.cn',
-  'www.cssn.net.cn',
-  'csres.com',
-  'www.csres.com',
-  'bzsou.cn',
-  'www.bzsou.cn',
-  'ccsn.org.cn',
-  'www.ccsn.org.cn',
-  'ebook.chinabuilding.com.cn',
-  'www.ebook.chinabuilding.com.cn',
-  'cq.dingyi.de',
-]
+import {
+  ALLOWED_HOSTS,
+  MAX_BODY_BYTES,
+  corsHeadersFor,
+  isAllowedTarget,
+  fetchTarget,
+  RATE_LIMIT,
+  rateLimitMap,
+  checkRateLimit,
+  cleanup,
+} from './shared.js'
 
-// CORS 头:放行前端发来的 cap-token 自定义头(否则预检被拒)
-// no-store + Max-Age 0:强制浏览器/CF 边缘每次重新取 preflight,不复用旧缓存
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, cap-token',
-  'Access-Control-Max-Age': '0',
-  'Cache-Control': 'no-store, no-cache, must-revalidate',
-}
-
-// ===== 安全代理:手动跟随重定向,目标重定向同样过白名单校验(S1) =====
-const MAX_REDIRECTS = 3
-
-function isAllowedTarget(u) {
-  return (u.protocol === 'https:' || u.protocol === 'http:') && ALLOWED_HOSTS.includes(u.hostname)
-}
-
-// 自动跟随只校验初始 URL,白名单内站点上的开放重定向可把请求带到任意外网(SSRF 中继)。
-async function fetchTarget(current, headers) {
-  for (let i = 0; i <= MAX_REDIRECTS; i++) {
-    const resp = await fetch(current, { headers, redirect: 'manual' })
-    if (resp.status >= 300 && resp.status < 400) {
-      const location = resp.headers.get('location')
-      if (!location)
-        return resp
-      const next = new URL(location, current)
-      if (!isAllowedTarget(next))
-        throw new Error(`redirect to disallowed host: ${next.hostname}`)
-      current = next.href
-      continue
-    }
-    return resp
-  }
-  throw new Error('too many redirects')
-}
-
-// 滑动窗口限流：每个 IP 每 60 秒最多 30 次请求
-const RATE_LIMIT = 30
-const WINDOW_MS = 60_000
-const rateLimitMap = new Map()
-
-function checkRateLimit(ip) {
-  const now = Date.now()
-  let timestamps = rateLimitMap.get(ip)
-  if (!timestamps) {
-    timestamps = []
-    rateLimitMap.set(ip, timestamps)
-  }
-  while (timestamps.length > 0 && timestamps[0] <= now - WINDOW_MS) {
-    timestamps.shift()
-  }
-  if (timestamps.length >= RATE_LIMIT) {
-    const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1000)
-    return { allowed: false, retryAfter }
-  }
-  timestamps.push(now)
-  return { allowed: true }
-}
-
-let lastCleanup = Date.now()
-function cleanup() {
-  if (Date.now() - lastCleanup < 300_000)
-    return
-  lastCleanup = Date.now()
-  const cutoff = Date.now() - WINDOW_MS
-  for (const [ip, timestamps] of rateLimitMap) {
-    while (timestamps.length > 0 && timestamps[0] <= cutoff) {
-      timestamps.shift()
-    }
-    if (timestamps.length === 0)
-      rateLimitMap.delete(ip)
-  }
-}
-
+// 纯代理(无 cap / 无 KV 计数):damp-art-942a / yellow-bush-0938
 export default {
   async fetch(request) {
     cleanup()
 
     const url = new URL(request.url)
 
-    // 处理 CORS 预检：直接返回允许 cap-token 的响应头
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders })
+      return new Response(null, { headers: corsHeadersFor(request) })
     }
 
     const ip = request.headers.get('cf-connecting-ip') || 'unknown'
@@ -107,7 +29,7 @@ export default {
         headers: {
           'Retry-After': String(retryAfter),
           'Content-Type': 'text/plain',
-          ...corsHeaders,
+          ...corsHeadersFor(request),
         },
       })
     }
@@ -115,7 +37,7 @@ export default {
     const target = url.searchParams.get('url')
 
     if (!target) {
-      return new Response('Missing ?url= parameter', { status: 400, headers: corsHeaders })
+      return new Response('Missing ?url= parameter', { status: 400, headers: corsHeadersFor(request) })
     }
 
     let targetUrl
@@ -123,11 +45,11 @@ export default {
       targetUrl = new URL(target)
     }
     catch {
-      return new Response('Invalid URL', { status: 400, headers: corsHeaders })
+      return new Response('Invalid URL', { status: 400, headers: corsHeadersFor(request) })
     }
 
     if (!isAllowedTarget(targetUrl)) {
-      return new Response('Host not allowed', { status: 403, headers: corsHeaders })
+      return new Response('Host not allowed', { status: 403, headers: corsHeadersFor(request) })
     }
 
     try {
@@ -139,9 +61,18 @@ export default {
         },
       })
 
-      const contentType = resp.headers.get('content-type') || ''
-      const buffer = await resp.arrayBuffer()
+      // S8: 超上限拒绝
+      const contentLength = Number(resp.headers.get('content-length') || 0)
+      if (contentLength > MAX_BODY_BYTES) {
+        return new Response('Response too large', {
+          status: 502,
+          headers: { 'Content-Type': 'text/plain', ...corsHeadersFor(request) },
+        })
+      }
 
+      const buffer = await readLimited(resp.body, MAX_BODY_BYTES)
+
+      const contentType = resp.headers.get('content-type') || ''
       let body
       if (contentType.includes('gbk') || contentType.includes('gb2312') || targetUrl.hostname.includes('csres.com')) {
         body = new TextDecoder('gbk').decode(buffer)
@@ -156,12 +87,40 @@ export default {
           'Content-Type': 'text/html; charset=utf-8',
           'X-RateLimit-Limit': String(RATE_LIMIT),
           'X-RateLimit-Remaining': String(RATE_LIMIT - (rateLimitMap.get(ip)?.length || 0)),
-          ...corsHeaders,
+          ...corsHeadersFor(request),
         },
       })
     }
-    catch (e) {
-      return new Response(`Proxy error: ${e.message}`, { status: 502, headers: corsHeaders })
+    catch {
+      // S14: 不回显内部报错
+      return new Response('Proxy error', { status: 502, headers: corsHeadersFor(request) })
     }
   },
+}
+
+// 从 ReadableStream 读取,最多 maxBytes 字节(S8)
+async function readLimited(stream, maxBytes) {
+  if (!stream)
+    return new Uint8Array(0)
+  const reader = stream.getReader()
+  const chunks = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+    if (total + value.byteLength > maxBytes) {
+      await reader.cancel().catch(() => {})
+      break
+    }
+    chunks.push(value)
+    total += value.byteLength
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
 }
