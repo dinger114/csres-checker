@@ -6,7 +6,7 @@ const MAX_LOG_LINES = 200
 export const useLogStore = defineStore('log', {
   state: () => ({
     lines: [] as LogEntry[],
-    stats: { ok: 0, empty: 0, time: 0, queries: 0 } as LogStats,
+    stats: { ok: 0, empty: 0, warnings: 0, time: 0, queries: 0 } as LogStats,
   }),
   actions: {
     now(): string {
@@ -16,19 +16,24 @@ export const useLogStore = defineStore('log', {
       this.lines.push({ time: this.now(), message, type })
       if (type === 'success')
         this.stats.ok++
+      // C11: warn 仅表告警,不再污染 empty 计数;empty 由 recordEmpty() 显式累加
       if (type === 'warn')
-        this.stats.empty++
+        this.stats.warnings++
       // Trim to max lines to prevent memory buildup during batch queries
       if (this.lines.length > MAX_LOG_LINES) {
         this.lines = this.lines.slice(-MAX_LOG_LINES)
       }
+    },
+    // C11: 显式记录一次「空结果」,与 warn 语义分离
+    recordEmpty() {
+      this.stats.empty++
     },
     updateStats(patch: Partial<LogStats>) {
       Object.assign(this.stats, patch)
     },
     clear() {
       this.lines = []
-      this.stats = { ok: 0, empty: 0, time: 0, queries: 0 }
+      this.stats = { ok: 0, empty: 0, warnings: 0, time: 0, queries: 0 }
     },
   },
 })

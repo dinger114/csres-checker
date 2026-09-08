@@ -5,7 +5,9 @@
 import http from 'node:http'
 
 const PORT = Number(process.argv[2] || 8787)
-const ALLOWED_HOSTS = ['ebook.chinabuilding.com.cn', 'www.eBook.chinabuilding.com.cn']
+// S10: 仅监听回环地址,避免同局域网把开发者机器当开放代理
+const HOST = '127.0.0.1'
+const ALLOWED_HOSTS = ['ebook.chinabuilding.com.cn', 'www.ebook.chinabuilding.com.cn']
 
 const server = http.createServer(async (req, res) => {
   const cors = {
@@ -64,7 +66,7 @@ const server = http.createServer(async (req, res) => {
   }
 })
 
-server.listen(PORT, () => {
-  console.log(`🚀 本地 CORS 代理已启动: http://localhost:${PORT}/`)
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 本地 CORS 代理已启动: http://${HOST}:${PORT}/`)
   console.log(`   白名单: ${ALLOWED_HOSTS.join(', ')}`)
 })

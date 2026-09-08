@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, refactor/vue3-worker-edge]
 
+# M6: 并发部署竞态控制,避免后完成的旧构建覆盖新构建
+concurrency:
+  group: pages-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   pages: write
@@ -26,8 +31,6 @@ jobs:
           cache: npm
 
       - name: Install and Quality Gates
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           npm ci
           npm run lint
@@ -35,8 +38,6 @@ jobs:
           npm run test
 
       - name: Build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: npm run build
 
       - name: Setup Pages
@@ -66,8 +67,6 @@ jobs:
           cache: npm
 
       - name: Install and Quality Gates
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: |
           npm ci
           npm run lint
@@ -75,8 +74,6 @@ jobs:
           npm run test
 
       - name: Build
-        env:
-          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages

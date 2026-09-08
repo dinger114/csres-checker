@@ -10,7 +10,13 @@ export const useThemeStore = defineStore('theme', {
     applyTheme(t: ThemeMode) {
       this.theme = t
       document.documentElement.setAttribute('data-theme', t)
-      localStorage.setItem('theme', t)
+      // S19: 隐私模式/禁用存储时降级,不抛错中断主题初始化
+      try {
+        localStorage.setItem('theme', t)
+      }
+      catch {
+        /* storage unavailable */
+      }
     },
     toggleTheme() {
       this.applyTheme(this.theme === 'dark' ? 'light' : 'dark')

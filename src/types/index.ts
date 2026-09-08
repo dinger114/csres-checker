@@ -91,6 +91,7 @@ export interface CcsnResponse {
 export interface LogStats {
   ok: number
   empty: number
+  warnings: number
   time: number
   queries: number
 }

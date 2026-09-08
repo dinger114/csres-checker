@@ -6,7 +6,9 @@ const MAX_HISTORY = 20
 function loadHistory(): string[] {
   try {
     const saved = localStorage.getItem(HISTORY_KEY)
-    return saved ? JSON.parse(saved) : []
+    const parsed = saved ? JSON.parse(saved) : []
+    // S18: 校验类型,避免 localStorage 脏数据导致 add() 崩溃
+    return Array.isArray(parsed) ? parsed.filter((x: unknown): x is string => typeof x === 'string') : []
   }
   catch {
     return []

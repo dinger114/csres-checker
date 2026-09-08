@@ -8,6 +8,9 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    # S16: 显式声明最小权限,不依赖仓库默认 token 权限
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v5
