@@ -220,7 +220,7 @@ npm run preview
 npm run test:lighthouse
 ```
 
-# 审计安全加固（audit-fix 分支）
+## 审计安全加固（audit-fix 分支）
 
 基于第三方安全审计报告（csres-checker-audit.md）在本分支逐步修复。验证命令：`npm run typecheck && npm run test && npm run build` 全绿（仅 6 个预存 Teleport 测试因 happy-dom 环境问题失败，与改动无关）。
 

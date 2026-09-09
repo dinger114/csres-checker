@@ -72,7 +72,8 @@ export function useBzsou() {
       // Fall back to proxy if direct fails
       if (!resp) {
         add(`bzsou: direct failed, trying proxy`, 'warn')
-        resp = await race(url)
+        // C3: JSON 源要求代理返回以 { / [ 开头,WAF HTML 挑战页不算有效
+        resp = await race(url, 'json')
       }
 
       if (!resp) {
@@ -99,8 +100,15 @@ export function useBzsou() {
 
       return filtered.map((r: BzsouItem) => {
         // C2: 'YYYY-MM-DD HH:mm:ss' 按东八区解析,避免按本地时区转 UTC 时日期偏移一天;
-        // 无法解析时降级为空字符串而非整批抛错(外层 catch 会吞掉全部结果)
-        const fmtDate = (s?: string): string => {
+        // 无法解析时降级为空字符串而非整批抛错(外层 catch 会吞掉全部结果)。
+        // 实测日期字段也可能为 epoch 毫秒整数(Solr 数字类型),按 Date(ms) 处理。
+        const fmtDate = (s?: string | number): string => {
+          if (typeof s === 'number') {
+            if (!Number.isFinite(s))
+              return ''
+            const dt = new Date(s)
+            return Number.isNaN(dt.getTime()) ? '' : dt.toISOString().split('T')[0]
+          }
           if (!s)
             return ''
           const m = s.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/)

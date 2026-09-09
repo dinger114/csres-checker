@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFocusTrap } from '../composables/useFocusTrap'
-import { setLocale } from '../locales'
 
 const props = defineProps<{
   visible: boolean
@@ -18,10 +17,6 @@ const { t, locale } = useI18n()
 const shareBase = computed(() => window.location.origin + window.location.pathname)
 
 const { container } = useFocusTrap(() => props.visible)
-
-function toggleLocale() {
-  setLocale(locale.value === 'en' ? 'zh-CN' : 'en')
-}
 </script>
 
 <template>
@@ -32,9 +27,6 @@ function toggleLocale() {
         <span class="dot dot-y" />
         <span class="dot dot-g" />
         <span class="title">HELP</span>
-        <button class="locale-btn" @click="toggleLocale">
-          {{ locale === 'en' ? '中文' : 'EN' }}
-        </button>
         <button class="close-btn" :aria-label="t('version_history.close')" @click="emit('close')">
           ×
         </button>
@@ -374,25 +366,6 @@ GB 50311-2016</pre>
   font-weight: 700;
 }
 
-.locale-btn {
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-dim);
-  font-size: 10px;
-  padding: 3px 10px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.15s;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  margin-left: auto;
-}
-
-.locale-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -518,7 +491,7 @@ tr:hover td {
   font-size: 16px;
   cursor: pointer;
   padding: 2px 8px;
-  margin-left: 8px;
+  margin-left: auto;
   line-height: 1;
   transition: all 0.15s;
 }

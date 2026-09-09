@@ -255,7 +255,9 @@ defineExpose({ columns })
           <span class="skeleton-cell" />
         </div>
       </div>
-      <div v-else-if="results.length === 0" class="empty-state">{{ t('output.empty') }}</div>
+      <div v-else-if="results.length === 0" class="empty-state">
+        {{ t('output.empty') }}
+      </div>
       <div v-else class="table-wrap">
         <table>
           <thead>

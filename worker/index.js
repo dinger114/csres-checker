@@ -1,16 +1,15 @@
 import { generateChallenge, validateChallenge } from 'capjs-core'
 import {
-  ALLOWED_HOSTS,
-  MAX_BODY_BYTES,
-  corsHeadersFor,
-  isAllowedTarget,
-  fetchTarget,
-  parseCount,
-  RATE_LIMIT,
-  rateLimitMap,
   checkRateLimit,
-  touchRateLimit,
   cleanup,
+  corsHeadersFor,
+  fetchTarget,
+  isAllowedTarget,
+  MAX_BODY_BYTES,
+  parseCount,
+  rateLimitHeaders,
+  readLimited,
+  touchRateLimit,
 } from './shared.js'
 
 // ===== Cap permit tokenKey 推导(id:sha256(ver)) =====
@@ -162,6 +161,8 @@ export default {
           headers: {
             'Retry-After': String(retryAfter),
             'Content-Type': 'text/plain',
+            // C22: 429 也带 X-RateLimit-*,前端可读到真实剩余配额
+            ...rateLimitHeaders(ip),
             ...corsHeadersFor(request),
           },
         })
@@ -247,43 +248,14 @@ export default {
         status: resp.status,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'X-RateLimit-Limit': String(RATE_LIMIT),
-          'X-RateLimit-Remaining': String(RATE_LIMIT - (rateLimitMap.get(ip)?.length || 0)),
+          ...rateLimitHeaders(ip),
           ...corsHeadersFor(request),
         },
       })
     }
-    catch (e) {
-      // S14: 不回显内部报错细节
+    catch {
+      // S14: 不回显内部报错细节(含 readLimited 超限抛错 → 502)
       return new Response('Proxy error', { status: 502, headers: corsHeadersFor(request) })
     }
   },
-}
-
-// 从 ReadableStream 读取,最多 maxBytes 字节(S8)
-async function readLimited(stream, maxBytes) {
-  if (!stream)
-    return new Uint8Array(0)
-  const reader = stream.getReader()
-  const chunks = []
-  let total = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done)
-      break
-    if (total + value.byteLength > maxBytes) {
-      // 超出上限:取消读取并返回已读部分(上游已判定超限的兜底)
-      await reader.cancel().catch(() => {})
-      break
-    }
-    chunks.push(value)
-    total += value.byteLength
-  }
-  const out = new Uint8Array(total)
-  let offset = 0
-  for (const c of chunks) {
-    out.set(c, offset)
-    offset += c.byteLength
-  }
-  return out
 }

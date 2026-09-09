@@ -119,7 +119,7 @@ export const useQueryStore = defineStore('query', {
         useCap().endSession()
     },
     async query(keywords: string[], source: string = '') {
-      const { add, updateStats } = useLogStore()
+      const { add, updateStats, recordEmpty } = useLogStore()
       if (this.running)
         return
       if (!useCap().hasValidToken()) {
@@ -138,97 +138,101 @@ export const useQueryStore = defineStore('query', {
       }
 
       try {
-      const startTime = Date.now()
-      const useDefault = source === ''
+        const startTime = Date.now()
+        const useDefault = source === ''
 
-      add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')
+        add(`═══ START: ${normalizedKws.length} items ═══`, 'highlight')
 
-      if (!useDefault) {
-        add(`selected: ${source}`, 'info')
-      }
-      add(SEPARATOR, 'info')
+        if (!useDefault) {
+          add(`selected: ${source}`, 'info')
+        }
+        add(SEPARATOR, 'info')
 
-      // Deduplicate keywords for querying
-      const uniqueKws = [...new Set(normalizedKws)]
-      const kwToIndices = new Map<string, number[]>()
-      normalizedKws.forEach((kw, idx) => {
-        if (!kwToIndices.has(kw))
-          kwToIndices.set(kw, [])
-        kwToIndices.get(kw)!.push(idx)
-      })
+        // Deduplicate keywords for querying
+        const uniqueKws = [...new Set(normalizedKws)]
+        const kwToIndices = new Map<string, number[]>()
+        normalizedKws.forEach((kw, idx) => {
+          if (!kwToIndices.has(kw))
+            kwToIndices.set(kw, [])
+          kwToIndices.get(kw)!.push(idx)
+        })
 
-      // 记录每个关键词是否命中（任一源返回 ≥1 条即记一次）。
-      // 完成后用 queryResults.size 作为「成功查询关键词数」上报计数。
-      const queryResults = new Map<string, StandardResult[]>()
+        // 记录每个关键词是否命中（任一源返回 ≥1 条即记一次）。
+        // 完成后用 queryResults.size 作为「成功查询关键词数」上报计数。
+        const queryResults = new Map<string, StandardResult[]>()
 
-      if (uniqueKws.length > 0) {
-        if (useDefault) {
-          add('plan: cssn → bzsou (fail) → ccsn (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
+        if (uniqueKws.length > 0) {
+          if (useDefault) {
+            add('plan: cssn → bzsou (fail) → ccsn (fail) → gongbiaoku (fail) → csres (fallback)', 'info')
 
-          const { query: cssnQuery } = useCssn()
-          const { query: bzsouQuery } = useBzsou()
-          const { query: ccsnQuery } = useCcsn()
-          const { query: gongQuery } = useGongbiaoku()
-          const { query: csresQuery } = useCsres()
+            const { query: cssnQuery } = useCssn()
+            const { query: bzsouQuery } = useBzsou()
+            const { query: ccsnQuery } = useCcsn()
+            const { query: gongQuery } = useGongbiaoku()
+            const { query: csresQuery } = useCsres()
 
-          const failedAfterCssn = await this.runSource('cssn.net.cn', { query: cssnQuery }, uniqueKws, normalizedKws, kwToIndices, queryResults)
-          const failedAfterBzsou = await this.runSource('bzsou.cn', { query: bzsouQuery }, failedAfterCssn, normalizedKws, kwToIndices, queryResults)
-          const failedAfterCcsn = await this.runSource('ccsn.org.cn', { query: ccsnQuery }, failedAfterBzsou, normalizedKws, kwToIndices, queryResults)
-          const failedAfterGong = await this.runSource('gongbiaoku.com', { query: gongQuery }, failedAfterCcsn, normalizedKws, kwToIndices, queryResults)
+            const failedAfterCssn = await this.runSource('cssn.net.cn', { query: cssnQuery }, uniqueKws, normalizedKws, kwToIndices, queryResults)
+            const failedAfterBzsou = await this.runSource('bzsou.cn', { query: bzsouQuery }, failedAfterCssn, normalizedKws, kwToIndices, queryResults)
+            const failedAfterCcsn = await this.runSource('ccsn.org.cn', { query: ccsnQuery }, failedAfterBzsou, normalizedKws, kwToIndices, queryResults)
+            const failedAfterGong = await this.runSource('gongbiaoku.com', { query: gongQuery }, failedAfterCcsn, normalizedKws, kwToIndices, queryResults)
 
-          if (failedAfterGong.length > 0) {
-            await this.runSource('csres.com', { query: csresQuery }, failedAfterGong, normalizedKws, kwToIndices, queryResults)
+            if (failedAfterGong.length > 0) {
+              await this.runSource('csres.com', { query: csresQuery }, failedAfterGong, normalizedKws, kwToIndices, queryResults)
+            }
+          }
+          else {
+            const { query: cssnQuery } = useCssn()
+            const { query: bzsouQuery } = useBzsou()
+            const { query: ccsnQuery } = useCcsn()
+            const { query: gongQuery } = useGongbiaoku()
+            const { query: csresQuery } = useCsres()
+            const { query: cqdbQuery } = useCqdb()
+
+            const sourceMap: Record<string, SourceFn> = {
+              cssn: { query: cssnQuery },
+              bzsou: { query: bzsouQuery },
+              ccsn: { query: ccsnQuery },
+              gongbiaoku: { query: gongQuery },
+              csres: { query: csresQuery },
+              cqdb: { query: cqdbQuery },
+            }
+
+            const selectedSrc = sourceMap[source]
+            if (!selectedSrc) {
+              add(`unknown source: ${source}`, 'error')
+              return
+            }
+
+            const failed = await this.runSource(source, selectedSrc, uniqueKws, normalizedKws, kwToIndices, queryResults)
+
+            if (source !== 'csres' && failed.length > 0) {
+              add(SEPARATOR, 'info')
+              add(`fallback: csres.com (${failed.length} items)`, 'warn')
+              await this.runSource('csres.com', { query: csresQuery }, failed, normalizedKws, kwToIndices, queryResults)
+            }
           }
         }
-        else {
-          const { query: cssnQuery } = useCssn()
-          const { query: bzsouQuery } = useBzsou()
-          const { query: ccsnQuery } = useCcsn()
-          const { query: gongQuery } = useGongbiaoku()
-          const { query: csresQuery } = useCsres()
-          const { query: cqdbQuery } = useCqdb()
 
-          const sourceMap: Record<string, SourceFn> = {
-            cssn: { query: cssnQuery },
-            bzsou: { query: bzsouQuery },
-            ccsn: { query: ccsnQuery },
-            gongbiaoku: { query: gongQuery },
-            csres: { query: csresQuery },
-            cqdb: { query: cqdbQuery },
-          }
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+        this.progress = { current: normalizedKws.length, total: normalizedKws.length, pct: 100 }
 
-          const selectedSrc = sourceMap[source]
-          if (!selectedSrc) {
-            add(`unknown source: ${source}`, 'error')
-            this.running = false
-            return
-          }
+        // 按命中关键词数上报全网成功查询计数（fire-and-forget，不阻塞 UI）
+        const successCount = queryResults.size
+        if (successCount > 0)
+          useCounter().incQueryCount(successCount)
 
-          const failed = await this.runSource(source, selectedSrc, uniqueKws, normalizedKws, kwToIndices, queryResults)
+        // C11: 显式统计「空结果」——跑完全部数据源仍无任何命中的关键词数
+        const emptyCount = uniqueKws.length - queryResults.size
+        if (emptyCount > 0)
+          recordEmpty(emptyCount)
 
-          if (source !== 'csres' && failed.length > 0) {
-            add(SEPARATOR, 'info')
-            add(`fallback: csres.com (${failed.length} items)`, 'warn')
-            await this.runSource('csres.com', { query: csresQuery }, failed, normalizedKws, kwToIndices, queryResults)
-          }
-        }
-      }
+        updateStats({
+          time: Number.parseFloat(elapsed),
+          queries: normalizedKws.length,
+        })
 
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-      this.progress = { current: normalizedKws.length, total: normalizedKws.length, pct: 100 }
-
-      // 按命中关键词数上报全网成功查询计数（fire-and-forget，不阻塞 UI）
-      const successCount = queryResults.size
-      if (successCount > 0)
-        useCounter().incQueryCount(successCount)
-
-      updateStats({
-        time: Number.parseFloat(elapsed),
-        queries: normalizedKws.length,
-      })
-
-      add(SEPARATOR, 'info')
-      add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
+        add(SEPARATOR, 'info')
+        add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
       }
       finally {
         // 本轮查询结束，注销本次安全验证 permit(C4)
@@ -236,7 +240,7 @@ export const useQueryStore = defineStore('query', {
       }
     },
     async queryAtlas(keywords: string[]) {
-      const { add, updateStats } = useLogStore()
+      const { add, updateStats, recordEmpty } = useLogStore()
       if (this.running)
         return
       if (!useCap().hasValidToken()) {
@@ -255,67 +259,72 @@ export const useQueryStore = defineStore('query', {
       }
 
       try {
-      const startTime = Date.now()
+        const startTime = Date.now()
 
-      add(`═══ ATLAS QUERY: ${normalizedKws.length} items ═══`, 'highlight')
-      add(SEPARATOR, 'info')
-      add('plan: ebook.chinabuilding.com.cn (标准图集, 需代理)', 'info')
-      add(SEPARATOR, 'info')
+        add(`═══ ATLAS QUERY: ${normalizedKws.length} items ═══`, 'highlight')
+        add(SEPARATOR, 'info')
+        add('plan: ebook.chinabuilding.com.cn (标准图集, 需代理)', 'info')
+        add(SEPARATOR, 'info')
 
-      const uniqueKws = [...new Set(normalizedKws)]
-      const kwToIndices = new Map<string, number[]>()
-      normalizedKws.forEach((kw, idx) => {
-        if (!kwToIndices.has(kw))
-          kwToIndices.set(kw, [])
-        kwToIndices.get(kw)!.push(idx)
-      })
-
-      const { query } = useAtlas()
-      const queryResults = new Map<string, StandardResult[]>()
-
-      for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
-        const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
-        const t0 = Date.now()
-        const batchResults = await Promise.allSettled(batch.map(kw => query(kw)))
-        this.recordLatency((Date.now() - t0) / batch.length)
-        batchResults.forEach((r, idx) => {
-          const kw = batch[idx]
-          if (r.status === 'fulfilled' && r.value.length > 0) {
-            if (!queryResults.has(kw)) {
-              const indices = kwToIndices.get(kw) || []
-              for (const idx of indices) {
-                this.results.push(...r.value.map(res => ({ ...res, query: normalizedKws[idx] })))
-              }
-            }
-            queryResults.set(kw, r.value)
-          }
+        const uniqueKws = [...new Set(normalizedKws)]
+        const kwToIndices = new Map<string, number[]>()
+        normalizedKws.forEach((kw, idx) => {
+          if (!kwToIndices.has(kw))
+            kwToIndices.set(kw, [])
+          kwToIndices.get(kw)!.push(idx)
         })
-        this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
-        if (i + this.adaptiveBatchSize() < uniqueKws.length)
-          await delay(this.adaptiveDelay())
-      }
 
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-      this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
+        const { query } = useAtlas()
+        const queryResults = new Map<string, StandardResult[]>()
 
-      const successCount = queryResults.size
-      if (successCount > 0)
-        useCounter().incQueryCount(successCount)
+        for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
+          const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
+          const t0 = Date.now()
+          const batchResults = await Promise.allSettled(batch.map(kw => query(kw)))
+          this.recordLatency((Date.now() - t0) / batch.length)
+          batchResults.forEach((r, idx) => {
+            const kw = batch[idx]
+            if (r.status === 'fulfilled' && r.value.length > 0) {
+              if (!queryResults.has(kw)) {
+                const indices = kwToIndices.get(kw) || []
+                for (const idx of indices) {
+                  this.results.push(...r.value.map(res => ({ ...res, query: normalizedKws[idx] })))
+                }
+              }
+              queryResults.set(kw, r.value)
+            }
+          })
+          this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
+          if (i + this.adaptiveBatchSize() < uniqueKws.length)
+            await delay(this.adaptiveDelay())
+        }
 
-      updateStats({
-        time: Number.parseFloat(elapsed),
-        queries: normalizedKws.length,
-      })
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+        this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
 
-      add(SEPARATOR, 'info')
-      add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
+        const successCount = queryResults.size
+        if (successCount > 0)
+          useCounter().incQueryCount(successCount)
+
+        // C11: 显式统计「空结果」——该路径所有关键词中无任何命中的数量
+        const emptyCount = uniqueKws.length - queryResults.size
+        if (emptyCount > 0)
+          recordEmpty(emptyCount)
+
+        updateStats({
+          time: Number.parseFloat(elapsed),
+          queries: normalizedKws.length,
+        })
+
+        add(SEPARATOR, 'info')
+        add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
       }
       finally {
         this.finishQuery()
       }
     },
     async searchByName(keywords: string[], source: string = '') {
-      const { add, updateStats } = useLogStore()
+      const { add, updateStats, recordEmpty } = useLogStore()
       if (this.running)
         return
       if (!useCap().hasValidToken()) {
@@ -334,65 +343,70 @@ export const useQueryStore = defineStore('query', {
       }
 
       try {
-      const startTime = Date.now()
+        const startTime = Date.now()
 
-      add(`═══ NAME SEARCH: ${normalizedKws.length} items ═══`, 'highlight')
-      add(SEPARATOR, 'info')
-      if (source === 'cqdb')
-        add('plan: cq.dingyi.de (重庆地标, 需代理)', 'info')
-      else
-        add('plan: cssn.net.cn only', 'info')
-      add(SEPARATOR, 'info')
+        add(`═══ NAME SEARCH: ${normalizedKws.length} items ═══`, 'highlight')
+        add(SEPARATOR, 'info')
+        if (source === 'cqdb')
+          add('plan: cq.dingyi.de (重庆地标, 需代理)', 'info')
+        else
+          add('plan: cssn.net.cn only', 'info')
+        add(SEPARATOR, 'info')
 
-      // Deduplicate keywords
-      const uniqueKws = [...new Set(normalizedKws)]
-      const kwToIndices = new Map<string, number[]>()
-      normalizedKws.forEach((kw, idx) => {
-        if (!kwToIndices.has(kw))
-          kwToIndices.set(kw, [])
-        kwToIndices.get(kw)!.push(idx)
-      })
-
-      const queryByNameFn = source === 'cqdb' ? useCqdb().queryByName : useCssn().queryByName
-
-      const queryResults = new Map<string, StandardResult[]>()
-
-      for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
-        const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
-        const t0 = Date.now()
-        const batchResults = await Promise.allSettled(batch.map(kw => queryByNameFn(kw)))
-        this.recordLatency((Date.now() - t0) / batch.length)
-        batchResults.forEach((r, idx) => {
-          const kw = batch[idx]
-          if (r.status === 'fulfilled' && r.value.length > 0) {
-            if (!queryResults.has(kw)) {
-              const indices = kwToIndices.get(kw) || []
-              for (const idx of indices) {
-                this.results.push(...r.value.map(res => ({ ...res, query: normalizedKws[idx] })))
-              }
-            }
-            queryResults.set(kw, r.value)
-          }
+        // Deduplicate keywords
+        const uniqueKws = [...new Set(normalizedKws)]
+        const kwToIndices = new Map<string, number[]>()
+        normalizedKws.forEach((kw, idx) => {
+          if (!kwToIndices.has(kw))
+            kwToIndices.set(kw, [])
+          kwToIndices.get(kw)!.push(idx)
         })
-        this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
-        if (i + this.adaptiveBatchSize() < uniqueKws.length)
-          await delay(this.adaptiveDelay())
-      }
 
-      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
-      this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
+        const queryByNameFn = source === 'cqdb' ? useCqdb().queryByName : useCssn().queryByName
 
-      const successCount = queryResults.size
-      if (successCount > 0)
-        useCounter().incQueryCount(successCount)
+        const queryResults = new Map<string, StandardResult[]>()
 
-      updateStats({
-        time: Number.parseFloat(elapsed),
-        queries: normalizedKws.length,
-      })
+        for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
+          const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
+          const t0 = Date.now()
+          const batchResults = await Promise.allSettled(batch.map(kw => queryByNameFn(kw)))
+          this.recordLatency((Date.now() - t0) / batch.length)
+          batchResults.forEach((r, idx) => {
+            const kw = batch[idx]
+            if (r.status === 'fulfilled' && r.value.length > 0) {
+              if (!queryResults.has(kw)) {
+                const indices = kwToIndices.get(kw) || []
+                for (const idx of indices) {
+                  this.results.push(...r.value.map(res => ({ ...res, query: normalizedKws[idx] })))
+                }
+              }
+              queryResults.set(kw, r.value)
+            }
+          })
+          this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
+          if (i + this.adaptiveBatchSize() < uniqueKws.length)
+            await delay(this.adaptiveDelay())
+        }
 
-      add(SEPARATOR, 'info')
-      add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
+        this.progress = { current: uniqueKws.length, total: uniqueKws.length, pct: 100 }
+
+        const successCount = queryResults.size
+        if (successCount > 0)
+          useCounter().incQueryCount(successCount)
+
+        // C11: 显式统计「空结果」——该路径所有关键词中无任何命中的数量
+        const emptyCount = uniqueKws.length - queryResults.size
+        if (emptyCount > 0)
+          recordEmpty(emptyCount)
+
+        updateStats({
+          time: Number.parseFloat(elapsed),
+          queries: normalizedKws.length,
+        })
+
+        add(SEPARATOR, 'info')
+        add(`═══ COMPLETE: ${this.results.length} results, ${elapsed}s ═══`, 'highlight')
       }
       finally {
         this.finishQuery()

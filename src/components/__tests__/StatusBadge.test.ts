@@ -1,6 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createI18n } from 'vue-i18n'
+import en from '../../locales/en.json'
+import zhCN from '../../locales/zh-CN.json'
 import StatusBadge from '../StatusBadge.vue'
 
 const clipboardData = { text: '' }
@@ -8,10 +11,20 @@ const writeText = vi.fn(async (text: string) => {
   clipboardData.text = text
 })
 
+// Q6: popover 文案已接 i18n(status.replaced_by),测试需挂载真实 i18n 并固定 zh-CN
+function makeI18n() {
+  return createI18n({
+    legacy: false,
+    locale: 'zh-CN',
+    fallbackLocale: 'en',
+    messages: { 'zh-CN': zhCN, en },
+  })
+}
+
 function mountBadge(props: { status: string, replacedBy?: string }) {
   return mount(StatusBadge, {
     props: { status: props.status, replacedBy: props.replacedBy ?? '' },
-    global: { plugins: [createPinia()] },
+    global: { plugins: [createPinia(), makeI18n()] },
   })
 }
 

@@ -44,9 +44,11 @@ function copyReplace() {
       {{ status }}
     </span>
     <div v-if="showPopover" class="replace-info">
-      <span>已被</span>
-      <strong class="replace-number" @click="copyReplace">{{ replacedBy }}</strong>
-      <span>替代</span>
+      <i18n-t keypath="status.replaced_by" tag="span" scope="global" class="replace-text">
+        <template #standard>
+          <strong class="replace-number" @click="copyReplace">{{ replacedBy }}</strong>
+        </template>
+      </i18n-t>
     </div>
   </span>
   <span v-else class="status-badge" :class="badgeClass">
@@ -104,6 +106,11 @@ function copyReplace() {
   color: var(--tooltip-text, #e0e0e0);
   border: 1px solid var(--border-color, #333);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.replace-text {
+  display: inline-flex;
+  align-items: center;
 }
 
 .replace-number {

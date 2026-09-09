@@ -24,8 +24,16 @@ export const useThemeStore = defineStore('theme', {
     initTheme() {
       this.applyTheme(getPreferredTheme())
 
+      // S19: 监听器内的 localStorage 读取同样包 try/catch,隐私模式下系统主题切换不抛错
       window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
-        if (!localStorage.getItem('theme')) {
+        let stored: string | null = null
+        try {
+          stored = localStorage.getItem('theme')
+        }
+        catch {
+          /* storage unavailable: 视为未持久化,跟随系统主题 */
+        }
+        if (!stored) {
           this.applyTheme(e.matches ? 'light' : 'dark')
         }
       })

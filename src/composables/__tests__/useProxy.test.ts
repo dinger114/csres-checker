@@ -56,7 +56,7 @@ describe('useProxy', () => {
       expect(uniqueUrls.size).toBe(PROXY_LIST.length)
     })
 
-    it('rejects responses shorter than 100 chars', async () => {
+    it('rejects responses shorter than the minimum valid body size', async () => {
       const shortText = 'short'
       const longText = 'a'.repeat(200)
 
@@ -102,6 +102,53 @@ describe('useProxy', () => {
       const value = await result
 
       expect(value).toBeNull()
+    })
+
+    it('rejects non-ok responses even with long bodies (C3)', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve('a'.repeat(500)),
+      })
+
+      const { race } = useProxy()
+      const result = race('https://example.com')
+
+      vi.advanceTimersByTime(0)
+      const value = await result
+
+      expect(value).toBeNull()
+    })
+
+    it('rejects HTML bodies for json-kind sources (C3: WAF challenge pages)', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(`<html>${'x'.repeat(500)}</html>`),
+      })
+
+      const { race } = useProxy()
+      const result = race('https://example.com', 'json')
+
+      vi.advanceTimersByTime(0)
+      const value = await result
+
+      expect(value).toBeNull()
+    })
+
+    it('accepts json bodies for json-kind sources', async () => {
+      const jsonText = `{"results": [${'"a",'.repeat(60)}"b"]}`
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve(jsonText),
+      })
+
+      const { race } = useProxy()
+      const result = race('https://example.com', 'json')
+
+      vi.advanceTimersByTime(0)
+      const value = await result
+
+      expect(value).toBe(jsonText)
     })
   })
 

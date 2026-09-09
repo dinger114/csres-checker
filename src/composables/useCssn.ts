@@ -35,7 +35,8 @@ export function useCssn() {
 
     // Fall back to proxy if direct fails
     if (!resp) {
-      resp = await race(url)
+      // C3: JSON 源要求代理返回以 { / [ 开头,WAF HTML 挑战页不算有效
+      resp = await race(url, 'json')
     }
 
     if (!resp)

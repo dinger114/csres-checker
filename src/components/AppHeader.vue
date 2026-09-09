@@ -2,6 +2,7 @@
 import type { ThemeMode } from '../types'
 import { useI18n } from 'vue-i18n'
 import { useCounter } from '../composables/useCounter'
+import { setLocale } from '../locales'
 
 defineProps<{
   theme: ThemeMode
@@ -12,8 +13,12 @@ defineEmits<{
   'show-help': []
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { globalCount } = useCounter()
+
+function toggleLocale() {
+  setLocale(locale.value === 'en' ? 'zh-CN' : 'en')
+}
 </script>
 
 <template>
@@ -23,6 +28,9 @@ const { globalCount } = useCounter()
     <div class="header-actions">
       <button class="help-btn" @click="$emit('show-help')">
         {{ t('header.help') }}
+      </button>
+      <button class="help-btn locale-toggle" :aria-label="locale === 'en' ? '切换到中文' : 'Switch to English'" @click="toggleLocale">
+        {{ locale === 'en' ? '中文' : 'EN' }}
       </button>
       <button class="theme-toggle" :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'" @click="$emit('toggle-theme')">
         <svg v-if="theme === 'dark'" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
@@ -93,5 +101,9 @@ const { globalCount } = useCounter()
 .theme-toggle .icon {
   width: 15px;
   height: 15px;
+}
+
+.locale-toggle {
+  min-width: 48px;
 }
 </style>

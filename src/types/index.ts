@@ -56,8 +56,9 @@ export interface BzsouItem {
   STAN_NUM?: string
   STAN_CNNAME?: string
   STAN_STATUS?: string
-  PUB_DATE?: string
-  IMPL_DATE?: string
+  // 实测该字段可能为 'YYYY-MM-DD HH:mm:ss' 字符串,也可能为 epoch 毫秒整数(如 1162339200000)
+  PUB_DATE?: string | number
+  IMPL_DATE?: string | number
   STAN_PART_YEAR?: number
   RELEASE_ORG?: string
   CCS_NAME?: string

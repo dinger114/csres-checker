@@ -196,6 +196,33 @@ describe('useBzsou', () => {
     expect(results[0].implement_date).toBe('')
   })
 
+  it('handles epoch-millisecond number dates from the real API (regression: s.trim is not a function)', async () => {
+    const mock = fetchDirectMock as ReturnType<typeof vi.fn>
+    // 实测 bzsou.cn 真实返回:PUB_DATE/IMPL_DATE 为 epoch 毫秒整数(Solr 数字类型)
+    // 1162339200000 = 2006-11-01T00:00:00Z(UTC),即东八区 2006-11-01 08:00
+    mock.mockResolvedValueOnce(JSON.stringify({
+      totalCount: 1,
+      result: [{
+        STAN_NUM: 'GB/T 708-2006',
+        STAN_CNNAME: '冷轧钢板和钢带的尺寸、外形、重量及允许偏差',
+        STAN_STATUS: '现行',
+        PUB_DATE: 1162339200000,
+        IMPL_DATE: 1170288000000,
+        STAN_PART_YEAR: 2006,
+        RELEASE_ORG: '国标委',
+        CCS_NAME: '',
+        ICS_NAME: '',
+      }],
+    }))
+
+    const { query } = useBzsou()
+    const results = await query('GB/T 708-2006')
+
+    expect(results).toHaveLength(1)
+    expect(results[0].publish_date).toBe('2006-11-01')
+    expect(results[0].implement_date).toBe('2007-02-01')
+  })
+
   it('handles missing result array in response', async () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(JSON.stringify({ totalCount: 5 }))

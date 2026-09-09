@@ -34,6 +34,7 @@ export function useFocusTrap(active: () => boolean) {
   function deactivate() {
     document.removeEventListener('keydown', onKeydown)
     prevFocus?.focus()
+    prevFocus = null
   }
 
   // C16: immediate 处理初始即激活(如页面加载时弹窗已开)的情况;
@@ -51,7 +52,11 @@ export function useFocusTrap(active: () => boolean) {
   })
 
   onBeforeUnmount(() => {
-    document.removeEventListener('keydown', onKeydown)
+    // C16: 激活期间宿主组件卸载,同样恢复先前焦点(此前只移除了 keydown 监听)
+    if (active())
+      deactivate()
+    else
+      document.removeEventListener('keydown', onKeydown)
   })
 
   return { container }

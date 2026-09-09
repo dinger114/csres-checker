@@ -43,7 +43,7 @@ export function corsHeadersFor(request, extra = {}) {
   }
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     headers['Access-Control-Allow-Origin'] = origin
-    headers['Vary'] = 'Origin'
+    headers.Vary = 'Origin'
   }
   return headers
 }
@@ -102,6 +102,14 @@ export function checkRateLimit(ip) {
   return { allowed: true }
 }
 
+// C22: 429 等限流相关响应也带 X-RateLimit-* 头,前端可读到真实剩余配额
+export function rateLimitHeaders(ip) {
+  return {
+    'X-RateLimit-Limit': String(RATE_LIMIT),
+    'X-RateLimit-Remaining': String(Math.max(0, RATE_LIMIT - (rateLimitMap.get(ip)?.length || 0))),
+  }
+}
+
 // 仅记录不限流(C22):带 cap permit 的豁免路径也更新限流计数,
 // 使 X-RateLimit-Remaining 反映真实状态,但不拒绝请求。
 export function touchRateLimit(ip) {
@@ -115,6 +123,34 @@ export function touchRateLimit(ip) {
     timestamps.shift()
   }
   timestamps.push(now)
+}
+
+// 从 ReadableStream 读取,最多 maxBytes 字节(S8)。
+// 超限直接抛错(由调用方转 502),不再静默截断返回半截内容。
+export async function readLimited(stream, maxBytes) {
+  if (!stream)
+    return new Uint8Array(0)
+  const reader = stream.getReader()
+  const chunks = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+    if (total + value.byteLength > maxBytes) {
+      await reader.cancel().catch(() => {})
+      throw new Error(`response body exceeds ${maxBytes} bytes`)
+    }
+    chunks.push(value)
+    total += value.byteLength
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
 }
 
 // 定期清理过期 IP(防内存泄漏)

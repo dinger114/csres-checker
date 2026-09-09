@@ -24,9 +24,9 @@ export const useLogStore = defineStore('log', {
         this.lines = this.lines.slice(-MAX_LOG_LINES)
       }
     },
-    // C11: 显式记录一次「空结果」,与 warn 语义分离
-    recordEmpty() {
-      this.stats.empty++
+    // C11: 显式记录「空结果」,与 warn 语义分离;count 便于批量路径一次累计
+    recordEmpty(count = 1) {
+      this.stats.empty += count
     },
     updateStats(patch: Partial<LogStats>) {
       Object.assign(this.stats, patch)
