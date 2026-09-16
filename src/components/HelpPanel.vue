@@ -68,7 +68,7 @@ GB 50311-2016</pre>
                 <td>Name Search</td><td>Search by standard name keyword, data source selectable (CSSN or Chongqing local standards), sorted by priority</td>
               </tr>
               <tr v-else>
-                <td>名称检索</td><td>按标准名称关键词搜索，数据源可选 CSSN（前 3 页约 60 条，按优先级排序）或重庆地标（含 PDF 预览）</td>
+                <td>名称检索</td><td>按标准名称关键词搜索，数据源可选 CSSN（前 3 页约 60 条，按优先级排序）、重庆地标（含 PDF 预览）或山西地标（省住建厅发布公告，含实施日期与 PDF 外链）</td>
               </tr>
               <tr v-if="locale === 'en'">
                 <td>Standard Atlas</td><td>Search building standard atlases by number or name, supports batch input and TXT import</td>
@@ -221,7 +221,7 @@ GB 50311-2016</pre>
               <strong>PDF preview:</strong> Chongqing local standard results include PDF download links
             </li>
             <li v-else>
-              <strong>地标预览：</strong>重庆地标数据源的结果带 PDF 下载链接，点击可查看标准原文
+              <strong>地标预览：</strong>重庆地标与山西地标数据源的结果带 PDF 下载链接，点击可查看标准原文（山西为 68MB 级大文件，仅提供外链，请在浏览器中自行下载）
             </li>
           </ul>
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAtlasHtml, parseCqDbHtml, parseCsresHtml, parseGongbiaokuHtml, parseShanxiAnnouncementHtml } from '../htmlParser'
+import { parseAtlasHtml, parseCqDbHtml, parseCsresHtml, parseGongbiaokuHtml, parseShanxiAnnouncementHtml, parseShanxiEntryPdfHtml } from '../htmlParser'
 
 const cqdbHtml = `
 <table class="layui-table">
@@ -221,5 +221,52 @@ describe('parseShanxiAnnouncementHtml', () => {
 
   it('returns empty when the editor container is missing', () => {
     expect(parseShanxiAnnouncementHtml('<div class="other">现批准《x》</div>', { keyword: 'x' })).toEqual([])
+  })
+
+  // 2023 年公告用的是 div.view TRS_UEDITOR …(不是 trs_editor_view),
+  // 只认 trs_editor_view 会静默漏掉老页面 —— 实测 DBJ04/T444-2023 就是这么丢的
+  it('parses the older div.view TRS_UEDITOR template', () => {
+    const html = `
+<div class="view TRS_UEDITOR trs_paper_default trs_web">
+  <p><span data-index="14" style="font-size: 14px;">\u2002\u2002\u2002\u2002</span><span data-index="14" style="font-size: 14px;">现批准《预制装配整体式混凝土城市综合管廊结构技术标准》为山西省工程建设地方标准，编号为DBJ04/T444-2023，自2023年7月1日起实施。</span></p>
+  <p><span data-index="14" style="font-size: 14px;">\u2002\u2002\u2002\u2002本标准由山西省住房和城乡建设厅负责管理。</span></p>
+</div>`
+    const results = parseShanxiAnnouncementHtml(html, { keyword: '城市综合管廊', pubDate: '2023-04-12' })
+
+    expect(results).toHaveLength(1)
+    expect(results[0].standard_number).toBe('DBJ04/T444-2023')
+    expect(results[0].title).toBe('预制装配整体式混凝土城市综合管廊结构技术标准')
+    expect(results[0].implement_date).toBe('2023-07-01')
+    expect(results[0].publish_date).toBe('2023-04-12')
+  })
+})
+
+// 标准库条目页(…/bzgf/bzk/*.shtml):无标准编号,只有 PDF 附件
+const shanxiEntryHtml = `
+<div class="content">
+  <p><a style="color: rgb(0, 102, 204);" appendix="true" data-appendix="true" needdownload="true"
+        href="./P020260612553273540285.pdf" title="《城市综合管廊工程技术标准》.pdf"
+        download="《城市综合管廊工程技术标准》.pdf">《城市综合管廊工程技术标准》.pdf</a></p>
+</div>`
+
+describe('parseShanxiEntryPdfHtml', () => {
+  it('resolves the relative appendix href against the entry page url', () => {
+    const url = 'http://zjt.shanxi.gov.cn/zfxxgk/zfxxgkml/bzgf/bzk/202606/t20260612_10145310.shtml'
+    expect(parseShanxiEntryPdfHtml(shanxiEntryHtml, url))
+      .toBe('http://zjt.shanxi.gov.cn/zfxxgk/zfxxgkml/bzgf/bzk/202606/P020260612553273540285.pdf')
+  })
+
+  it('returns empty when the page has no pdf attachment', () => {
+    expect(parseShanxiEntryPdfHtml('<div>没有附件</div>', 'http://x/y/z.shtml')).toBe('')
+  })
+
+  it('ignores anchors that are not pdf', () => {
+    const html = '<a appendix="true" href="./doc.docx">文档</a>'
+    expect(parseShanxiEntryPdfHtml(html, 'http://x/y/z.shtml')).toBe('')
+  })
+
+  it('falls back to p.insertfileTag anchors', () => {
+    const html = '<p class="insertfileTag"><a href="./P02025.pdf">附件</a></p>'
+    expect(parseShanxiEntryPdfHtml(html, 'http://x/bzk/a.shtml')).toBe('http://x/bzk/P02025.pdf')
   })
 })

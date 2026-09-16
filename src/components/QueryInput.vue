@@ -31,6 +31,7 @@ const numberSources = [
 const nameSources = [
   { key: 'cssn', label: 'CSSN' },
   { key: 'cqdb', label: '重庆地标' },
+  { key: 'shanxi', label: '山西地标' },
 ]
 
 const keywords = ref('')

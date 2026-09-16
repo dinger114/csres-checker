@@ -219,11 +219,15 @@ export function parseCsresHtml(html: string, keyword: string): StandardResult[] 
 }
 
 // ===== 山西省工程建设地方标准(省住建厅「发布公告」) =====
-// 实测事实(2026-09,共核对 5 份公告):
+// 实测事实(2026-09,共核对 6 份公告):
 //  - 标准库条目页(…/bzgf/bzk/*.shtml)不含标准编号,编号仅存在于 68MB 全文 PDF 附件内;
 //  - 公告页(…/bzgf/bzgg/*.shtml)正文才是编号 / 实施日期 / 替代关系的唯一权威来源;
-//  - 正文由 div.trs_editor_view 承载,段落被 Word 粘贴产生的 <span style> 切碎,
-//    故先按整段去标签取纯文本再做正则,比逐层选择器稳;
+//  - 正文容器 class 随模板年份变化,实测至少两种:
+//      2026 年: div.trs_editor_view TRS_UEDITOR trs_paper_default trs_word
+//      2023 年: div.view TRS_UEDITOR trs_paper_default trs_web
+//    共同 token 是 TRS_UEDITOR,故用它选容器;再兜底取整页文本,
+//    避免将来换模板时静默解析失败(只认 trs_editor_view 会漏掉老页面)。
+//  - 段落被 Word 粘贴产生的 <span style> 切碎,故先取纯文本再做正则,比逐层选择器稳;
 //  - 正文含 U+2002 等 Unicode 空白,统一 \s+ 压缩后再匹配。
 // 实测句式(仅替代子句有三态:带全角括号 / 带半角括号 / 不存在):
 //  现批准《城市综合管廊工程技术标准》为山西省工程建设地方标准，编号为DBJ04/T389-2026，自2026年9月1日起实施。
@@ -240,7 +244,8 @@ export function parseShanxiAnnouncementHtml(
 ): StandardResult[] {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
-  const body = doc.querySelector('div.trs_editor_view')
+  // TRS_UEDITOR 是各年份模板的公共 class token;取不到就退回整页文本
+  const body = doc.querySelector('div.TRS_UEDITOR') || doc.querySelector('div.trs_editor_view') || doc.body
   const text = (body?.textContent || '').replace(/\s+/g, '')
   if (!text)
     return []
@@ -290,4 +295,24 @@ export function parseShanxiAnnouncementHtml(
   }
 
   return results
+}
+
+// ===== 山西省标准库条目页(…/bzgf/bzk/*.shtml)的 PDF 附件 =====
+// 实测(2026-09,抽样 20 个条目页 20/20 均有附件):
+//  - 该页没有标准编号(编号只在公告正文里),但全文 PDF 只挂在这一页;
+//  - 附件锚点带 appendix="true" 属性,href 为相对路径 ./P020….pdf;
+//  - 附件是 68MB 级大文件,只取外链供用户自行下载,绝不在前端下载。
+export function parseShanxiEntryPdfHtml(html: string, baseUrl: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const anchor = doc.querySelector('a[appendix="true"][href]') || doc.querySelector('p.insertfileTag a[href]')
+  const href = anchor?.getAttribute('href')?.trim() || ''
+  if (!href || !/\.pdf$/i.test(href))
+    return ''
+  try {
+    return new URL(href, baseUrl).href
+  }
+  catch {
+    return ''
+  }
 }

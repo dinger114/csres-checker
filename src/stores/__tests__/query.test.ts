@@ -12,6 +12,7 @@ const csresQuery = vi.fn()
 const cqdbQuery = vi.fn()
 const cqdbQueryByName = vi.fn()
 const shanxiQuery = vi.fn()
+const shanxiQueryByName = vi.fn()
 const atlasQuery = vi.fn()
 const queryByName = vi.fn()
 const incQueryCount = vi.fn().mockResolvedValue(undefined)
@@ -42,7 +43,7 @@ vi.mock('../../composables/useCqdb', () => ({
   useCqdb: () => ({ query: cqdbQuery, queryByName: cqdbQueryByName }),
 }))
 vi.mock('../../composables/useShanxi', () => ({
-  useShanxi: () => ({ query: shanxiQuery }),
+  useShanxi: () => ({ query: shanxiQuery, queryByName: shanxiQueryByName }),
 }))
 vi.mock('../../composables/useAtlas', () => ({
   useAtlas: () => ({ query: atlasQuery }),
@@ -167,6 +168,17 @@ describe('useQueryStore', () => {
 
     expect(shanxiQuery).not.toHaveBeenCalled()
     expect(cqdbQuery).not.toHaveBeenCalled()
+  })
+
+  it('searchByName routes to shanxi when source is shanxi', async () => {
+    shanxiQueryByName.mockResolvedValue([baseResult('DBJ04/T389-2026')])
+
+    const store = useQueryStore()
+    await store.searchByName(['城市综合管廊'], 'shanxi')
+
+    expect(shanxiQueryByName).toHaveBeenCalledWith('城市综合管廊')
+    expect(queryByName).not.toHaveBeenCalled()
+    expect(store.results[0].standard_number).toBe('DBJ04/T389-2026')
   })
 
   it('does not start a second run while running', async () => {

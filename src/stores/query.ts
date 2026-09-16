@@ -352,6 +352,8 @@ export const useQueryStore = defineStore('query', {
         add(SEPARATOR, 'info')
         if (source === 'cqdb')
           add('plan: cq.dingyi.de (重庆地标, 需代理)', 'info')
+        else if (source === 'shanxi')
+          add('plan: zjt.shanxi.gov.cn (山西地标, 需代理)', 'info')
         else
           add('plan: cssn.net.cn only', 'info')
         add(SEPARATOR, 'info')
@@ -365,7 +367,12 @@ export const useQueryStore = defineStore('query', {
           kwToIndices.get(kw)!.push(idx)
         })
 
-        const queryByNameFn = source === 'cqdb' ? useCqdb().queryByName : useCssn().queryByName
+        const nameSourceMap: Record<string, { queryByName: (kw: string) => Promise<StandardResult[]> }> = {
+          cqdb: useCqdb(),
+          shanxi: useShanxi(),
+          cssn: useCssn(),
+        }
+        const queryByNameFn = (nameSourceMap[source] || nameSourceMap.cssn).queryByName
 
         const queryResults = new Map<string, StandardResult[]>()
 

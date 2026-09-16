@@ -31,7 +31,7 @@ const defaultColumns: ColumnDef[] = [
   { key: 'status', label: 'STATUS', i18nKey: 'output.col_status', draggable: true, exportable: true },
   { key: 'publish_date', label: 'PUBLISHED', i18nKey: 'output.col_published', draggable: true, exportable: true },
   { key: 'implement_date', label: 'IMPLEMENTED', i18nKey: 'output.col_implemented', draggable: true, exportable: true },
-  { key: 'jzxx', label: '筑森档案', i18nKey: 'output.col_pdf', draggable: true, exportable: false },
+  { key: 'jzxx', label: '文件下载', i18nKey: 'output.col_jzxx', draggable: true, exportable: false },
   { key: 'doc88', label: '道客巴巴', i18nKey: 'output.col_doc88', draggable: true, exportable: false },
   { key: 'soujz', label: '搜建筑', i18nKey: 'output.col_soujz', draggable: true, exportable: false },
   { key: 'pdf', label: '地标预览', i18nKey: 'output.col_pdf', draggable: true, exportable: false },

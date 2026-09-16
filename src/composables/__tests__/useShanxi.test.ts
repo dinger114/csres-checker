@@ -39,7 +39,8 @@ function hit(overrides: Record<string, string> = {}) {
 
 describe('useShanxi', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    // 同下:必须 mockReset,否则 mockResolvedValueOnce 队列跨用例残留
+    raceMock.mockReset()
   })
 
   it('queries the TRS openSearch API with position=0 (全文检索)', async () => {
@@ -198,5 +199,93 @@ describe('useShanxi', () => {
     expect(results).toHaveLength(2)
     expect(results[0].standard_number).toBe('DBJ04/T389-2026')
     expect(results[1].standard_number).toBe('DBJ04/T389-2019')
+  })
+})
+
+// ===== 名称检索 =====
+
+// 实测返回:标准库条目页标题就是标准名称(带书名号),另有发布公告与征求意见稿
+const ENTRY_URL = 'http://zjt.shanxi.gov.cn/zfxxgk/zfxxgkml/bzgf/bzk/202606/t20260612_10145310.shtml'
+
+function entryHit(overrides: Record<string, string> = {}) {
+  return {
+    gk_doctitle: '《城市综合管廊工程技术标准》',
+    docpuburl: ENTRY_URL,
+    docpubtime: '2026-06-11 15:15:00',
+    ...overrides,
+  }
+}
+
+const ENTRY_PAGE = `<div><p><a appendix="true" href="./P020260612553273540285.pdf">《城市综合管廊工程技术标准》.pdf</a></p></div>`
+
+describe('useShanxi queryByName', () => {
+  beforeEach(() => {
+    // mockReset 而非 clearAllMocks:后者不清空 mockResolvedValueOnce 队列,
+    // 用例间会串味(上一个用例没消费完的返回值被下一个用例吃掉)
+    raceMock.mockReset()
+  })
+
+  it('uses 标题检索 (position=1) and returns the entry with its pdf link', async () => {
+    raceMock.mockResolvedValueOnce(searchResponse([entryHit(), hit()]))
+    raceMock.mockResolvedValueOnce(ENTRY_PAGE)
+    raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
+
+    const { queryByName } = useShanxi()
+    const results = await queryByName('城市综合管廊')
+
+    // 名称检索必须用标题检索,与编号检索相反
+    expect(raceMock.mock.calls[0][0]).toContain('position=1')
+    expect(raceMock.mock.calls[0][0]).toContain('keywords=%E5%9F%8E%E5%B8%82%E7%BB%BC%E5%90%88%E7%AE%A1%E5%BB%8A')
+
+    expect(results).toHaveLength(2)
+    // 条目页标题给出名称,公告正文补出编号/实施日期
+    expect(results[0].title).toBe('城市综合管廊工程技术标准')
+    expect(results[0].standard_number).toBe('DBJ04/T389-2026')
+    expect(results[0].implement_date).toBe('2026-09-01')
+    expect(results[0].pdf_url).toBe('http://zjt.shanxi.gov.cn/zfxxgk/zfxxgkml/bzgf/bzk/202606/P020260612553273540285.pdf')
+    // 被废止的旧标准一并带出
+    expect(results[1].standard_number).toBe('DBJ04/T389-2019')
+    expect(results[1].status).toBe('废止')
+    expect(results[1].replaced_by).toBe('DBJ04/T389-2026')
+  })
+
+  it('keeps the entry row with empty number when no 发布公告 matches', async () => {
+    raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    raceMock.mockResolvedValueOnce(ENTRY_PAGE)
+
+    const { queryByName } = useShanxi()
+    const results = await queryByName('城市综合管廊')
+
+    expect(results).toHaveLength(1)
+    expect(results[0].title).toBe('城市综合管廊工程技术标准')
+    expect(results[0].standard_number).toBe('')
+    expect(results[0].status).toBe('现行')
+    expect(results[0].pdf_url).toContain('P020260612553273540285.pdf')
+  })
+
+  it('ignores 征求意见稿 and 转发通知 hits', async () => {
+    raceMock.mockResolvedValueOnce(searchResponse([
+      { gk_doctitle: '山西省住房和城乡建设厅关于《城市综合管廊工程技术标准》公开征求意见的通知', docpuburl: 'http://zjt.shanxi.gov.cn/zwgk/zqyj/202511/t20251111_9994106.shtml', docpubtime: '2025-11-11 16:04:23' },
+      { gk_doctitle: '关于转发住建部《关于印发城市综合管廊…的通知》的通知〔2016〕55号', docpuburl: 'http://zjt.shanxi.gov.cn/zwgk/tfwj/202109/t20210907_1960325.shtml', docpubtime: '2016-03-10 00:00:00' },
+    ]))
+
+    const { queryByName } = useShanxi()
+    expect(await queryByName('城市综合管廊')).toEqual([])
+    // 只有检索请求,没有抓详情页
+    expect(raceMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns empty when the search has no hits', async () => {
+    raceMock.mockResolvedValueOnce(searchResponse([]))
+
+    const { queryByName } = useShanxi()
+    expect(await queryByName('不存在的标准')).toEqual([])
+  })
+
+  it('returns empty when race throws', async () => {
+    raceMock.mockRejectedValueOnce(new Error('network error'))
+
+    const { queryByName } = useShanxi()
+    expect(await queryByName('城市综合管廊')).toEqual([])
   })
 })
