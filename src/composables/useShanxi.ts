@@ -20,7 +20,16 @@ const SHANXI_MIN_JSON_BYTES = 40
 const MAX_ANNOUNCEMENTS = 2
 
 // 名称检索时最多解析几个标准库条目页(该页无编号,只为取 PDF 外链)
-const MAX_ENTRIES = 3
+const MAX_ENTRIES = 5
+
+// 条目页找不到同名公告时,用条目标题再补搜一次(站点全文检索下公告常排到很后面,
+// 靠加大 pageSize 也覆盖不到 —— 实测关键词「建筑」前 100 条一条公告都没有)。
+// 补搜按顺序进行,一旦本页已有公告匹配上就不再补搜。
+const MAX_ENTRY_LOOKUPS = 3
+
+// 名称检索第一页取多少条。默认 10 条时「发布公告」常被标准库条目挤到第二页,
+// 导致条目拿不到编号(实测关键词「消防」默认页 0 个公告,pageSize=100 有 4 个)。
+const NAME_PAGE_SIZE = '100'
 
 // 公告标题特征(实测公告栏目 20/20 条一致)。检索库同时收录标准库条目、征求意见稿等,
 // 只有「发布公告」正文含标准编号,故按标题过滤。
@@ -50,7 +59,7 @@ export function useShanxi() {
 
   // position=0 全文检索(编号检索必须用它,标题检索对编号 total=0);
   // position=1 标题检索(名称检索用它,否则全文命中太多噪声)。
-  async function searchDocs(keyword: string, position = '0'): Promise<ShanxiSearchItem[]> {
+  async function searchDocs(keyword: string, position = '0', pageSize?: string): Promise<ShanxiSearchItem[]> {
     const params = new URLSearchParams({
       keywords: keyword,
       pageNum: '1',
@@ -59,6 +68,8 @@ export function useShanxi() {
       sort: '',
       suitability: '1',
     })
+    if (pageSize)
+      params.set('pageSize', pageSize)
     const resp = await race(`${SHANXI_SEARCH_API}?${params.toString()}`, 'json', SHANXI_MIN_JSON_BYTES)
     if (!resp)
       return []
@@ -174,7 +185,8 @@ export function useShanxi() {
       add(`shanxi (name): "${kw}"`, 'info')
       const t0 = Date.now()
 
-      const hits = await searchDocs(kw, '1')
+      // pageSize 加大:默认 10 条时「发布公告」常排在标准库条目后面,一页装不下
+      const hits = await searchDocs(kw, '1', NAME_PAGE_SIZE)
       if (hits.length === 0)
         return []
 
@@ -190,23 +202,47 @@ export function useShanxi() {
       // 发布公告:正文含编号/实施日期/替代关系,用它给条目补全字段。
       // 不按固定条数截断,而是「按名称给每个条目找它自己的公告」——否则名称检索命中
       // 多个标准时,靠后的条目会因公告被截断而拿不到编号(实测 2023 年的公告就是这样丢的)。
-      const announcementCandidates = hits
+      let announcementCandidates = hits
         .filter(h => h.docpuburl && ANNOUNCEMENT_TITLE_RE.test(stripTags(h.gk_doctitle || h.title || '')))
         .sort((a, b) => (b.docpubtime || '').localeCompare(a.docpubtime || ''))
 
       const entryTitles = entries.map(e => stripTags(e.gk_doctitle || e.title || '').replace(/[《》]/g, '').trim())
 
-      // 每个条目挑最新的一份同名公告(最新的公告才反映当前状态)
+      const normTitleOf = (h: ShanxiSearchItem) => normalizeTitle(h.gk_doctitle || h.title || '')
+      const annTitles = new Set(announcementCandidates.map(normTitleOf))
+
+      // 本页公告覆盖不到的条目,用条目标题补搜一次。
+      // 站点全文检索下公告常排到几十条之后(「建筑」前 100 条一条公告都没有),
+      // 但用「标准名称」搜就很准 —— 实测 4/4 都能搜到自己的发布公告。
+      let lookups = 0
+      for (const title of entryTitles) {
+        if (lookups >= MAX_ENTRY_LOOKUPS)
+          break
+        const key = normalizeTitle(title)
+        if (!key || annTitles.has(key))
+          continue
+        lookups++
+        const found = await searchDocs(title, '1')
+        const ann = found
+          .filter(h => h.docpuburl && ANNOUNCEMENT_TITLE_RE.test(stripTags(h.gk_doctitle || h.title || '')))
+          .find(h => normTitleOf(h) === key)
+        if (ann) {
+          announcementCandidates = [...announcementCandidates, ann]
+          annTitles.add(key)
+          add(`shanxi (name): "${title}" 补搜到发布公告`, 'info')
+        }
+      }
+
       const annForEntry: Array<ShanxiSearchItem | undefined> = entryTitles.map((t) => {
         const key = normalizeTitle(t)
-        return announcementCandidates.find(a => normalizeTitle(a.gk_doctitle || a.title || '') === key)
+        return announcementCandidates.find(a => normTitleOf(a) === key)
       })
 
       const entryPages = await Promise.allSettled(entries.map(h => race(h.docpuburl!)))
 
       const byTitle = new Map<string, StandardResult[]>()
       await Promise.all(annForEntry.map(async (ann) => {
-        if (!ann?.docpuburl || byTitle.has(normalizeTitle(ann.gk_doctitle || ann.title || '')))
+        if (!ann?.docpuburl || byTitle.has(normTitleOf(ann)))
           return
         const html = await race(ann.docpuburl)
         if (!html)

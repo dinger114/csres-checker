@@ -250,7 +250,9 @@ describe('useShanxi queryByName', () => {
   })
 
   it('keeps the entry row with empty number when no 发布公告 matches', async () => {
+    // 首页只有条目页;补搜(用条目标题再搜一次)也搜不到公告
     raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([]))
     raceMock.mockResolvedValueOnce(ENTRY_PAGE)
 
     const { queryByName } = useShanxi()
@@ -261,6 +263,35 @@ describe('useShanxi queryByName', () => {
     expect(results[0].standard_number).toBe('')
     expect(results[0].status).toBe('现行')
     expect(results[0].pdf_url).toContain('P020260612553273540285.pdf')
+  })
+
+  it('补搜:首页无公告时用条目标题再搜一次拿到编号', async () => {
+    raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    // 补搜命中同名公告
+    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(ENTRY_PAGE)
+    raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
+
+    const { queryByName } = useShanxi()
+    const results = await queryByName('城市综合管廊')
+
+    // 第二次检索用条目标题(不带书名号)
+    expect(raceMock.mock.calls[1][0]).toContain('keywords=%E5%9F%8E%E5%B8%82%E7%BB%BC%E5%90%88%E7%AE%A1%E5%BB%8A%E5%B7%A5%E7%A8%8B%E6%8A%80%E6%9C%AF%E6%A0%87%E5%87%86')
+    expect(results).toHaveLength(2)
+    expect(results[0].standard_number).toBe('DBJ04/T389-2026')
+    expect(results[0].implement_date).toBe('2026-09-01')
+  })
+
+  it('名称检索首页取 100 条(默认 10 条装不下公告)', async () => {
+    raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([]))
+    raceMock.mockResolvedValueOnce(ENTRY_PAGE)
+
+    const { queryByName } = useShanxi()
+    await queryByName('城市综合管廊')
+
+    expect(raceMock.mock.calls[0][0]).toContain('pageSize=100')
+    expect(raceMock.mock.calls[0][0]).toContain('position=1')
   })
 
   it('ignores 征求意见稿 and 转发通知 hits', async () => {
