@@ -1,6 +1,6 @@
 # Proxy Worker
 
-代理服务，用于跨域请求不支持 CORS 的标准数据源（工标库、csres.com、重庆地标等）。
+代理服务，用于跨域请求不支持 CORS 的标准数据源（工标库、csres.com、重庆地标、山西地标等）。
 
 两套 Worker 共享 `worker/shared.js`（白名单 / 重定向处理 / 限流 / CORS / 响应大小限制 / KV 计数解析），逻辑单一来源，不会漂移：
 
@@ -32,7 +32,7 @@ GET https://your-worker.workers.dev/?url=https://example.com
 
 ## 功能
 
-- URL 白名单 + 协议校验（`cssn.net.cn`、`bzsou.cn`、`ccsn.org.cn`、`gongbiaoku.com`、`csres.com`、`ebook.chinabuilding.com.cn`、`cq.dingyi.de`，见 `shared.js` 的 `ALLOWED_HOSTS`），防止 SSRF
+- URL 白名单 + 协议校验（`cssn.net.cn`、`bzsou.cn`、`ccsn.org.cn`、`gongbiaoku.com`、`csres.com`、`ebook.chinabuilding.com.cn`、`cq.dingyi.de`、`zjt.shanxi.gov.cn`，见 `shared.js` 的 `ALLOWED_HOSTS`），防止 SSRF
 - 手动跟随重定向（S1）：3xx 的每一跳 `Location` 重新过白名单 + 协议校验，最多 3 跳
 - 滑动窗口限流：每 IP 每 60 秒最多 30 次请求（响应头 `X-RateLimit-*`，429 带 `Retry-After`；注意为单 isolate 内存限流，跨实例不共享）
 - Cap PoW 人机验证（完整版）：`/cap/challenge` → `/cap/redeem` 签发 session permit，TTL 内豁免限流；依赖 KV 绑定 `CAPTCHA_KV`（nonce 防重放 + permit 存储）与 `COUNTER_KV`（计数）

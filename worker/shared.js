@@ -16,6 +16,7 @@ export const ALLOWED_HOSTS = [
   'ebook.chinabuilding.com.cn',
   'www.ebook.chinabuilding.com.cn',
   'cq.dingyi.de',
+  'zjt.shanxi.gov.cn',
 ]
 
 // 手动跟随重定向时允许的最大跳数

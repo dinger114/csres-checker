@@ -26,6 +26,7 @@ const numberSources = [
   { key: 'gongbiaoku', label: '工标库' },
   { key: 'csres', label: 'CSRes' },
   { key: 'cqdb', label: '重庆地标' },
+  { key: 'shanxi', label: '山西地标' },
 ]
 const nameSources = [
   { key: 'cssn', label: 'CSSN' },

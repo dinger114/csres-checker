@@ -7,7 +7,7 @@
 ## 功能特性
 
 - 支持 GB、行业标准等编号查询（`GB50222` → `GB 50222` 自动格式化）
-- 六数据源：cssn.net.cn + 标准搜 + 工程标 + 工标库 + csres.com（自动 fallback）+ 重庆地标（手动选择）
+- 七数据源：cssn.net.cn + 标准搜 + 工程标 + 工标库 + csres.com（自动 fallback）+ 重庆地标、山西地标（手动选择）
 - 名称检索模式：按标准名称关键词搜索（数据源可选 CSSN 或重庆地标），按国标 > 行业 > 地方 > 国际优先级排序
 - 标准图集模式：按图集编号或名称搜索国标图集（ebook.chinabuilding.com.cn）
 - 并行批量查询（2 个一批，500ms 间隔），实时进度条 + 日志面板
@@ -71,11 +71,11 @@ python csres_checker.py -f examples/sample.txt
 
 ## 自建代理与计数（Cloudflare Worker + KV）
 
-部分数据源（工标库、csres、重庆地标、图集）不支持 CORS，浏览器直接请求会被拦截。通过 Cloudflare Worker 中转解决。
+部分数据源（工标库、csres、重庆地标、山西地标、图集）不支持 CORS，浏览器直接请求会被拦截。通过 Cloudflare Worker 中转解决。
 
 Worker 同时提供全网查询计数 API（`/api/count` 读取、`/api/count/inc` 递增），使用 KV 存储计数，替代了原先的 Firebase 依赖。
 
-Worker 内置 URL 白名单（`cssn.net.cn`、`bzsou.cn`、`ccsn.org.cn`、`gongbiaoku.com`、`csres.com`、`ebook.chinabuilding.com.cn`、`cq.dingyi.de` 及重庆源站 `183.66.41.2`），仅允许转发到这些域名，防止 SSRF，并带滑动窗口限流（每 IP 每 60 秒 30 次）。
+Worker 内置 URL 白名单（`cssn.net.cn`、`bzsou.cn`、`ccsn.org.cn`、`gongbiaoku.com`、`csres.com`、`ebook.chinabuilding.com.cn`、`cq.dingyi.de`、`zjt.shanxi.gov.cn` 及重庆源站 `183.66.41.2`），仅允许转发到这些域名，防止 SSRF，并带滑动窗口限流（每 IP 每 60 秒 30 次）。
 
 前端通过 `src/utils/constants.ts` 的 `PROXY_LIST` 配置代理端点（默认 `api.dingyi.de`、`api2.dingyi.de`），多代理竞速取最快可用。
 
@@ -95,7 +95,7 @@ npx wrangler deploy
 npx wrangler kv key put --namespace-id=<YOUR_ID> queryCount 0 --remote
 ```
 
-> 注：cssn.net.cn、bzsou.cn、ccsn.org.cn 支持 CORS 时前端直连优先，代理仅作 fallback；工标库、csres、重庆地标、图集必须走代理。
+> 注：cssn.net.cn、bzsou.cn、ccsn.org.cn 支持 CORS 时前端直连优先，代理仅作 fallback；工标库、csres、重庆地标、山西地标、图集必须走代理。
 
 ## 技术栈
 
@@ -144,6 +144,7 @@ csres-checker/
 │   │   ├── useGongbiaoku.ts    # 工标库数据源（代理）
 │   │   ├── useCsres.ts         # csres.com 数据源（代理）
 │   │   ├── useCqdb.ts          # 重庆地标数据源（代理）
+│   │   ├── useShanxi.ts        # 山西地标数据源（省住建厅公告，代理）
 │   │   ├── useAtlas.ts         # 标准图集数据源（代理）
 │   │   ├── useProxy.ts         # 代理竞速（PROXY_LIST 多端点）
 │   │   ├── useCounter.ts       # Worker + KV 查询计数

@@ -11,6 +11,7 @@ const gongQuery = vi.fn()
 const csresQuery = vi.fn()
 const cqdbQuery = vi.fn()
 const cqdbQueryByName = vi.fn()
+const shanxiQuery = vi.fn()
 const atlasQuery = vi.fn()
 const queryByName = vi.fn()
 const incQueryCount = vi.fn().mockResolvedValue(undefined)
@@ -39,6 +40,9 @@ vi.mock('../../composables/useCsres', () => ({
 }))
 vi.mock('../../composables/useCqdb', () => ({
   useCqdb: () => ({ query: cqdbQuery, queryByName: cqdbQueryByName }),
+}))
+vi.mock('../../composables/useShanxi', () => ({
+  useShanxi: () => ({ query: shanxiQuery }),
 }))
 vi.mock('../../composables/useAtlas', () => ({
   useAtlas: () => ({ query: atlasQuery }),
@@ -142,6 +146,27 @@ describe('useQueryStore', () => {
     expect(cqdbQuery).toHaveBeenCalled()
     expect(cssnQuery).not.toHaveBeenCalled()
     expect(store.results[0].standard_number).toBe('DBJ50/T-562')
+  })
+
+  it('routes to shanxi when source is shanxi (且不入默认链)', async () => {
+    shanxiQuery.mockResolvedValue([baseResult('DBJ04/T389-2026')])
+
+    const store = useQueryStore()
+    await store.query(['DBJ04/T389-2026'], 'shanxi')
+
+    expect(shanxiQuery).toHaveBeenCalled()
+    expect(cssnQuery).not.toHaveBeenCalled()
+    expect(store.results[0].standard_number).toBe('DBJ04/T389-2026')
+  })
+
+  it('默认降级链不包含 shanxi', async () => {
+    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+
+    const store = useQueryStore()
+    await store.query(['GB 50010-2010'])
+
+    expect(shanxiQuery).not.toHaveBeenCalled()
+    expect(cqdbQuery).not.toHaveBeenCalled()
   })
 
   it('does not start a second run while running', async () => {

@@ -1,4 +1,5 @@
 import type { StandardResult } from '../types'
+import { STATUS } from './status'
 
 const CQDB_BASE = 'http://183.66.41.2:3757/x/'
 
@@ -212,6 +213,80 @@ export function parseCsresHtml(html: string, keyword: string): StandardResult[] 
         }
       }
     }
+  }
+
+  return results
+}
+
+// ===== 山西省工程建设地方标准(省住建厅「发布公告」) =====
+// 实测事实(2026-09,共核对 5 份公告):
+//  - 标准库条目页(…/bzgf/bzk/*.shtml)不含标准编号,编号仅存在于 68MB 全文 PDF 附件内;
+//  - 公告页(…/bzgf/bzgg/*.shtml)正文才是编号 / 实施日期 / 替代关系的唯一权威来源;
+//  - 正文由 div.trs_editor_view 承载,段落被 Word 粘贴产生的 <span style> 切碎,
+//    故先按整段去标签取纯文本再做正则,比逐层选择器稳;
+//  - 正文含 U+2002 等 Unicode 空白,统一 \s+ 压缩后再匹配。
+// 实测句式(仅替代子句有三态:带全角括号 / 带半角括号 / 不存在):
+//  现批准《城市综合管廊工程技术标准》为山西省工程建设地方标准，编号为DBJ04/T389-2026，自2026年9月1日起实施。
+//  原《城市综合管廊工程技术标准》（DBJ04/T389-2019）同时废止。
+const SHANXI_APPROVE_RE = /现?批准《([^》]+)》为山西省工程建设地方标准[，,]编号为\s*([^，,。；;]+)/
+const SHANXI_IMPL_RE = /自\s*(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日\s*起\s*(?:实施|施行)/
+// 旧名称可能含半角括号(如「现浇混凝土内置保温体系(SD)应用技术标准」);
+// [^》]* 不会跨过书名号,故用贪婪即可;编号形如 DBJ04/T389-2019,按「字母+数字+分隔段」精确描述
+const SHANXI_REPLACED_RE = /原《([^》]*)》[（(\s]*([a-z]+\d[\da-z]*(?:[/.-][\da-z]*)*)[\s）)]*同时废止/i
+
+export function parseShanxiAnnouncementHtml(
+  html: string,
+  opts: { keyword: string, pubDate?: string },
+): StandardResult[] {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const body = doc.querySelector('div.trs_editor_view')
+  const text = (body?.textContent || '').replace(/\s+/g, '')
+  if (!text)
+    return []
+
+  const approve = SHANXI_APPROVE_RE.exec(text)
+  if (!approve)
+    return []
+
+  const title = approve[1].trim()
+  const standardNumber = approve[2].trim()
+
+  const impl = SHANXI_IMPL_RE.exec(text)
+  const implementDate = impl
+    ? `${impl[1]}-${impl[2].padStart(2, '0')}-${impl[3].padStart(2, '0')}`
+    : ''
+
+  const results: StandardResult[] = [{
+    query: opts.keyword,
+    standard_number: standardNumber,
+    title,
+    // 公告语义即「新批准发布」,状态恒为现行;废止行由下一段回推
+    status: STATUS.ACTIVE,
+    publish_date: opts.pubDate || '',
+    implement_date: implementDate,
+    replaced_by: '',
+    publisher: '山西省住房和城乡建设厅',
+    category: '地方标准',
+    ics: '',
+  }]
+
+  // 回推被本公告废止的旧标准:查新场景下「旧编号 → 已废止 + 被谁替代」比新标准本身更常被问
+  const replaced = SHANXI_REPLACED_RE.exec(text)
+  const oldNumber = replaced?.[2]?.trim()
+  if (oldNumber && oldNumber !== standardNumber) {
+    results.push({
+      query: opts.keyword,
+      standard_number: oldNumber,
+      title: replaced?.[1]?.trim() || title,
+      status: STATUS.DEPRECATED,
+      publish_date: '',
+      implement_date: '',
+      replaced_by: standardNumber,
+      publisher: '山西省住房和城乡建设厅',
+      category: '地方标准',
+      ics: '',
+    })
   }
 
   return results

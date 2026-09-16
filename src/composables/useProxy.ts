@@ -8,13 +8,13 @@ const MIN_VALID_BODY_BYTES = 200
 
 // 校验代理返回是否为有效响应(C3):
 // 1. 必须 res.ok;
-// 2. body 达到最小长度;
+// 2. body 达到最小长度(minBytes 可覆盖:JSON 源的「空结果」响应可能远小于 200 字节);
 // 3. JSON 数据源要求首非空白字符为 { 或 [——200+ 字节的 WAF HTML 挑战页不算有效。
-function isValidProxyResponse(res: Response, text: string, kind: SourceKind): boolean {
+function isValidProxyResponse(res: Response, text: string, kind: SourceKind, minBytes = MIN_VALID_BODY_BYTES): boolean {
   if (!res.ok)
     return false
   const trimmed = text.trimStart()
-  if (trimmed.length < MIN_VALID_BODY_BYTES)
+  if (trimmed.length < minBytes)
     return false
   if (kind === 'json')
     return trimmed.startsWith('{') || trimmed.startsWith('[')
@@ -40,7 +40,7 @@ export function useProxy() {
     }
   }
 
-  async function race(url: string, kind: SourceKind = 'html'): Promise<string | null> {
+  async function race(url: string, kind: SourceKind = 'html', minBytes = MIN_VALID_BODY_BYTES): Promise<string | null> {
     const proxyUrls = PROXY_LIST.map(fn => fn(url))
     // 代理竞速:api/api2 是简化代理,不校验 cap-token,
     // 不附带自定义头可避免 OPTIONS preflight(CORS 源头)。
@@ -48,7 +48,7 @@ export function useProxy() {
       fetchWithRetry(proxyUrl, FETCH_RETRIES, FETCH_TIMEOUT)
         .then(async (res) => {
           const text = await res.text()
-          if (isValidProxyResponse(res, text, kind))
+          if (isValidProxyResponse(res, text, kind, minBytes))
             return text
           throw new Error(`invalid proxy response: ${res.status}`)
         }),

@@ -129,6 +129,13 @@ GB 50311-2016</pre>
                   cq.dingyi.de（重庆地方标准，含 PDF 预览）
                 </td>
               </tr>
+              <tr>
+                <td>{{ locale === 'en' ? 'Shanxi' : '山西地标' }}</td><td v-if="locale === 'en'">
+                  zjt.shanxi.gov.cn (Shanxi provincial 发布公告, with implement dates &amp; superseded numbers)
+                </td><td v-else>
+                  zjt.shanxi.gov.cn（山西省住建厅发布公告，含实施日期与被替代编号）
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

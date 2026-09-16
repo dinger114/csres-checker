@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAtlasHtml, parseCqDbHtml, parseCsresHtml, parseGongbiaokuHtml } from '../htmlParser'
+import { parseAtlasHtml, parseCqDbHtml, parseCsresHtml, parseGongbiaokuHtml, parseShanxiAnnouncementHtml } from '../htmlParser'
 
 const cqdbHtml = `
 <table class="layui-table">
@@ -138,5 +138,88 @@ describe('parseAtlasHtml', () => {
   it('returns empty when no atlas rows match', () => {
     const results = parseAtlasHtml('<div class="other"></div>', '05SJ810')
     expect(results).toEqual([])
+  })
+})
+
+// 山西公告正文实测结构:div.trs_editor_view 内段落被 Word 粘贴的 <span style> 切碎,
+// 且含 U+2002 等 Unicode 空白,解析器先取纯文本再正则
+function shanxiAnnouncement(bodyHtml: string): string {
+  return `
+<div class="trs_editor_view TRS_UEDITOR trs_paper_default trs_word">
+  <p><span style="font-size: 16px;">${bodyHtml}</span></p>
+</div>`
+}
+
+describe('parseShanxiAnnouncementHtml', () => {
+  it('parses number, title and implement date from 发布公告 (全角括号替代子句)', () => {
+    const html = shanxiAnnouncement(
+      '现批准《城市综合管廊工程技术标准》为山西省工程建设地方标准，编号为DBJ04/T389-2026，自2026年9月1日起实施。'
+      + '原《城市综合管廊工程技术标准》（DBJ04/T389-2019）同时废止。'
+      + '本标准由山西省住房和城乡建设厅负责管理。',
+    )
+    const results = parseShanxiAnnouncementHtml(html, { keyword: 'DBJ04/T389-2026', pubDate: '2026-06-11' })
+
+    expect(results).toHaveLength(2)
+    const [newStd, oldStd] = results
+    expect(newStd.standard_number).toBe('DBJ04/T389-2026')
+    expect(newStd.title).toBe('城市综合管廊工程技术标准')
+    expect(newStd.status).toBe('现行')
+    expect(newStd.publish_date).toBe('2026-06-11')
+    expect(newStd.implement_date).toBe('2026-09-01')
+    expect(newStd.replaced_by).toBe('')
+    expect(newStd.publisher).toBe('山西省住房和城乡建设厅')
+    expect(newStd.category).toBe('地方标准')
+
+    // 回推被废止的旧标准:查新场景最常问的「旧编号 → 已废止 + 被谁替代」
+    expect(oldStd.standard_number).toBe('DBJ04/T389-2019')
+    expect(oldStd.status).toBe('废止')
+    expect(oldStd.replaced_by).toBe('DBJ04/T389-2026')
+  })
+
+  it('handles 半角括号 in the old title and no brackets around the old number', () => {
+    const html = shanxiAnnouncement(
+      '现批准《现浇混凝土内置保温系统应用技术标准》为山西省工程建设地方标准，编号为DBJ04/T382-2026，自2026年9月1日起实施。'
+      + '原《现浇混凝土内置保温体系(SD)应用技术标准》DBJ04/T375-2018同时废止。',
+    )
+    const results = parseShanxiAnnouncementHtml(html, { keyword: 'DBJ04/T382-2026' })
+
+    expect(results).toHaveLength(2)
+    expect(results[0].standard_number).toBe('DBJ04/T382-2026')
+    // 旧名称含半角括号,非贪婪匹配不应越界
+    expect(results[1].title).toBe('现浇混凝土内置保温体系(SD)应用技术标准')
+    expect(results[1].standard_number).toBe('DBJ04/T375-2018')
+    expect(results[1].status).toBe('废止')
+    expect(results[1].replaced_by).toBe('DBJ04/T382-2026')
+  })
+
+  it('returns a single row when there is no 同时废止 clause', () => {
+    const html = shanxiAnnouncement(
+      '现批准《好房子技术标准》为山西省工程建设地方标准，编号为DBJ04/T523-2026，自2026年9月1日起实施。'
+      + '本标准由山西省住房和城乡建设厅负责管理。山西省住房和城乡建设厅\u2002\u2002\u20022026年6月11日（主动公开）',
+    )
+    const results = parseShanxiAnnouncementHtml(html, { keyword: 'DBJ04/T523-2026', pubDate: '2026-06-11' })
+
+    expect(results).toHaveLength(1)
+    expect(results[0].standard_number).toBe('DBJ04/T523-2026')
+    expect(results[0].title).toBe('好房子技术标准')
+    expect(results[0].implement_date).toBe('2026-09-01')
+  })
+
+  it('pads single-digit month/day to ISO form', () => {
+    const html = shanxiAnnouncement(
+      '现批准《某标准》为山西省工程建设地方标准，编号为DBJ04/T900-2026，自2026年1月5日起施行。',
+    )
+    const results = parseShanxiAnnouncementHtml(html, { keyword: 'DBJ04/T900-2026' })
+
+    expect(results[0].implement_date).toBe('2026-01-05')
+  })
+
+  it('returns empty when the body has no 现批准 clause', () => {
+    const html = shanxiAnnouncement('本标准由山西省住房和城乡建设厅负责管理。')
+    expect(parseShanxiAnnouncementHtml(html, { keyword: 'x' })).toEqual([])
+  })
+
+  it('returns empty when the editor container is missing', () => {
+    expect(parseShanxiAnnouncementHtml('<div class="other">现批准《x》</div>', { keyword: 'x' })).toEqual([])
   })
 })

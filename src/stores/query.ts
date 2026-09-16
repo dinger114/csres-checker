@@ -10,6 +10,7 @@ import { useCqdb } from '../composables/useCqdb'
 import { useCsres } from '../composables/useCsres'
 import { useCssn } from '../composables/useCssn'
 import { useGongbiaoku } from '../composables/useGongbiaoku'
+import { useShanxi } from '../composables/useShanxi'
 import { useXlsx } from '../composables/useXlsx'
 import { BATCH_DELAY, BATCH_SIZE } from '../utils/constants'
 import { normalizeKeyword } from '../utils/normalize'
@@ -187,6 +188,7 @@ export const useQueryStore = defineStore('query', {
             const { query: gongQuery } = useGongbiaoku()
             const { query: csresQuery } = useCsres()
             const { query: cqdbQuery } = useCqdb()
+            const { query: shanxiQuery } = useShanxi()
 
             const sourceMap: Record<string, SourceFn> = {
               cssn: { query: cssnQuery },
@@ -195,6 +197,7 @@ export const useQueryStore = defineStore('query', {
               gongbiaoku: { query: gongQuery },
               csres: { query: csresQuery },
               cqdb: { query: cqdbQuery },
+              shanxi: { query: shanxiQuery },
             }
 
             const selectedSrc = sourceMap[source]
