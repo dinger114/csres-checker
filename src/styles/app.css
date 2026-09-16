@@ -12,6 +12,21 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+}
+
+/* input 按内容高度,output 吃掉剩余高度 —— 与右侧 terminal 面板底部平齐。
+   两者都必须是 flex 容器,否则子组件上的 flex:1 不生效(ResultsTable 的
+   .results-card 就是靠这条撑满的)。 */
+.panel-input {
+  flex: 0 0 auto;
+}
+
+.panel-output {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .terminal-wrapper {
