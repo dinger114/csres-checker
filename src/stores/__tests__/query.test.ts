@@ -291,4 +291,40 @@ describe('useQueryStore', () => {
 
     expect(capEndSession).not.toHaveBeenCalled()
   })
+
+  // 回归：runSource 曾在循环步进与切片各调一次 adaptiveBatchSize()。
+  // 批次间平均延迟跨档（>slowThreshold→1 / <fastThreshold→4）时两次取值不同，
+  // 中间关键词既不查询也不进 failed（fallback 不会补），另一些被重复查询。
+  it('queries every keyword exactly once when the adaptive batch size shifts mid-run', async () => {
+    const kws = ['K1', 'K2', 'K3', 'K4', 'K5', 'K6']
+    const queried: string[] = []
+
+    let clock = 0
+    vi.spyOn(Date, 'now').mockImplementation(() => clock)
+
+    const src = {
+      query: vi.fn(async (kw: string) => {
+        queried.push(kw)
+        if (kw === 'K1')
+          clock += 3000 * 4 // 首批 4 条，3000ms/条 → 下一轮 adaptiveBatchSize() 降到 1
+        return [baseResult(kw)]
+      }),
+    }
+
+    const store = useQueryStore()
+    const failed = await store.runSource(
+      'regression',
+      src,
+      kws,
+      kws,
+      new Map(kws.map((k, i) => [k, [i]])),
+      new Map(),
+    )
+
+    vi.restoreAllMocks()
+
+    expect(queried).toHaveLength(kws.length)
+    expect([...queried].sort()).toEqual([...kws].sort())
+    expect(failed).toEqual([])
+  })
 })

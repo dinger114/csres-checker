@@ -78,8 +78,12 @@ export const useQueryStore = defineStore('query', {
       add(`phase: ${name} (${kws.length} items)`, 'info')
 
       const failed: string[] = []
-      for (let i = 0; i < kws.length; i += this.adaptiveBatchSize()) {
-        const batch = kws.slice(i, i + this.adaptiveBatchSize())
+      for (let i = 0; i < kws.length;) {
+        // 批次大小每轮只取一次：自适应档位会随平均延迟变化，
+        // 若步进与切片各调一次 adaptiveBatchSize()，两者可能取到不同档位，
+        // 导致中间关键词既不查询也不进 failed（fallback 也不会补），另一些被重复查询。
+        const size = this.adaptiveBatchSize()
+        const batch = kws.slice(i, i + size)
         const t0 = Date.now()
         const batchResults = await Promise.allSettled(batch.map(kw => src.query(kw)))
         this.recordLatency((Date.now() - t0) / batch.length)
@@ -100,13 +104,14 @@ export const useQueryStore = defineStore('query', {
           }
         })
         // 进度更新(C5):主查询路径此前恒为 0% 再跳 100%,现与 atlas/name 路径一致
-        const done = Math.min(i + this.adaptiveBatchSize(), kws.length)
+        const done = Math.min(i + size, kws.length)
         this.progress = {
           current: done,
           total: kws.length,
           pct: Math.round(done / kws.length * 100),
         }
-        if (i + this.adaptiveBatchSize() < kws.length)
+        i += size
+        if (i < kws.length)
           await delay(this.adaptiveDelay())
       }
       return failed
@@ -280,8 +285,9 @@ export const useQueryStore = defineStore('query', {
         const { query } = useAtlas()
         const queryResults = new Map<string, StandardResult[]>()
 
-        for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
-          const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
+        for (let i = 0; i < uniqueKws.length;) {
+          const size = this.adaptiveBatchSize()
+          const batch = uniqueKws.slice(i, i + size)
           const t0 = Date.now()
           const batchResults = await Promise.allSettled(batch.map(kw => query(kw)))
           this.recordLatency((Date.now() - t0) / batch.length)
@@ -297,8 +303,10 @@ export const useQueryStore = defineStore('query', {
               queryResults.set(kw, r.value)
             }
           })
-          this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
-          if (i + this.adaptiveBatchSize() < uniqueKws.length)
+          i += size
+          const done = Math.min(i, uniqueKws.length)
+          this.progress = { current: done, total: uniqueKws.length, pct: Math.round(done / uniqueKws.length * 100) }
+          if (i < uniqueKws.length)
             await delay(this.adaptiveDelay())
         }
 
@@ -376,8 +384,9 @@ export const useQueryStore = defineStore('query', {
 
         const queryResults = new Map<string, StandardResult[]>()
 
-        for (let i = 0; i < uniqueKws.length; i += this.adaptiveBatchSize()) {
-          const batch = uniqueKws.slice(i, i + this.adaptiveBatchSize())
+        for (let i = 0; i < uniqueKws.length;) {
+          const size = this.adaptiveBatchSize()
+          const batch = uniqueKws.slice(i, i + size)
           const t0 = Date.now()
           const batchResults = await Promise.allSettled(batch.map(kw => queryByNameFn(kw)))
           this.recordLatency((Date.now() - t0) / batch.length)
@@ -393,8 +402,10 @@ export const useQueryStore = defineStore('query', {
               queryResults.set(kw, r.value)
             }
           })
-          this.progress = { current: Math.min(i + this.adaptiveBatchSize(), uniqueKws.length), total: uniqueKws.length, pct: Math.round(Math.min(i + this.adaptiveBatchSize(), uniqueKws.length) / uniqueKws.length * 100) }
-          if (i + this.adaptiveBatchSize() < uniqueKws.length)
+          i += size
+          const done = Math.min(i, uniqueKws.length)
+          this.progress = { current: done, total: uniqueKws.length, pct: Math.round(done / uniqueKws.length * 100) }
+          if (i < uniqueKws.length)
             await delay(this.adaptiveDelay())
         }
 
