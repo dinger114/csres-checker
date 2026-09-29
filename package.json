@@ -16,7 +16,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@cap.js/widget": "^0.1.57",
+    "@cap.js/widget": "^0.1.58",
     "@vueuse/core": "^15.0.0",
     "pinia": "^4.0.3",
     "vue": "^3.5.43",
