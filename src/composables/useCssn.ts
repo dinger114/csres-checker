@@ -116,7 +116,9 @@ export function useCssn() {
 
     return filtered.map((r) => {
       const base = stdBase(r.a100 || '')
-      const versions = base ? toVersions(groups.get(base) || []) : []
+      const versions = base
+        ? toVersions(groups.get(base) || [])
+        : []
       const replacedBy = currentMap && r.a000 && ['被代替', '作废', '废止'].includes(r.a000)
         ? currentMap.get(base) || ''
         : ''
@@ -132,7 +134,9 @@ export function useCssn() {
         publisher: '',
         category: '',
         ics: '',
-        versions: versions.length > 1 ? versions : undefined,
+        versions: versions.length > 1
+          ? versions
+          : undefined,
       }
     })
   }

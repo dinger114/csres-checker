@@ -23,4 +23,7 @@ export function createTestI18n() {
 }
 
 // Auto-install for all tests
-config.global.plugins = [createPinia(), i18n]
+config.global.plugins = [
+  createPinia(),
+  i18n,
+]

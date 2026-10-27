@@ -107,7 +107,9 @@ export function useBzsou() {
             if (!Number.isFinite(s))
               return ''
             const dt = new Date(s)
-            return Number.isNaN(dt.getTime()) ? '' : dt.toISOString().split('T')[0]
+            return Number.isNaN(dt.getTime())
+              ? ''
+              : dt.toISOString().split('T')[0]
           }
           if (!s)
             return ''
@@ -116,14 +118,18 @@ export function useBzsou() {
             return ''
           const [, y, mo, d, hh = '00', mm = '00', ss = '00'] = m
           const dt = new Date(`${y}-${mo}-${d}T${hh}:${mm}:${ss}+08:00`)
-          return Number.isNaN(dt.getTime()) ? '' : dt.toISOString().split('T')[0]
+          return Number.isNaN(dt.getTime())
+            ? ''
+            : dt.toISOString().split('T')[0]
         }
         return {
           query: keyword,
           standard_number: stripHtml(r.STAN_NUM || ''),
           title: stripHtml(r.STAN_CNNAME || ''),
           status: mapStatus(r.STAN_STATUS || ''),
-          publish_date: fmtDate(r.PUB_DATE) || (r.STAN_PART_YEAR ? String(r.STAN_PART_YEAR) : ''),
+          publish_date: fmtDate(r.PUB_DATE) || (r.STAN_PART_YEAR
+            ? String(r.STAN_PART_YEAR)
+            : ''),
           implement_date: fmtDate(r.IMPL_DATE),
           replaced_by: '',
           publisher: r.RELEASE_ORG || '',

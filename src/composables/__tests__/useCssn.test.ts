@@ -5,7 +5,9 @@ const raceMock = vi.fn()
 const fetchDirectMock = vi.fn()
 
 vi.mock('../../stores/log', () => ({
-  useLogStore: () => ({ add: vi.fn() }),
+  useLogStore: () => ({
+    add: vi.fn(),
+  }),
 }))
 
 vi.mock('../useProxy', () => ({
@@ -13,13 +15,15 @@ vi.mock('../useProxy', () => ({
 }))
 
 const cssnResponse = {
-  results: [{
-    a100: 'GB 50010-2010（2024年版）',
-    a298: '混凝土结构设计标准',
-    a000: '现行',
-    a101: '2024-04-24',
-    a205: '2024-08-01',
-  }],
+  results: [
+    {
+      a100: 'GB 50010-2010（2024年版）',
+      a298: '混凝土结构设计标准',
+      a000: '现行',
+      a101: '2024-04-24',
+      a205: '2024-08-01',
+    },
+  ],
   next: null,
 }
 
@@ -119,13 +123,15 @@ describe('useCssn', () => {
   it('returns empty when no results match the query', async () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(JSON.stringify({
-      results: [{
-        a100: 'GB 50016-2014（2018年版）',
-        a298: '建筑设计防火规范',
-        a000: '现行',
-        a101: '2018-05-09',
-        a205: '2018-12-01',
-      }],
+      results: [
+        {
+          a100: 'GB 50016-2014（2018年版）',
+          a298: '建筑设计防火规范',
+          a000: '现行',
+          a101: '2018-05-09',
+          a205: '2018-12-01',
+        },
+      ],
       next: null,
     }))
 
@@ -138,13 +144,15 @@ describe('useCssn', () => {
   it('normalizes 未生效 status to 即将实施', async () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(JSON.stringify({
-      results: [{
-        a100: 'GB 50010-2010',
-        a298: '混凝土结构设计标准',
-        a000: '未生效',
-        a101: '2024-01-01',
-        a205: '2024-06-01',
-      }],
+      results: [
+        {
+          a100: 'GB 50010-2010',
+          a298: '混凝土结构设计标准',
+          a000: '未生效',
+          a101: '2024-01-01',
+          a205: '2024-06-01',
+        },
+      ],
       next: null,
     }))
 
@@ -286,11 +294,27 @@ describe('useCssn', () => {
     it('paginates through multiple pages', async () => {
       const mock = fetchDirectMock as ReturnType<typeof vi.fn>
       mock.mockResolvedValueOnce(JSON.stringify({
-        results: [{ a100: 'GB 50010-2010', a298: '混凝土结构设计标准', a000: '现行', a101: '2010-01-01', a205: '2010-06-01' }],
+        results: [
+          {
+            a100: 'GB 50010-2010',
+            a298: '混凝土结构设计标准',
+            a000: '现行',
+            a101: '2010-01-01',
+            a205: '2010-06-01',
+          },
+        ],
         next: 'page2',
       }))
       mock.mockResolvedValueOnce(JSON.stringify({
-        results: [{ a100: 'GB/T 50010-2010', a298: '混凝土结构设计规范', a000: '现行', a101: '2010-01-01', a205: '2010-06-01' }],
+        results: [
+          {
+            a100: 'GB/T 50010-2010',
+            a298: '混凝土结构设计规范',
+            a000: '现行',
+            a101: '2010-01-01',
+            a205: '2010-06-01',
+          },
+        ],
         next: null,
       }))
 
@@ -305,7 +329,15 @@ describe('useCssn', () => {
     it('stops pagination when next is null', async () => {
       const mock = fetchDirectMock as ReturnType<typeof vi.fn>
       mock.mockResolvedValueOnce(JSON.stringify({
-        results: [{ a100: 'GB 50010-2010', a298: '混凝土结构设计标准', a000: '现行', a101: '2010-01-01', a205: '2010-06-01' }],
+        results: [
+          {
+            a100: 'GB 50010-2010',
+            a298: '混凝土结构设计标准',
+            a000: '现行',
+            a101: '2010-01-01',
+            a205: '2010-06-01',
+          },
+        ],
         next: null,
       }))
 
@@ -339,9 +371,27 @@ describe('useCssn', () => {
       const mock = fetchDirectMock as ReturnType<typeof vi.fn>
       mock.mockResolvedValueOnce(JSON.stringify({
         results: [
-          { a100: 'DB11/T 100-2020', a298: '地方标准', a000: '现行', a101: '2020-01-01', a205: '2020-06-01' },
-          { a100: 'GB 50010-2010', a298: '国家标准', a000: '现行', a101: '2010-01-01', a205: '2010-06-01' },
-          { a100: 'ISO 1234-2020', a298: '国际标准', a000: '现行', a101: '2020-01-01', a205: '2020-06-01' },
+          {
+            a100: 'DB11/T 100-2020',
+            a298: '地方标准',
+            a000: '现行',
+            a101: '2020-01-01',
+            a205: '2020-06-01',
+          },
+          {
+            a100: 'GB 50010-2010',
+            a298: '国家标准',
+            a000: '现行',
+            a101: '2010-01-01',
+            a205: '2010-06-01',
+          },
+          {
+            a100: 'ISO 1234-2020',
+            a298: '国际标准',
+            a000: '现行',
+            a101: '2020-01-01',
+            a205: '2020-06-01',
+          },
         ],
         next: null,
       }))

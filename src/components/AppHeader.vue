@@ -17,7 +17,9 @@ const { t, locale } = useI18n()
 const { globalCount } = useCounter()
 
 function toggleLocale() {
-  setLocale(locale.value === 'en' ? 'zh-CN' : 'en')
+  setLocale(locale.value === 'en'
+    ? 'zh-CN'
+    : 'en')
 }
 </script>
 

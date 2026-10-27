@@ -24,7 +24,12 @@ function makeI18n() {
 function mountBadge(props: { status: string, replacedBy?: string }) {
   return mount(StatusBadge, {
     props: { status: props.status, replacedBy: props.replacedBy ?? '' },
-    global: { plugins: [createPinia(), makeI18n()] },
+    global: {
+      plugins: [
+        createPinia(),
+        makeI18n(),
+      ],
+    },
   })
 }
 

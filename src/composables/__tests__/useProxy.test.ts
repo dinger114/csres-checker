@@ -64,9 +64,15 @@ describe('useProxy', () => {
       globalThis.fetch = vi.fn().mockImplementation(() => {
         callCount++
         if (callCount === 1) {
-          return Promise.resolve({ ok: true, text: () => Promise.resolve(shortText) })
+          return Promise.resolve({
+            ok: true,
+            text: () => Promise.resolve(shortText),
+          })
         }
-        return Promise.resolve({ ok: true, text: () => Promise.resolve(longText) })
+        return Promise.resolve({
+          ok: true,
+          text: () => Promise.resolve(longText),
+        })
       })
 
       const { race } = useProxy()
@@ -213,7 +219,9 @@ describe('useProxy', () => {
             })
           })
         }
-        return Promise.resolve({ text: () => Promise.resolve('ok after retry') })
+        return Promise.resolve({
+          text: () => Promise.resolve('ok after retry'),
+        })
       })
 
       const { fetchDirect } = useProxy()

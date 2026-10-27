@@ -5,7 +5,9 @@ const raceMock = vi.fn()
 const fetchDirectMock = vi.fn()
 
 vi.mock('../../stores/log', () => ({
-  useLogStore: () => ({ add: vi.fn() }),
+  useLogStore: () => ({
+    add: vi.fn(),
+  }),
 }))
 
 vi.mock('../useProxy', () => ({
@@ -139,10 +141,12 @@ describe('useBzsou', () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(JSON.stringify({
       totalCount: 1,
-      result: [{
-        ...bzsouResponse.result[0],
-        STAN_STATUS: '部分废止',
-      }],
+      result: [
+        {
+          ...bzsouResponse.result[0],
+          STAN_STATUS: '部分废止',
+        },
+      ],
     }))
 
     const { query } = useBzsou()
@@ -155,16 +159,18 @@ describe('useBzsou', () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(JSON.stringify({
       totalCount: 1,
-      result: [{
-        STAN_NUM: 'GB 50010-2010',
-        STAN_CNNAME: '<b>混凝土结构</b>设计<b>标准</b>&mdash;2024年版',
-        STAN_STATUS: '现行',
-        PUB_DATE: '2024-04-24T12:00:00Z',
-        IMPL_DATE: '2024-08-01T12:00:00Z',
-        RELEASE_ORG: '住建部',
-        CCS_NAME: '',
-        ICS_NAME: '',
-      }],
+      result: [
+        {
+          STAN_NUM: 'GB 50010-2010',
+          STAN_CNNAME: '<b>混凝土结构</b>设计<b>标准</b>&mdash;2024年版',
+          STAN_STATUS: '现行',
+          PUB_DATE: '2024-04-24T12:00:00Z',
+          IMPL_DATE: '2024-08-01T12:00:00Z',
+          RELEASE_ORG: '住建部',
+          CCS_NAME: '',
+          ICS_NAME: '',
+        },
+      ],
     }))
 
     const { query } = useBzsou()
@@ -178,15 +184,17 @@ describe('useBzsou', () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValueOnce(JSON.stringify({
       totalCount: 1,
-      result: [{
-        STAN_NUM: 'GB 50010-2010',
-        STAN_CNNAME: '混凝土结构设计标准',
-        STAN_STATUS: '现行',
-        STAN_PART_YEAR: 2010,
-        RELEASE_ORG: '住建部',
-        CCS_NAME: '',
-        ICS_NAME: '',
-      }],
+      result: [
+        {
+          STAN_NUM: 'GB 50010-2010',
+          STAN_CNNAME: '混凝土结构设计标准',
+          STAN_STATUS: '现行',
+          STAN_PART_YEAR: 2010,
+          RELEASE_ORG: '住建部',
+          CCS_NAME: '',
+          ICS_NAME: '',
+        },
+      ],
     }))
 
     const { query } = useBzsou()
@@ -202,17 +210,19 @@ describe('useBzsou', () => {
     // 1162339200000 = 2006-11-01T00:00:00Z(UTC),即东八区 2006-11-01 08:00
     mock.mockResolvedValueOnce(JSON.stringify({
       totalCount: 1,
-      result: [{
-        STAN_NUM: 'GB/T 708-2006',
-        STAN_CNNAME: '冷轧钢板和钢带的尺寸、外形、重量及允许偏差',
-        STAN_STATUS: '现行',
-        PUB_DATE: 1162339200000,
-        IMPL_DATE: 1170288000000,
-        STAN_PART_YEAR: 2006,
-        RELEASE_ORG: '国标委',
-        CCS_NAME: '',
-        ICS_NAME: '',
-      }],
+      result: [
+        {
+          STAN_NUM: 'GB/T 708-2006',
+          STAN_CNNAME: '冷轧钢板和钢带的尺寸、外形、重量及允许偏差',
+          STAN_STATUS: '现行',
+          PUB_DATE: 1162339200000,
+          IMPL_DATE: 1170288000000,
+          STAN_PART_YEAR: 2006,
+          RELEASE_ORG: '国标委',
+          CCS_NAME: '',
+          ICS_NAME: '',
+        },
+      ],
     }))
 
     const { query } = useBzsou()

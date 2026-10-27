@@ -14,7 +14,9 @@ vi.mock('@cap.js/widget', () => ({
 }))
 
 vi.mock('../../stores/log', () => ({
-  useLogStore: () => ({ add: vi.fn() }),
+  useLogStore: () => ({
+    add: vi.fn(),
+  }),
 }))
 
 function seedSession(token: string, expiresMs: number) {

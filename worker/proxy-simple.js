@@ -17,7 +17,9 @@ export default {
     const url = new URL(request.url)
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeadersFor(request) })
+      return new Response(null, {
+        headers: corsHeadersFor(request),
+      })
     }
 
     const ip = request.headers.get('cf-connecting-ip') || 'unknown'
@@ -38,7 +40,10 @@ export default {
     const target = url.searchParams.get('url')
 
     if (!target) {
-      return new Response('Missing ?url= parameter', { status: 400, headers: corsHeadersFor(request) })
+      return new Response('Missing ?url= parameter', {
+        status: 400,
+        headers: corsHeadersFor(request),
+      })
     }
 
     let targetUrl
@@ -46,11 +51,17 @@ export default {
       targetUrl = new URL(target)
     }
     catch {
-      return new Response('Invalid URL', { status: 400, headers: corsHeadersFor(request) })
+      return new Response('Invalid URL', {
+        status: 400,
+        headers: corsHeadersFor(request),
+      })
     }
 
     if (!isAllowedTarget(targetUrl)) {
-      return new Response('Host not allowed', { status: 403, headers: corsHeadersFor(request) })
+      return new Response('Host not allowed', {
+        status: 403,
+        headers: corsHeadersFor(request),
+      })
     }
 
     try {
@@ -67,7 +78,10 @@ export default {
       if (contentLength > MAX_BODY_BYTES) {
         return new Response('Response too large', {
           status: 502,
-          headers: { 'Content-Type': 'text/plain', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'text/plain',
+            ...corsHeadersFor(request),
+          },
         })
       }
 
@@ -93,7 +107,10 @@ export default {
     }
     catch {
       // S14: 不回显内部报错(含 readLimited 超限抛错 → 502)
-      return new Response('Proxy error', { status: 502, headers: corsHeadersFor(request) })
+      return new Response('Proxy error', {
+        status: 502,
+        headers: corsHeadersFor(request),
+      })
     }
   },
 }

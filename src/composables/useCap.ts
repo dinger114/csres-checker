@@ -4,7 +4,9 @@ import { errMsg } from '../utils/errors'
 
 // 与 useCounter 同一个 Worker。本地 dev 默认指向 wrangler dev（localhost:8787）。
 const CAPTCHA_WORKER = import.meta.env.VITE_CAPTCHA_WORKER_URL
-  || (import.meta.env.DEV ? 'http://localhost:8787' : 'https://counter.dingyi.de')
+  || (import.meta.env.DEV
+    ? 'http://localhost:8787'
+    : 'https://counter.dingyi.de')
 
 const SESSION_KEY = 'cap-session'
 // 与 Worker 侧 tokenTtlMs(900_000) 对齐
@@ -19,7 +21,9 @@ function hasValidToken(): boolean {
 }
 
 export function getToken(): string | null {
-  return hasValidToken() ? token.value : null
+  return hasValidToken()
+    ? token.value
+    : null
 }
 
 function init() {
@@ -100,5 +104,14 @@ function endSession() {
 }
 
 export function useCap() {
-  return { solved, token, expires, init, hasValidToken, getToken, ensureSolved, endSession }
+  return {
+    solved,
+    token,
+    expires,
+    init,
+    hasValidToken,
+    getToken,
+    ensureSolved,
+    endSession,
+  }
 }

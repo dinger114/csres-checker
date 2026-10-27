@@ -4,7 +4,9 @@ import { useCqdb } from '../useCqdb'
 const raceMock = vi.fn()
 
 vi.mock('../../stores/log', () => ({
-  useLogStore: () => ({ add: vi.fn() }),
+  useLogStore: () => ({
+    add: vi.fn(),
+  }),
 }))
 
 vi.mock('../useProxy', () => ({

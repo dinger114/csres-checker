@@ -49,7 +49,11 @@ vi.mock('../../composables/useAtlas', () => ({
   useAtlas: () => ({ query: atlasQuery }),
 }))
 vi.mock('../../composables/useCounter', () => ({
-  useCounter: () => ({ incQueryCount, refreshCount, globalCount: ref(0) }),
+  useCounter: () => ({
+    incQueryCount,
+    refreshCount,
+    globalCount: ref(0),
+  }),
 }))
 
 function baseResult(stdNo: string) {
@@ -74,8 +78,12 @@ describe('useQueryStore', () => {
   })
 
   it('reports successful keyword count to counter (per-keyword)', async () => {
-    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
-    bzsouQuery.mockResolvedValue([baseResult('GB 50011-2010')])
+    cssnQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
+    bzsouQuery.mockResolvedValue([
+      baseResult('GB 50011-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB 50010-2010', 'GB 50011-2010'])
@@ -102,7 +110,9 @@ describe('useQueryStore', () => {
     bzsouQuery.mockResolvedValue([])
     ccsnQuery.mockResolvedValue([])
     gongQuery.mockResolvedValue([])
-    csresQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    csresQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB 50010-2010'])
@@ -118,7 +128,9 @@ describe('useQueryStore', () => {
   })
 
   it('stops the chain once a source returns results', async () => {
-    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    cssnQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB 50010-2010'])
@@ -130,7 +142,9 @@ describe('useQueryStore', () => {
   })
 
   it('maps result query back to the original keyword form', async () => {
-    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    cssnQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB50010-2010'])
@@ -139,7 +153,9 @@ describe('useQueryStore', () => {
   })
 
   it('uses the selected source when provided', async () => {
-    cqdbQuery.mockResolvedValue([baseResult('DBJ50/T-562')])
+    cqdbQuery.mockResolvedValue([
+      baseResult('DBJ50/T-562'),
+    ])
 
     const store = useQueryStore()
     await store.query(['DBJ50/T-562'], 'cqdb')
@@ -150,7 +166,9 @@ describe('useQueryStore', () => {
   })
 
   it('routes to shanxi when source is shanxi (且不入默认链)', async () => {
-    shanxiQuery.mockResolvedValue([baseResult('DBJ04/T389-2026')])
+    shanxiQuery.mockResolvedValue([
+      baseResult('DBJ04/T389-2026'),
+    ])
 
     const store = useQueryStore()
     await store.query(['DBJ04/T389-2026'], 'shanxi')
@@ -161,7 +179,9 @@ describe('useQueryStore', () => {
   })
 
   it('默认降级链不包含 shanxi', async () => {
-    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    cssnQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB 50010-2010'])
@@ -171,7 +191,9 @@ describe('useQueryStore', () => {
   })
 
   it('searchByName routes to shanxi when source is shanxi', async () => {
-    shanxiQueryByName.mockResolvedValue([baseResult('DBJ04/T389-2026')])
+    shanxiQueryByName.mockResolvedValue([
+      baseResult('DBJ04/T389-2026'),
+    ])
 
     const store = useQueryStore()
     await store.searchByName(['城市综合管廊'], 'shanxi')
@@ -185,7 +207,9 @@ describe('useQueryStore', () => {
     let resolveFirst: ((value?: unknown) => void) | undefined
     cssnQuery.mockReturnValue(new Promise((r) => {
       resolveFirst = r
-    }).then(() => [baseResult('GB 50010-2010')]))
+    }).then(() => [
+      baseResult('GB 50010-2010'),
+    ]))
 
     const store = useQueryStore()
     const first = store.query(['GB 50010-2010'])
@@ -198,7 +222,9 @@ describe('useQueryStore', () => {
   })
 
   it('searchByName queries cssn and updates progress to 100%', async () => {
-    queryByName.mockResolvedValue([baseResult('GB 50010-2010')])
+    queryByName.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.searchByName(['消防'])
@@ -219,7 +245,9 @@ describe('useQueryStore', () => {
   })
 
   it('searchByName routes to cqdb when source is cqdb', async () => {
-    cqdbQueryByName.mockResolvedValue([baseResult('DBJ50/T-522-2025')])
+    cqdbQueryByName.mockResolvedValue([
+      baseResult('DBJ50/T-522-2025'),
+    ])
 
     const store = useQueryStore()
     await store.searchByName(['消防'], 'cqdb')
@@ -232,7 +260,9 @@ describe('useQueryStore', () => {
   })
 
   it('searchByName defaults to cssn for unknown source values', async () => {
-    queryByName.mockResolvedValue([baseResult('GB 50010-2010')])
+    queryByName.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.searchByName(['消防'], 'bzsou')
@@ -242,7 +272,10 @@ describe('useQueryStore', () => {
   })
 
   it('queryAtlas queries the atlas source', async () => {
-    const atlasResult = { ...baseResult('05SJ810'), category: '标准图集' }
+    const atlasResult = {
+      ...baseResult('05SJ810'),
+      category: '标准图集',
+    }
     atlasQuery.mockResolvedValue([atlasResult])
 
     const store = useQueryStore()
@@ -266,7 +299,9 @@ describe('useQueryStore', () => {
 
   it('aborts query when no valid cap token is present', async () => {
     capHasValidToken.mockReturnValueOnce(false)
-    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    cssnQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB 50010-2010'])
@@ -277,7 +312,9 @@ describe('useQueryStore', () => {
   })
 
   it('ends the cap session when a run completes', async () => {
-    cssnQuery.mockResolvedValue([baseResult('GB 50010-2010')])
+    cssnQuery.mockResolvedValue([
+      baseResult('GB 50010-2010'),
+    ])
 
     const store = useQueryStore()
     await store.query(['GB 50010-2010'])
@@ -307,7 +344,9 @@ describe('useQueryStore', () => {
         queried.push(kw)
         if (kw === 'K1')
           clock += 3000 * 4 // 首批 4 条，3000ms/条 → 下一轮 adaptiveBatchSize() 降到 1
-        return [baseResult(kw)]
+        return [
+          baseResult(kw),
+        ]
       }),
     }
 
@@ -317,7 +356,10 @@ describe('useQueryStore', () => {
       src,
       kws,
       kws,
-      new Map(kws.map((k, i) => [k, [i]])),
+      new Map(kws.map((k, i) => [
+        k,
+        [i],
+      ])),
       new Map(),
     )
 

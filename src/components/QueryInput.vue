@@ -41,7 +41,9 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const nameInputRef = ref<HTMLInputElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-const sources = computed(() => searchMode.value === 'name' ? nameSources : numberSources)
+const sources = computed(() => searchMode.value === 'name'
+  ? nameSources
+  : numberSources)
 
 const textareaPlaceholder = computed(() =>
   searchMode.value === 'atlas'
@@ -108,7 +110,9 @@ function readFile(file: File) {
     const lines = parseKeywords(text)
     if (lines.length > 0) {
       const existing = keywords.value.trim()
-      keywords.value = existing ? `${existing}\n${lines.join('\n')}` : lines.join('\n')
+      keywords.value = existing
+        ? `${existing}\n${lines.join('\n')}`
+        : lines.join('\n')
     }
   }
   reader.readAsText(file)

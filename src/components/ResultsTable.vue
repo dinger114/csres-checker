@@ -25,16 +25,76 @@ export interface ColumnDef {
 }
 
 const defaultColumns: ColumnDef[] = [
-  { key: 'query', label: 'QUERY', i18nKey: 'output.col_query', draggable: true, exportable: true },
-  { key: 'standard_number', label: 'STD NO', i18nKey: 'output.col_std_no', draggable: true, exportable: true },
-  { key: 'title', label: 'TITLE', i18nKey: 'output.col_title', draggable: true, exportable: true },
-  { key: 'status', label: 'STATUS', i18nKey: 'output.col_status', draggable: true, exportable: true },
-  { key: 'publish_date', label: 'PUBLISHED', i18nKey: 'output.col_published', draggable: true, exportable: true },
-  { key: 'implement_date', label: 'IMPLEMENTED', i18nKey: 'output.col_implemented', draggable: true, exportable: true },
-  { key: 'jzxx', label: '文件下载', i18nKey: 'output.col_jzxx', draggable: true, exportable: false },
-  { key: 'doc88', label: '道客巴巴', i18nKey: 'output.col_doc88', draggable: true, exportable: false },
-  { key: 'soujz', label: '搜建筑', i18nKey: 'output.col_soujz', draggable: true, exportable: false },
-  { key: 'pdf', label: '地标预览', i18nKey: 'output.col_pdf', draggable: true, exportable: false },
+  {
+    key: 'query',
+    label: 'QUERY',
+    i18nKey: 'output.col_query',
+    draggable: true,
+    exportable: true,
+  },
+  {
+    key: 'standard_number',
+    label: 'STD NO',
+    i18nKey: 'output.col_std_no',
+    draggable: true,
+    exportable: true,
+  },
+  {
+    key: 'title',
+    label: 'TITLE',
+    i18nKey: 'output.col_title',
+    draggable: true,
+    exportable: true,
+  },
+  {
+    key: 'status',
+    label: 'STATUS',
+    i18nKey: 'output.col_status',
+    draggable: true,
+    exportable: true,
+  },
+  {
+    key: 'publish_date',
+    label: 'PUBLISHED',
+    i18nKey: 'output.col_published',
+    draggable: true,
+    exportable: true,
+  },
+  {
+    key: 'implement_date',
+    label: 'IMPLEMENTED',
+    i18nKey: 'output.col_implemented',
+    draggable: true,
+    exportable: true,
+  },
+  {
+    key: 'jzxx',
+    label: '文件下载',
+    i18nKey: 'output.col_jzxx',
+    draggable: true,
+    exportable: false,
+  },
+  {
+    key: 'doc88',
+    label: '道客巴巴',
+    i18nKey: 'output.col_doc88',
+    draggable: true,
+    exportable: false,
+  },
+  {
+    key: 'soujz',
+    label: '搜建筑',
+    i18nKey: 'output.col_soujz',
+    draggable: true,
+    exportable: false,
+  },
+  {
+    key: 'pdf',
+    label: '地标预览',
+    i18nKey: 'output.col_pdf',
+    draggable: true,
+    exportable: false,
+  },
 ]
 
 const columns = ref<ColumnDef[]>([...defaultColumns])
@@ -49,11 +109,26 @@ let copiedTimer: ReturnType<typeof setTimeout> | null = null
 const sortableKeys = ['publish_date', 'implement_date']
 
 const filters = computed(() => [
-  { label: t('output.filter_all'), value: 'all' },
-  { label: t('output.filter_active'), value: '现行' },
-  { label: t('output.filter_replaced'), value: '被代替' },
-  { label: t('output.filter_deprecated'), value: '废止' },
-  { label: t('output.filter_upcoming'), value: '即将实施' },
+  {
+    label: t('output.filter_all'),
+    value: 'all',
+  },
+  {
+    label: t('output.filter_active'),
+    value: '现行',
+  },
+  {
+    label: t('output.filter_replaced'),
+    value: '被代替',
+  },
+  {
+    label: t('output.filter_deprecated'),
+    value: '废止',
+  },
+  {
+    label: t('output.filter_upcoming'),
+    value: '即将实施',
+  },
 ])
 
 const statusFilter = ref('all')
@@ -74,7 +149,9 @@ const filteredResults = computed(() => {
       if (!bv)
         return -1
       const cmp = av.localeCompare(bv)
-      return sortOrder.value === 'desc' ? -cmp : cmp
+      return sortOrder.value === 'desc'
+        ? -cmp
+        : cmp
     })
   }
   return list
@@ -122,7 +199,9 @@ function onColKeydown(e: KeyboardEvent, colKey: string) {
   if (!col || !col.draggable)
     return
   const idx = columns.value.indexOf(col)
-  const newIdx = e.key === 'ArrowLeft' ? idx - 1 : idx + 1
+  const newIdx = e.key === 'ArrowLeft'
+    ? idx - 1
+    : idx + 1
   if (newIdx < 0 || newIdx >= columns.value.length)
     return
   const item = columns.value.splice(idx, 1)[0]
@@ -132,7 +211,9 @@ function onColKeydown(e: KeyboardEvent, colKey: string) {
 
 function handleSort(colKey: string) {
   if (sortKey.value === colKey) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+    sortOrder.value = sortOrder.value === 'asc'
+      ? 'desc'
+      : 'asc'
   }
   else {
     sortKey.value = colKey
@@ -143,7 +224,9 @@ function handleSort(colKey: string) {
 function getSortIcon(colKey: string): string {
   if (sortKey.value !== colKey)
     return ''
-  return sortOrder.value === 'asc' ? '▲' : '▼'
+  return sortOrder.value === 'asc'
+    ? '▲'
+    : '▼'
 }
 
 const selectedCount = computed(() => {
@@ -198,12 +281,23 @@ async function copySelected() {
 
 function getValue(r: StandardResult, key: string): string {
   const value = r[key as keyof StandardResult]
-  return typeof value === 'string' ? value : ''
+  return typeof value === 'string'
+    ? value
+    : ''
 }
 
 function getCellClass(col: ColumnDef): string {
-  if (['status', 'publish_date', 'implement_date', 'doc88', 'soujz', 'jzxx', 'pdf'].includes(col.key))
+  if ([
+    'status',
+    'publish_date',
+    'implement_date',
+    'doc88',
+    'soujz',
+    'jzxx',
+    'pdf',
+  ].includes(col.key)) {
     return 'text-center'
+  }
   if (col.key === 'num')
     return 'num'
   return 'clickable'

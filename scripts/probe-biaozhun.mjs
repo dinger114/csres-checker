@@ -11,18 +11,35 @@ function normalize(kw) {
 async function search(raw) {
   const q = normalize(raw)
   const url = `${BASE}/plus/search.php?q=${encodeURIComponent(q)}`
-  const res = await fetch(url, { headers: { 'User-Agent': UA } })
+  const res = await fetch(url, {
+    headers: { 'User-Agent': UA },
+  })
   if (!res.ok)
     return { raw, q, error: `HTTP ${res.status}` }
   const html = await res.text()
   const seg = html.split('热门推荐')[0]
   const found = seg.match(/结果共找到 <font[^>]*>(\d+)<\/font> 条/)
-  const items = [...seg.matchAll(/<a href="(\/[a-z]+\/\d+\.html)"[^>]*>(.*?)<\/a>/g)]
-    .map(m => ({ url: m[1], title: m[2].replace(/<[^>]+>/g, '').trim() }))
+  const items = [
+    ...seg.matchAll(/<a href="(\/[a-z]+\/\d+\.html)"[^>]*>(.*?)<\/a>/g),
+  ]
+    .map(m => ({
+      url: m[1],
+      title: m[2].replace(/<[^>]+>/g, '').trim(),
+    }))
   const state = seg.match(/<div class="state">([^<]+)<\/div>/)?.[1] ?? null
   const pub = seg.match(/发布日期:<em>([^<]+)<\/em>/)?.[1] ?? null
   const impl = seg.match(/实施日期:<em>([^<]+)<\/em>/)?.[1] ?? null
-  return { raw, q, found: found ? +found[1] : -1, items, state, pub, impl }
+  return {
+    raw,
+    q,
+    found: found
+      ? +found[1]
+      : -1,
+    items,
+    state,
+    pub,
+    impl,
+  }
 }
 
 const cases = [

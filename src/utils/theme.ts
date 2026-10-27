@@ -11,5 +11,7 @@ export function getPreferredTheme(): ThemeMode {
   }
   if (saved === 'dark' || saved === 'light')
     return saved
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+  return window.matchMedia('(prefers-color-scheme: light)').matches
+    ? 'light'
+    : 'dark'
 }

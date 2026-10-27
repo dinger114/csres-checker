@@ -40,7 +40,9 @@ export function useClipboard() {
       exportCols.map((c) => {
         const field = COLUMN_MAP[c.key]?.field || c.key
         const value = r[field as keyof StandardResult]
-        return value == null ? '' : String(value)
+        return value == null
+          ? ''
+          : String(value)
       }),
     )
 

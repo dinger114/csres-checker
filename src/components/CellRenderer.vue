@@ -16,7 +16,9 @@ const emit = defineEmits<{
 
 function getValue(r: StandardResult, key: string): string {
   const value = r[key as keyof StandardResult]
-  return typeof value === 'string' ? value : ''
+  return typeof value === 'string'
+    ? value
+    : ''
 }
 
 function doc88Url(r: StandardResult): string {
