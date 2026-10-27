@@ -33,7 +33,9 @@ async function startSolve() {
   }
   catch (e) {
     phase.value = 'error'
-    errorMsg.value = e instanceof Error ? e.message : String(e)
+    errorMsg.value = e instanceof Error
+      ? e.message
+      : String(e)
   }
 }
 

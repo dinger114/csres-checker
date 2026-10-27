@@ -4,7 +4,9 @@ import { useShanxi } from '../useShanxi'
 const raceMock = vi.fn()
 
 vi.mock('../../stores/log', () => ({
-  useLogStore: () => ({ add: vi.fn() }),
+  useLogStore: () => ({
+    add: vi.fn(),
+  }),
 }))
 
 vi.mock('../useProxy', () => ({
@@ -12,7 +14,16 @@ vi.mock('../useProxy', () => ({
 }))
 
 function searchResponse(items: Array<Record<string, string>>): string {
-  return JSON.stringify({ msg: 'success', state: 200, data: { total: items.length, data: items, pageSize: 10, pageNum: 1 } })
+  return JSON.stringify({
+    msg: 'success',
+    state: 200,
+    data: {
+      total: items.length,
+      data: items,
+      pageSize: 10,
+      pageNum: 1,
+    },
+  })
 }
 
 function announcementPage(body: string): string {
@@ -44,7 +55,9 @@ describe('useShanxi', () => {
   })
 
   it('queries the TRS openSearch API with position=0 (全文检索)', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
     const { query } = useShanxi()
@@ -61,7 +74,9 @@ describe('useShanxi', () => {
   })
 
   it('parses the announcement page and returns new + replaced old standard', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
     const { query } = useShanxi()
@@ -78,7 +93,9 @@ describe('useShanxi', () => {
   })
 
   it('回校验编号:过滤同族其他年份的标准', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
     const { query } = useShanxi()
@@ -152,7 +169,9 @@ describe('useShanxi', () => {
   })
 
   it('returns empty when the announcement page cannot be fetched', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(null)
 
     const { query } = useShanxi()
@@ -175,7 +194,9 @@ describe('useShanxi', () => {
 
   it('retries with a slash-repaired candidate when the first returns nothing', async () => {
     raceMock.mockResolvedValueOnce(searchResponse([]))
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
     const { query } = useShanxi()
@@ -190,7 +211,9 @@ describe('useShanxi', () => {
   })
 
   it('回校验对缺斜杠的输入同样有效', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
     const { query } = useShanxi()
@@ -226,7 +249,10 @@ describe('useShanxi queryByName', () => {
   })
 
   it('uses 标题检索 (position=1) and returns the entry with its pdf link', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([entryHit(), hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      entryHit(),
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ENTRY_PAGE)
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
@@ -251,7 +277,9 @@ describe('useShanxi queryByName', () => {
 
   it('keeps the entry row with empty number when no 发布公告 matches', async () => {
     // 首页只有条目页;补搜(用条目标题再搜一次)也搜不到公告
-    raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      entryHit(),
+    ]))
     raceMock.mockResolvedValueOnce(searchResponse([]))
     raceMock.mockResolvedValueOnce(ENTRY_PAGE)
 
@@ -266,9 +294,13 @@ describe('useShanxi queryByName', () => {
   })
 
   it('补搜:首页无公告时用条目标题再搜一次拿到编号', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      entryHit(),
+    ]))
     // 补搜命中同名公告
-    raceMock.mockResolvedValueOnce(searchResponse([hit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      hit(),
+    ]))
     raceMock.mockResolvedValueOnce(ENTRY_PAGE)
     raceMock.mockResolvedValueOnce(ANNOUNCEMENT_2026)
 
@@ -283,7 +315,9 @@ describe('useShanxi queryByName', () => {
   })
 
   it('名称检索首页取 100 条(默认 10 条装不下公告)', async () => {
-    raceMock.mockResolvedValueOnce(searchResponse([entryHit()]))
+    raceMock.mockResolvedValueOnce(searchResponse([
+      entryHit(),
+    ]))
     raceMock.mockResolvedValueOnce(searchResponse([]))
     raceMock.mockResolvedValueOnce(ENTRY_PAGE)
 

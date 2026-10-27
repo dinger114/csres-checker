@@ -86,7 +86,9 @@ export function useShanxi() {
   function searchCandidates(normalized: string): string[] {
     const compact = normalized.replace(/\s+/g, '')
     const slashFixed = compact.replace(/^([A-Z]{2,}\d*)T(\d)/i, '$1/T$2')
-    return [...new Set([compact, slashFixed])].filter(Boolean)
+    return [
+      ...new Set([compact, slashFixed]),
+    ].filter(Boolean)
   }
 
   // 站点编号一律写作 DBJ04/T389-2026;用户可能输入 DBJ04T389-2026 或 DBJ04 T389-2026,
@@ -153,7 +155,9 @@ export function useShanxi() {
       if (parsed === 0)
         add(`shanxi: ${announcements.length} 份公告正文未匹配到「现批准…编号为」句式`, 'warn')
 
-      add(`shanxi: ${results.length} matched (${Date.now() - t0}ms)`, results.length > 0 ? 'success' : 'warn')
+      add(`shanxi: ${results.length} matched (${Date.now() - t0}ms)`, results.length > 0
+        ? 'success'
+        : 'warn')
       return results
     }
     catch (e) {
@@ -303,7 +307,9 @@ export function useShanxi() {
       if (withNo > 0)
         add(`shanxi (name): ${withNo} 条未匹配到发布公告,编号留空`, 'warn')
 
-      add(`shanxi (name): ${results.length} matched (${Date.now() - t0}ms)`, results.length > 0 ? 'success' : 'warn')
+      add(`shanxi (name): ${results.length} matched (${Date.now() - t0}ms)`, results.length > 0
+        ? 'success'
+        : 'warn')
       return results
     }
     catch (e) {

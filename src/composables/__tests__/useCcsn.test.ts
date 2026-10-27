@@ -5,7 +5,9 @@ const raceMock = vi.fn()
 const fetchDirectMock = vi.fn()
 
 vi.mock('../../stores/log', () => ({
-  useLogStore: () => ({ add: vi.fn() }),
+  useLogStore: () => ({
+    add: vi.fn(),
+  }),
 }))
 
 vi.mock('../useProxy', () => ({
@@ -14,16 +16,18 @@ vi.mock('../useProxy', () => ({
 
 const ccsnResponse = {
   Total: 1,
-  List: [{
-    StandardCode: 'GB/T50010-2010（2024年版）',
-    StandardCNName: '混凝土结构设计标准',
-    StandardState: '现行',
-    ReplaceStandardCode: 'GB50010-2010（2015年版）',
-    PublishDate: '2024-04-24T00:00:00',
-    PerformDate: '2024-08-01T00:00:00',
-    AbolishDate: null,
-    ApprovalDep: '中华人民共和国住房和城乡建设部',
-  }],
+  List: [
+    {
+      StandardCode: 'GB/T50010-2010（2024年版）',
+      StandardCNName: '混凝土结构设计标准',
+      StandardState: '现行',
+      ReplaceStandardCode: 'GB50010-2010（2015年版）',
+      PublishDate: '2024-04-24T00:00:00',
+      PerformDate: '2024-08-01T00:00:00',
+      AbolishDate: null,
+      ApprovalDep: '中华人民共和国住房和城乡建设部',
+    },
+  ],
 }
 
 describe('useCcsn', () => {
@@ -96,11 +100,13 @@ describe('useCcsn', () => {
     const mock = fetchDirectMock as ReturnType<typeof vi.fn>
     mock.mockResolvedValue(JSON.stringify({
       Total: 1,
-      List: [{
-        ...ccsnResponse.List[0],
-        AbolishDate: '2024-06-01T00:00:00',
-        StandardState: '现行',
-      }],
+      List: [
+        {
+          ...ccsnResponse.List[0],
+          AbolishDate: '2024-06-01T00:00:00',
+          StandardState: '现行',
+        },
+      ],
     }))
 
     const { query } = useCcsn()

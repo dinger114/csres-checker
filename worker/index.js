@@ -14,7 +14,9 @@ import {
 
 // ===== Cap permit tokenKey 推导(id:sha256(ver)) =====
 function bufToHex(buf) {
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('')
+  return [
+    ...new Uint8Array(buf),
+  ].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function deriveTokenKey(token) {
@@ -35,7 +37,9 @@ export default {
 
     // 处理 CORS 预检请求(S6:CORS 头按来源收窄)
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeadersFor(request) })
+      return new Response(null, {
+        headers: corsHeadersFor(request),
+      })
     }
 
     // ===== 计数 API =====
@@ -46,13 +50,19 @@ export default {
         const value = await env.COUNTER_KV.get('queryCount')
         const count = parseCount(value)
         return new Response(JSON.stringify({ count }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
       catch {
         return new Response(JSON.stringify({ error: 'internal_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
     }
@@ -68,13 +78,19 @@ export default {
           challengeDifficulty: 3,
         })
         return new Response(JSON.stringify({ challenge: ch.challenge, token: ch.token, expires: ch.expires }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
       catch {
         return new Response(JSON.stringify({ error: 'internal_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
     }
@@ -97,7 +113,10 @@ export default {
         if (!result.success) {
           return new Response(JSON.stringify({ success: false, reason: result.reason }), {
             status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeadersFor(request),
+            },
           })
         }
         // 签发 session permit：TTL 内可复用，前端查询结束后主动注销
@@ -106,13 +125,19 @@ export default {
           expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)),
         })
         return new Response(JSON.stringify({ success: true, token: result.token, expires: result.expires }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
       catch {
         return new Response(JSON.stringify({ success: false, reason: 'server_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
     }
@@ -124,13 +149,19 @@ export default {
         if (tokenKey)
           await env.CAPTCHA_KV.delete(`cap-permit:${tokenKey}`)
         return new Response(JSON.stringify({ ok: true }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
       catch {
         return new Response(JSON.stringify({ ok: false }), {
           status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
     }
@@ -148,7 +179,10 @@ export default {
       if (!expiresRaw || Number(expiresRaw) < Date.now()) {
         return new Response('Invalid or expired permit', {
           status: 403,
-          headers: { 'Content-Type': 'text/plain', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'text/plain',
+            ...corsHeadersFor(request),
+          },
         })
       }
       touchRateLimit(ip) // C22: 豁免路径也计入限流窗口,使 X-RateLimit-Remaining 真实
@@ -185,13 +219,19 @@ export default {
         const newCount = current + n
         await env.COUNTER_KV.put('queryCount', String(newCount))
         return new Response(JSON.stringify({ count: newCount, inc: n }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
       catch {
         return new Response(JSON.stringify({ error: 'internal_error' }), {
           status: 500,
-          headers: { 'Content-Type': 'application/json', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeadersFor(request),
+          },
         })
       }
     }
@@ -199,7 +239,10 @@ export default {
     const target = url.searchParams.get('url')
 
     if (!target) {
-      return new Response('Missing ?url= parameter', { status: 400, headers: corsHeadersFor(request) })
+      return new Response('Missing ?url= parameter', {
+        status: 400,
+        headers: corsHeadersFor(request),
+      })
     }
 
     let targetUrl
@@ -207,11 +250,17 @@ export default {
       targetUrl = new URL(target)
     }
     catch {
-      return new Response('Invalid URL', { status: 400, headers: corsHeadersFor(request) })
+      return new Response('Invalid URL', {
+        status: 400,
+        headers: corsHeadersFor(request),
+      })
     }
 
     if (!isAllowedTarget(targetUrl)) {
-      return new Response('Host not allowed', { status: 403, headers: corsHeadersFor(request) })
+      return new Response('Host not allowed', {
+        status: 403,
+        headers: corsHeadersFor(request),
+      })
     }
 
     try {
@@ -228,7 +277,10 @@ export default {
       if (contentLength > MAX_BODY_BYTES) {
         return new Response('Response too large', {
           status: 502,
-          headers: { 'Content-Type': 'text/plain', ...corsHeadersFor(request) },
+          headers: {
+            'Content-Type': 'text/plain',
+            ...corsHeadersFor(request),
+          },
         })
       }
 
@@ -255,7 +307,10 @@ export default {
     }
     catch {
       // S14: 不回显内部报错细节(含 readLimited 超限抛错 → 502)
-      return new Response('Proxy error', { status: 502, headers: corsHeadersFor(request) })
+      return new Response('Proxy error', {
+        status: 502,
+        headers: corsHeadersFor(request),
+      })
     }
   },
 }

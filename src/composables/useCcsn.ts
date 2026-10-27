@@ -59,7 +59,9 @@ export function useCcsn() {
     const candidates = [noSpace, stripped]
     if (noSpace !== stripped)
       candidates.push(stdBase(stripped)) // 兜底:纯编号无年份
-    return [...new Set(candidates)]
+    return [
+      ...new Set(candidates),
+    ]
   }
 
   function filterResults(items: CcsnItem[], normalized: string): CcsnItem[] {
@@ -76,7 +78,9 @@ export function useCcsn() {
       query: keyword,
       standard_number: r.StandardCode || '',
       title: r.StandardCNName || '',
-      status: abolished ? '废止' : (r.StandardState || ''),
+      status: abolished
+        ? '废止'
+        : (r.StandardState || ''),
       publish_date: (r.PublishDate || '').slice(0, 10),
       implement_date: (r.PerformDate || '').slice(0, 10),
       replaced_by: r.ReplaceStandardCode || '',

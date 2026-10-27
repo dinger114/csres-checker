@@ -4,13 +4,41 @@ import type { StandardResult } from '../types'
 import { COLUMN_MAP } from '../utils/exportConfig'
 
 const DEFAULT_COLUMNS: Column<StandardResult>[] = [
-  { header: '查询词', cell: r => ({ value: r.query }), width: 12 },
-  { header: '标准号', cell: r => ({ value: r.standard_number }), width: 18 },
-  { header: '名称', cell: r => ({ value: r.title }), width: 40 },
-  { header: '状态', cell: r => ({ value: r.status }), width: 8 },
-  { header: '发布日期', cell: r => ({ value: r.publish_date }), width: 12 },
-  { header: '实施日期', cell: r => ({ value: r.implement_date }), width: 12 },
-  { header: '替代标准', cell: r => ({ value: r.replaced_by }), width: 18 },
+  {
+    header: '查询词',
+    cell: r => ({ value: r.query }),
+    width: 12,
+  },
+  {
+    header: '标准号',
+    cell: r => ({ value: r.standard_number }),
+    width: 18,
+  },
+  {
+    header: '名称',
+    cell: r => ({ value: r.title }),
+    width: 40,
+  },
+  {
+    header: '状态',
+    cell: r => ({ value: r.status }),
+    width: 8,
+  },
+  {
+    header: '发布日期',
+    cell: r => ({ value: r.publish_date }),
+    width: 12,
+  },
+  {
+    header: '实施日期',
+    cell: r => ({ value: r.implement_date }),
+    width: 12,
+  },
+  {
+    header: '替代标准',
+    cell: r => ({ value: r.replaced_by }),
+    width: 18,
+  },
 ]
 
 export function useXlsx() {
@@ -25,7 +53,11 @@ export function useXlsx() {
           cell: (r: StandardResult): { value: string } => {
             const field = COLUMN_MAP[c.key]?.field || c.key
             const value = r[field as keyof StandardResult]
-            return { value: value == null ? '' : String(value) }
+            return {
+              value: value == null
+                ? ''
+                : String(value),
+            }
           },
           width: COLUMN_MAP[c.key]?.width || 15,
         }))

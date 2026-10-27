@@ -155,7 +155,9 @@ export const useQueryStore = defineStore('query', {
         add(SEPARATOR, 'info')
 
         // Deduplicate keywords for querying
-        const uniqueKws = [...new Set(normalizedKws)]
+        const uniqueKws = [
+          ...new Set(normalizedKws),
+        ]
         const kwToIndices = new Map<string, number[]>()
         normalizedKws.forEach((kw, idx) => {
           if (!kwToIndices.has(kw))
@@ -274,7 +276,9 @@ export const useQueryStore = defineStore('query', {
         add('plan: ebook.chinabuilding.com.cn (标准图集, 需代理)', 'info')
         add(SEPARATOR, 'info')
 
-        const uniqueKws = [...new Set(normalizedKws)]
+        const uniqueKws = [
+          ...new Set(normalizedKws),
+        ]
         const kwToIndices = new Map<string, number[]>()
         normalizedKws.forEach((kw, idx) => {
           if (!kwToIndices.has(kw))
@@ -305,7 +309,11 @@ export const useQueryStore = defineStore('query', {
           })
           i += size
           const done = Math.min(i, uniqueKws.length)
-          this.progress = { current: done, total: uniqueKws.length, pct: Math.round(done / uniqueKws.length * 100) }
+          this.progress = {
+            current: done,
+            total: uniqueKws.length,
+            pct: Math.round(done / uniqueKws.length * 100),
+          }
           if (i < uniqueKws.length)
             await delay(this.adaptiveDelay())
         }
@@ -367,7 +375,9 @@ export const useQueryStore = defineStore('query', {
         add(SEPARATOR, 'info')
 
         // Deduplicate keywords
-        const uniqueKws = [...new Set(normalizedKws)]
+        const uniqueKws = [
+          ...new Set(normalizedKws),
+        ]
         const kwToIndices = new Map<string, number[]>()
         normalizedKws.forEach((kw, idx) => {
           if (!kwToIndices.has(kw))
@@ -404,7 +414,11 @@ export const useQueryStore = defineStore('query', {
           })
           i += size
           const done = Math.min(i, uniqueKws.length)
-          this.progress = { current: done, total: uniqueKws.length, pct: Math.round(done / uniqueKws.length * 100) }
+          this.progress = {
+            current: done,
+            total: uniqueKws.length,
+            pct: Math.round(done / uniqueKws.length * 100),
+          }
           if (i < uniqueKws.length)
             await delay(this.adaptiveDelay())
         }
@@ -442,7 +456,9 @@ export const useQueryStore = defineStore('query', {
         toast.show('暂无结果可复制')
         return
       }
-      toast.show(await copy(md) ? '已复制 Markdown 到剪贴板' : '复制失败')
+      toast.show(await copy(md)
+        ? '已复制 Markdown 到剪贴板'
+        : '复制失败')
     },
     async exportExcel() {
       const { exportXlsx } = useXlsx()

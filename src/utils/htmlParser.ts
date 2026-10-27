@@ -19,7 +19,9 @@ export function parseCqDbHtml(html: string, keyword: string): StandardResult[] {
 
     const pdfAnchor = tds[10]?.querySelector('a')
     const pdfHref = pdfAnchor?.getAttribute('href') || ''
-    const pdf_url = pdfHref ? CQDB_BASE + pdfHref.replace(/^\/+/, '') : ''
+    const pdf_url = pdfHref
+      ? CQDB_BASE + pdfHref.replace(/^\/+/, '')
+      : ''
 
     results.push({
       query: keyword,
@@ -85,7 +87,9 @@ export function parseGongbiaokuHtml(html: string, keyword: string): StandardResu
         query: keyword,
         standard_number,
         title: info['标准名称'] || '',
-        status: st ? st.textContent.trim() : '',
+        status: st
+          ? st.textContent.trim()
+          : '',
         publish_date: pd,
         implement_date: id,
         replaced_by,
@@ -123,7 +127,9 @@ export function parseAtlasHtml(html: string, keyword: string): StandardResult[] 
 
     // 状态:优先取 .search-resources 内的 .active 纯文本,否则取该格文本并去掉"资源状态:"前缀
     const activeEl = item.querySelector('.search-resources .active')
-    let status = activeEl ? activeEl.textContent?.trim() || '' : ''
+    let status = activeEl
+      ? activeEl.textContent?.trim() || ''
+      : ''
     if (!status) {
       const src = item.querySelector('.search-resources')
       status = (src?.textContent?.trim() || '').replace(/^资源状态[：:]\s*/, '')
@@ -262,19 +268,21 @@ export function parseShanxiAnnouncementHtml(
     ? `${impl[1]}-${impl[2].padStart(2, '0')}-${impl[3].padStart(2, '0')}`
     : ''
 
-  const results: StandardResult[] = [{
-    query: opts.keyword,
-    standard_number: standardNumber,
-    title,
-    // 公告语义即「新批准发布」,状态恒为现行;废止行由下一段回推
-    status: STATUS.ACTIVE,
-    publish_date: opts.pubDate || '',
-    implement_date: implementDate,
-    replaced_by: '',
-    publisher: '山西省住房和城乡建设厅',
-    category: '地方标准',
-    ics: '',
-  }]
+  const results: StandardResult[] = [
+    {
+      query: opts.keyword,
+      standard_number: standardNumber,
+      title,
+      // 公告语义即「新批准发布」,状态恒为现行;废止行由下一段回推
+      status: STATUS.ACTIVE,
+      publish_date: opts.pubDate || '',
+      implement_date: implementDate,
+      replaced_by: '',
+      publisher: '山西省住房和城乡建设厅',
+      category: '地方标准',
+      ics: '',
+    },
+  ]
 
   // 回推被本公告废止的旧标准:查新场景下「旧编号 → 已废止 + 被谁替代」比新标准本身更常被问
   const replaced = SHANXI_REPLACED_RE.exec(text)

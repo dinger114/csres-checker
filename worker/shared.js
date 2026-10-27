@@ -76,8 +76,12 @@ export async function fetchTarget(current, headers) {
 
 // 解析 KV 计数:NaN 按 0 兜底,防止 KV 值损坏后计数器永久失效(C7)
 export function parseCount(value) {
-  const parsed = value ? parseInt(value, 10) : 0
-  return Number.isFinite(parsed) ? parsed : 0
+  const parsed = value
+    ? parseInt(value, 10)
+    : 0
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0
 }
 
 // ===== 滑动窗口限流(ip 级,单 isolate 内存) =====
