@@ -43,6 +43,9 @@
     "vue-tsc": "^3.3.13",
     "wrangler": "^4.152.0"
   },
+  "overrides": {
+    "@vitest/eslint-plugin": "1.6.27"
+  },
   "lint-staged": {
     "*.{ts,tsx,vue,js,jsx,mjs,cjs,json,md,css,html}": "eslint --fix"
   }
