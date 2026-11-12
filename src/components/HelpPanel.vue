@@ -400,11 +400,9 @@ GB 50311-2016</pre>
 .help-body {
   overflow-y: auto;
   padding: 20px !important;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
 }
-
-.help-body::-webkit-scrollbar { width: 4px; height: 4px; }
-.help-body::-webkit-scrollbar-track { background: transparent; }
-.help-body::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
 
 .help-section {
   margin-bottom: 20px;

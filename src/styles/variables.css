@@ -3,7 +3,7 @@
   --primary: #00e676; --primary-dim: #00b35c; --bg: #0a0e0a; --panel: #0f1410;
   --border: #1e2a20; --border-subtle: #27342a; --text: #d8e6da; --text-dim: #7f8f82;
   --header-bg: #141a15; --row-hover: rgba(0, 230, 118, 0.04); --td-border: #1a241c;
-  --link: #58d3ff; --scrollbar-track: #0f1410;
+  --link: #58d3ff; --scrollbar-track: #0f1410; --scrollbar-thumb: #7f8f82;
   --danger: #ff6b5e; --hover-bg: rgba(0, 230, 118, 0.08); --text-secondary: #9aa89c;
   --badge-active-bg: rgba(0, 230, 118, 0.1); --badge-active-border: rgba(0, 230, 118, 0.35); --badge-active-text: #00e676;
   --badge-deprecated-bg: rgba(255, 107, 94, 0.12); --badge-deprecated-border: rgba(255, 107, 94, 0.35); --badge-deprecated-text: #ff8a80;
@@ -19,7 +19,7 @@
   --primary: #0d47a1; --primary-dim: #1565c0; --bg: #f6f8f6; --panel: #fff;
   --border: #d5dde0; --border-subtle: #e2e8eb; --text: #1c2730; --text-dim: #56636d;
   --header-bg: #e3ece5; --row-hover: rgba(13, 71, 161, 0.05); --td-border: #e8edef;
-  --link: #0d47a1; --scrollbar-track: #e8ede8;
+  --link: #0d47a1; --scrollbar-track: #e8ede8; --scrollbar-thumb: #56636d;
   --danger: #d93025; --hover-bg: rgba(13, 71, 161, 0.07); --text-secondary: #5f6b76;
   --badge-active-bg: rgba(13, 111, 79, 0.1); --badge-active-border: rgba(13, 111, 79, 0.3); --badge-active-text: #0d904f;
   --badge-deprecated-bg: rgba(217, 48, 37, 0.08); --badge-deprecated-border: rgba(217, 48, 37, 0.3); --badge-deprecated-text: #d93025;
@@ -44,10 +44,11 @@ body {
 
 ::selection { background: var(--primary); color: var(--bg); }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary-dim); }
+/* 标准滚动条属性(继承到全站),thin 对应原 6px。thumb/track 对比度 ≥ 3:1 (WCAG 1.4.11) */
+:root {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
 
 .terminal-box {
   background: var(--panel);
@@ -394,10 +395,11 @@ td a:hover { text-decoration: underline; }
   .empty-state::before { animation: none; }
 }
 
-.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
-.table-wrap::-webkit-scrollbar-track { background: transparent; }
-.table-wrap::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 2px; }
-.table-wrap::-webkit-scrollbar-thumb:hover { background: var(--primary-dim); }
+/* 表格内嵌滚动条:轨道保留透明(叠加在 panel 上),thumb 继承主题色 */
+.table-wrap {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+}
 
 @media (max-width: 768px) {
   .table-wrap { max-height: none; overflow: auto; }
