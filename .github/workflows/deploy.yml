@@ -30,6 +30,11 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # 与 ci.yml 一致:lockfile 由 npm 11 生成,runner 的 npm 10 会误判缺项
+      # (`Missing: typescript@7.0.2 from lock file`),显式对齐 npm 大版本
+      - name: Use npm 11
+        run: npm install --global npm@11
+
       - name: Install and Quality Gates
         run: |
           npm ci
@@ -65,6 +70,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+
+      # 同 build-and-deploy job
+      - name: Use npm 11
+        run: npm install --global npm@11
 
       - name: Install and Quality Gates
         run: |
